@@ -7,6 +7,7 @@ import (
 
 // Syntax supplies callbacks for added if expressions, terminating calls, and unevaluated operands.
 type Syntax struct {
+	Statements  func(*ast.CallExpr) ast.Stmt
 	Conditional func(*ast.CallExpr) *ast.IfStmt
 	Terminates  func(*ast.CallExpr) bool
 	Unevaluated func(*ast.CallExpr) bool
@@ -158,6 +159,11 @@ func (g *graph) expression(expr ast.Expr, next *point, t targets) *point {
 	case *ast.CallExpr:
 		if g.syntax.Unevaluated != nil && g.syntax.Unevaluated(e) {
 			return next
+		}
+		if g.syntax.Statements != nil {
+			if body := g.syntax.Statements(e); body != nil {
+				return g.statement(body, next, t, "")
+			}
 		}
 		if g.syntax.Conditional != nil {
 			if branch := g.syntax.Conditional(e); branch != nil {

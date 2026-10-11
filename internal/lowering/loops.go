@@ -104,7 +104,7 @@ func (r *rewrite) initializerJumps(loop *ast.ForStmt) bool {
 
 func (r *rewrite) realFunction(function *ast.FuncLit) bool {
 	call, _ := r.source.parents[function].(*ast.CallExpr)
-	return r.conditionals[call] == nil
+	return r.conditionals[call] == nil && r.comprehensions[call] == nil
 }
 
 // branchTarget uses source parents and checked labels, before statements move.

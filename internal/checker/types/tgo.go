@@ -12,10 +12,13 @@ import (
 
 // TGoOperation records the meaning of a frontend marker call.
 type TGoOperation struct {
-	Conditional bool
-	Wrap        bool
-	CallName    string
-	Position    token.Position
+	Comprehension bool
+	Output        string
+	Element       bool
+	Conditional   bool
+	Wrap          bool
+	CallName      string
+	Position      token.Position
 }
 
 func (check *Checker) tgoOperation(call *ast.CallExpr) (TGoOperation, bool) {
@@ -312,6 +315,7 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 
 func (check *Checker) branchFlow(body *ast.BlockStmt) controlflow.Result {
 	return controlflow.Branch(body, controlflow.Syntax{
+		Statements: check.operationStatements,
 		Conditional: func(call *ast.CallExpr) *ast.IfStmt {
 			if op, found := check.tgoOperation(call); found && op.Conditional {
 				return call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
@@ -422,7 +426,7 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 
 // conditionalStatements visits expressions in one statement. Nested statements
 // are visited by the caller; real function literals belong to another function.
-func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(*ast.IfStmt)) {
+func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(ast.Stmt)) {
 	var first, second ast.Stmt
 	switch statement := statement.(type) {
 	case *ast.IfStmt:
@@ -444,8 +448,8 @@ func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(*ast.
 			return false
 		}
 		if call, ok := node.(*ast.CallExpr); ok {
-			if op, found := check.tgoOperation(call); found && op.Conditional {
-				visit(call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt))
+			if body := check.operationStatements(call); body != nil {
+				visit(body)
 				return false
 			}
 		}
@@ -543,7 +547,7 @@ func (check *Checker) conditionalFunctionExit(body *ast.BlockStmt) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
 		if call, ok := node.(*ast.CallExpr); ok {
-			if operation, exists := check.tgoOperation(call); exists && operation.Conditional {
+			if operation, exists := check.tgoOperation(call); exists && (operation.Conditional || operation.Comprehension) {
 				found = true
 				return false
 			}
@@ -580,8 +584,8 @@ func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.FuncLit:
 		return nil
 	case *ast.CallExpr:
-		if operation, found := visitor.check.tgoOperation(node); found && operation.Conditional {
-			ast.Walk(visitor, node.Args[0].(*ast.FuncLit).Body.List[0])
+		if body := visitor.check.operationStatements(node); body != nil {
+			ast.Walk(visitor, body)
 			return nil
 		}
 	case *ast.ForStmt, *ast.RangeStmt:

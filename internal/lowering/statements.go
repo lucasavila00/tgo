@@ -115,7 +115,7 @@ func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
 			call, _ := r.source.parents[n].(*ast.CallExpr)
-			if r.conditionals[call] == nil {
+			if r.conditionals[call] == nil && r.comprehensions[call] == nil {
 				return false
 			}
 		}

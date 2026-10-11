@@ -64,7 +64,7 @@ func lowerModule(module *checkedModule) {
 		rejectUnsafePropagation(pkg)
 		operations := make(map[string]lowering.Propagation)
 		for name, operation := range pkg.Operations {
-			if !operation.Conditional {
+			if !operation.Conditional && !operation.Comprehension && !operation.Element {
 				operations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
 			}
 		}

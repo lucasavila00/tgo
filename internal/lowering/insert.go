@@ -34,7 +34,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -63,6 +63,11 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
 		}
 	}
+	for call := range r.comprehensions {
+		if !r.lowered[call] {
+			return nil, fmt.Errorf("%s: comprehension was not lowered", s.checked.Fset.Position(call.Pos()))
+		}
+	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
 			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
@@ -83,6 +88,23 @@ func (r *rewrite) contains(node ast.Node) bool {
 			return true
 		}
 	}
+	for expression := range r.comprehensions {
+		if contains(node, expression) {
+			return true
+		}
+	}
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		if call, ok := child.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok && r.source.checked.Operations[id.Name].Element {
+				found = true
+			}
+		}
+		return !found
+	})
+	if found {
+		return true
+	}
 	for expression := range r.conditionals {
 		if contains(node, expression) {
 			return true
@@ -100,7 +122,7 @@ func (r *rewrite) isTarget(expression ast.Expr) bool {
 	}
 	_, ok := r.propagations[expression]
 	call, _ := expression.(*ast.CallExpr)
-	return ok || r.conditionals[call] != nil
+	return ok || r.conditionals[call] != nil || r.comprehensions[call] != nil
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {

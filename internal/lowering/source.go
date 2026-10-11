@@ -113,7 +113,7 @@ func (s *Source) inventory(file *ast.File, dir string) {
 					fn = parent
 				case *ast.FuncLit:
 					call, _ := s.parents[parent].(*ast.CallExpr)
-					if s.checked.Conditionals[call] == nil {
+					if s.checked.Conditionals[call] == nil && s.checked.Comprehensions[call] == nil {
 						fn = parent
 					}
 				case *ast.GenDecl:

@@ -3,6 +3,7 @@ package lowering
 import (
 	"fmt"
 	"github.com/lucasavila00/tgo/internal/checker/types"
+	"github.com/lucasavila00/tgo/internal/frontend"
 	"go/ast"
 	"go/token"
 )
@@ -23,6 +24,8 @@ type rewrite struct {
 	bindings          map[types.Object]string
 	suppressedRoot    ast.Expr
 	propagations      map[ast.Expr]Propagation
+	comprehensions    map[*ast.CallExpr]*frontend.Comprehension
+	collectionOutputs map[string]*collectionDestination
 	conditionals      map[*ast.CallExpr]*ast.IfStmt
 	lowered           map[ast.Expr]bool
 	frame             *returnFrame
@@ -187,6 +190,12 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		return r.propagatedCall(expr.(*ast.CallExpr), operation)
 	}
 	if call, ok := expr.(*ast.CallExpr); ok {
+		if record := r.comprehensions[call]; record != nil {
+			return r.comprehensionCall(call, record)
+		}
+		if id, ok := call.Fun.(*ast.Ident); ok && r.collectionOutputs[id.Name] != nil {
+			return r.comprehensionOutput(call, r.collectionOutputs[id.Name])
+		}
 		if statement := r.conditionals[call]; statement != nil {
 			return r.conditionalCall(call, statement)
 		}

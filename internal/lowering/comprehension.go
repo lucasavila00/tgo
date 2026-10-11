@@ -1,0 +1,113 @@
+package lowering
+
+import (
+	"go/ast"
+	"go/token"
+
+	"github.com/lucasavila00/tgo/internal/checker/types"
+	"github.com/lucasavila00/tgo/internal/frontend"
+)
+
+type collectionDestination struct {
+	index  *ast.Ident
+	grow   *ast.Ident
+	result *ast.Ident
+	typ    types.Type
+}
+
+func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Comprehension) ([]ast.Stmt, []ast.Expr) {
+	result := r.name()
+	typ := r.typeOf(call)
+	r.collectionOutputs[record.Output] = &collectionDestination{result: result, typ: typ}
+	r.comprehensionBindings(record.Body)
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	}
+	if r.origins == nil {
+		r.origins = make(map[ast.Expr]ast.Expr)
+	}
+	r.temporaryTypes[result], r.origins[result] = typ, call
+	empty := &ast.CompositeLit{Type: r.temporaryType(typ, call)}
+	output := []ast.Stmt{variable(result, r.temporaryType(typ, call), empty)}
+	key, _ := types.ComprehensionTypes(typ)
+	if key == nil && r.builtinHidden("append") {
+		r.prepareSliceImport()
+		count := r.name()
+		r.collectionOutputs[record.Output].grow = count
+		output = append(output, variable(count, r.temporaryType(types.Typ[types.Int], call), integer(0)))
+	}
+	if exact := r.exactComprehension(call, record, result, typ); exact != nil {
+		output = exact
+	} else {
+		output = append(output, r.block(record.Body))
+	}
+	r.lowered[call] = true
+	return output, []ast.Expr{result}
+}
+
+func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) ([]ast.Stmt, []ast.Expr) {
+	before, values := r.operands(call.Args)
+
+	keyType, element := types.ComprehensionTypes(destination.typ)
+	if keyType == nil {
+		value := r.name()
+		before = append(before, variable(value, r.temporaryType(element, call.Args[0]), values[0]))
+		if destination.index != nil {
+			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}}, &ast.IncDecStmt{X: destination.index, Tok: token.INC})
+			return before, nil
+		}
+		if destination.grow != nil {
+			r.prepareSliceImport()
+			grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{destination.result, integer(1)}}
+			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{grown}}, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.SliceExpr{X: destination.result, High: &ast.BinaryExpr{X: destination.grow, Op: token.ADD, Y: integer(1)}}}}, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.grow}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}}, &ast.IncDecStmt{X: destination.grow, Tok: token.INC})
+			return before, nil
+		}
+		appendCall := &ast.CallExpr{Fun: ast.NewIdent("append"), Args: []ast.Expr{destination.result, value}}
+		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{appendCall}})
+	} else {
+		key, value := r.name(), r.name()
+		before = append(before, variable(key, r.temporaryType(keyType, call.Args[0]), values[0]))
+		before = append(before, variable(value, r.temporaryType(element, call.Args[1]), values[1]))
+		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: key}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+	}
+
+	return before, nil
+}
+
+// builtinHidden checks source declarations before emitting a builtin name.
+func (r *rewrite) builtinHidden(name string) bool {
+	for _, object := range r.source.checked.TypesInfo.Defs {
+		if object != nil && object.Name() == name {
+			return true
+		}
+	}
+	for _, object := range r.source.checked.TypesInfo.Implicits {
+		if object != nil && object.Name() == name {
+			return true
+		}
+	}
+	return false
+}
+
+// comprehensionBindings gives generator variables fresh names. Checked object
+// identity keeps their output uses and closures separate from outer bindings.
+func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
+	if r.bindings == nil {
+		r.bindings = make(map[types.Object]string)
+	}
+	ast.Inspect(body, func(node ast.Node) bool {
+		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
+			return false
+		}
+		if loop, ok := node.(*ast.RangeStmt); ok {
+			for _, expression := range []ast.Expr{loop.Key, loop.Value} {
+				if id, ok := expression.(*ast.Ident); ok && id.Name != "_" {
+					if object := r.source.checked.TypesInfo.Defs[id]; object != nil && r.bindings[object] == "" {
+						r.bindings[object] = r.nameFor(id.Name).Name
+					}
+				}
+			}
+		}
+		return true
+	})
+}
