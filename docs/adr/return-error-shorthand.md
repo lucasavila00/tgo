@@ -22,14 +22,14 @@ The final result must implement `error`; trailing `..` also requires nil to fit.
 Explicit operands follow Go return assignment rules. A sole multiple-result
 expression can fill the success results. Bare `return ..` is invalid.
 
-Keep Go token boundaries; write `1 ..`, not `1..`. Trailing `..` ends a statement
-at a newline.
+Keep Go token boundaries; write `1 ..`, not `1..`. Trailing `..` ends a
+statement at a newline.
 
 ## Consequences
 
 Lower to explicit Go returns with fresh typed locals. Evaluate operands once
-in Go's required order. Preserve named-result assignment before defers, enclosing
-returns, and jumps. Return errors unchanged, including typed nil conversions.
+in Go's required order. Preserve named-result assignment before defers,
+enclosing returns, and jumps. Return errors unchanged, including typed nil conversions.
 
 Compare generated programs with independent Go references for values, effects,
 error identity, defers, generic types, and multiple-result calls. Check invalid
