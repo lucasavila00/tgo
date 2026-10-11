@@ -23,14 +23,15 @@ compiler process; they exclude child Go processes.
 
 | Source | Before | After | Allocated bytes before / after |
 | --- | ---: | ---: | ---: |
-| 1 operator | 35 ms | 31 ms | 550 KB / 357 KB |
-| 8 independent operators | 133 ms | 30 ms | 2.33 MB / 554 KB |
-| 32 independent operators | 400 ms | 30 ms | 15.9 MB / 1.54 MB |
-| 32 nested operators | 419 ms | 31 ms | 16.4 MB / 1.50 MB |
-| Two packages and a test file, 25 operators | 13.2 s | 568 ms | 3.71 GB / 341 MB |
+| 1 operator | 35 ms | 26 ms | 550 KB / 344 KB |
+| 8 independent operators | 133 ms | 31 ms | 2.33 MB / 522 KB |
+| 32 independent operators | 400 ms | 28 ms | 15.9 MB / 1.44 MB |
+| 32 nested operators | 419 ms | 27 ms | 16.4 MB / 1.39 MB |
+| Two packages and a test file, 25 operators | 13.2 s | 374 ms | 3.71 GB / 190 MB |
 
 The single-file cases previously used 3, 10, and 34 package loads. They now use
-2. The checker cache test removes the source file after the first check and
+2. Final checking requests types and errors, without retaining syntax or
+expression information that no later stage uses. The checker cache test removes the source file after the first check and
 checks the same package ID again. It also checks that test variants keep
 separate type objects. Another test checks that public Go bindings stay intact.
 
