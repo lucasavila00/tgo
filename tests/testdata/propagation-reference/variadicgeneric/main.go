@@ -17,27 +17,31 @@ func next(failAt int) (int, error) {
 	return visits, nil
 }
 
-func consume[T any](f func(...T), n int) {
-	fmt.Print("C", n)
-	f()
+func consume[T any](f func(...T), channels chan (<-chan T), n int) {
+	inner := <-channels
+	value := <-inner
+	fmt.Print("C", n, ":", value)
+	f(value)
 }
 
-func run[T any](f func(...T), failAt int) error {
+func run[T any](f func(...T), channels chan (<-chan T), failAt int) error {
 	{
 		T := 1
 		_ = T
 		saved := f
+		savedChannels := channels
 		value, err := next(failAt)
 		if err != nil {
 			return err
 		}
-		consume(saved, value)
+		consume(saved, savedChannels, value)
 		saved = f
+		savedChannels = channels
 		value, err = next(failAt)
 		if err != nil {
 			return fmt.Errorf("next: %w", err)
 		}
-		consume(saved, value)
+		consume(saved, savedChannels, value)
 	}
 	return nil
 }
@@ -45,7 +49,13 @@ func run[T any](f func(...T), failAt int) error {
 func main() {
 	for _, failAt := range []int{0, 1, 2} {
 		visits = 0
-		err := run(func(...int) { fmt.Print("F") }, failAt)
+		inner := make(chan int, 2)
+		inner <- 7
+		inner <- 8
+		channels := make(chan (<-chan int), 2)
+		channels <- inner
+		channels <- inner
+		err := run(func(...int) { fmt.Print("F") }, channels, failAt)
 		switch {
 		case err == nil:
 			fmt.Print("S|")
