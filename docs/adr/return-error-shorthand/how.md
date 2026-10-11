@@ -36,8 +36,8 @@ and jumps.
 
 ## Tradeoffs
 
-Library helpers need omitted type arguments and separate forms for result
-counts. Return syntax uses the enclosing signature. Automatic fixes require
+Library helpers need explicit type arguments for omitted results and separate
+forms for result counts. Return syntax uses the enclosing signature. Automatic fixes require
 unchanged values and effects.
 
 [WHAT](what.md) states behavior. [PROOF](proof.md) defines checks.
