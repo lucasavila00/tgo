@@ -10,8 +10,8 @@ import (
 	"reflect"
 )
 
-// InsertAfter builds source files with statements after one expression.
-// The callback uses the expression's evaluated results in source order.
+// InsertAfter returns Go files with the callback's statements after the selected expression.
+// The callback receives saved results; the original syntax tree stays unchanged.
 func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) {
 	target, ok := s.expressions[site]
 	if !ok {
@@ -31,7 +31,8 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	return output, nil
 }
 
-// LowerPropagations emits source from typed marker calls.
+// LowerPropagations replaces typed marker calls with calls, error checks, and returns.
+// It returns Go file contents and reports an error if a selected operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
 	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {

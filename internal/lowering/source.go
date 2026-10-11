@@ -29,7 +29,8 @@ type Source struct {
 	parents     map[ast.Node]ast.Node
 }
 
-// Load reads one Go package. It does not change its syntax tree.
+// Load reads and type-checks one Go package selected by pattern in dir.
+// It records expression positions for later statement insertion.
 func Load(dir, pattern string) (*Source, error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir: dir,
@@ -46,7 +47,8 @@ func Load(dir, pattern string) (*Source, error) {
 	return SourceFromPackage(pkgs[0], dir)
 }
 
-// SourceFromPackage inventories a fully type-checked package.
+// SourceFromPackage records expression positions and insertion limits in a checked package.
+// File names are relative to dir; a package with type errors returns an error.
 func SourceFromPackage(p *packages.Package, dir string) (*Source, error) {
 	if len(p.Errors) != 0 {
 		return nil, fmt.Errorf("load source: %s", p.Errors[0])
