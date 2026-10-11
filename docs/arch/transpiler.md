@@ -35,6 +35,11 @@ participate in source type checking. See the API guide for module output rules.
 `call()!` wraps that error once with the source call name. On failure, later
 statements do not run. Deferred calls still run.
 
+The compiler checks that the caller can return the propagated error. For `!!`,
+the call's final result must be assignable to the caller's final result. For `!`,
+the wrapped `error` must be assignable to that result. A mismatch reports the
+source operator position and both types before lowering.
+
 The failure check uses the call's final result before return conversion. A nil
 pointer, slice, map, channel, or function is success. A nil error interface is
 success, but an interface that contains a nil pointer is failure. A result
