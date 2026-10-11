@@ -19,14 +19,14 @@ func next(fail bool) (int, error) {
 
 var direct = func(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
-	value := next(fail)!!
+	value := next(fail)!
 	trace = append(trace, fmt.Sprint(value))
 	return nil
 }
 
 var wrapped = func(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
-	value := next(fail)!
+	value := next(fail)!!
 	trace = append(trace, fmt.Sprint(value))
 	return nil
 }
@@ -35,7 +35,7 @@ var collection = map[string][]func(bool) error{
 	"run": {
 		func(fail bool) error {
 			defer func() { trace = append(trace, "defer") }()
-			value := next(fail)!!
+			value := next(fail)!
 			trace = append(trace, fmt.Sprint(value))
 			return nil
 		},
@@ -45,7 +45,7 @@ var collection = map[string][]func(bool) error{
 var nested = func() func(bool) error {
 	return func(fail bool) error {
 		defer func() { trace = append(trace, "defer") }()
-		value := next(fail)!!
+		value := next(fail)!
 		trace = append(trace, fmt.Sprint(value))
 		return nil
 	}
@@ -53,7 +53,7 @@ var nested = func() func(bool) error {
 
 var initialized = func() error {
 	defer func() { trace = append(trace, "init-defer") }()
-	next(true)!!
+	next(true)!
 	trace = append(trace, "unreachable")
 	return nil
 }()

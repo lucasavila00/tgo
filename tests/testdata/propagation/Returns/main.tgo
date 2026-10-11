@@ -18,24 +18,24 @@ func get() (Value, error) {
 }
 
 func unnamed(label string) (Value, error) {
-	return get()!!, nil
+	return get()!, nil
 }
 
 func named() (value Value, err error) {
 	value = 5
 	err = sentinel
-	get()!!
+	get()!
 	return
 }
 
 func generic[T any](value T) (T, error) {
-	get()!!
+	get()!
 	return value, nil
 }
 
 func closure() error {
 	call := func() (Value, error) {
-		return get()!!, nil
+		return get()!, nil
 	}
 	v, e := call()
 	fmt.Print(v, e == sentinel)

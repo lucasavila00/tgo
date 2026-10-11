@@ -160,9 +160,9 @@ func main() {
 	if err != nil {
 		t.Fatalf("invalid generator body: %v\n%s", err, body)
 	}
-	op := "!!"
+	op := "!"
 	if wrapped {
-		op = "!"
+		op = "!!"
 	}
 	replace := func(source string, reference bool) string {
 		return fuzzPropagation.ReplaceAllStringFunc(source, func(marker string) string {
@@ -241,7 +241,7 @@ func TestFuzzProgramGeneration(t *testing.T) {
 	for i, body := range fuzzBodies {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			input, reference := fuzzPrograms(t, body, []byte{byte(i), 255, 0}, false)
-			if !strings.Contains(input, "!!") || strings.Contains(reference, "!!") {
+			if !strings.Contains(input, "!") || strings.Contains(reference, "!") {
 				t.Fatal("operator was not replaced correctly")
 			}
 		})

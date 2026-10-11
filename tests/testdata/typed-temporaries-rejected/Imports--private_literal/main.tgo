@@ -8,7 +8,7 @@ import (
 )
 
 func run() error {
-	v := foreign.List{{Number: int(foreign.Number("A")!!)}, {Number: int(foreign.Number("B")!!)}}
+	v := foreign.List{{Number: int(foreign.Number("A")!)}, {Number: int(foreign.Number("B")!)}}
 	fmt.Print(v)
 	return nil
 }

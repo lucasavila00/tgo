@@ -8,7 +8,7 @@ import (
 )
 
 func run() error {
-	v := true && foreign.Boolean()!!
+	v := true && foreign.Boolean()!
 	fmt.Printf("%T", v)
 	return nil
 }

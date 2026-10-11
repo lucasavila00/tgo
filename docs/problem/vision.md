@@ -39,8 +39,8 @@ func Parse(text string) (int, error) {
 }
 ```
 
-If `strconv.Atoi` returns an error, `!` immediately returns from `Parse` and
-adds the call name to the error. `errors.Is` and `errors.As` continue to work.
+If `strconv.Atoi` fails, `!` returns the same error from `Parse`. Use `!!` to add
+the call name. `errors.Is` and `errors.As` can still find the original error.
 
 ## Require a non-nil pointer
 

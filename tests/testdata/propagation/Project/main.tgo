@@ -12,7 +12,7 @@ var message string
 var _ embed.FS
 
 func run() error {
-	v := library.Read()!!
+	v := library.Read()!
 	fmt.Print(v, message)
 	return nil
 }

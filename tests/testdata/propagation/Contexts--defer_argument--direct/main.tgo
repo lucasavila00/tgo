@@ -38,8 +38,8 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	defer fmt.Print(step("D")!!)
-	step("B")!!
+	defer fmt.Print(step("D")!)
+	step("B")!
 	return nil
 }
 

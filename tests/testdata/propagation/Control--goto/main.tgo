@@ -21,7 +21,7 @@ func run() error {
 	i := 0
 again:
 	i++
-	step("B")!!
+	step("B")!
 	if i < 2 {
 		goto again
 	}

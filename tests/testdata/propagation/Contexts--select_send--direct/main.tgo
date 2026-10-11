@@ -40,7 +40,7 @@ func identity[T any](v T) (T, error) {
 func run() error {
 	ch := make(chan int, 1)
 	select {
-	case ch <- step("V")!!:
+	case ch <- step("V")!:
 		fmt.Print("b")
 	}
 	return nil

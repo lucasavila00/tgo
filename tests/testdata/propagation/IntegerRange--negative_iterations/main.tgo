@@ -26,7 +26,7 @@ func run() error {
 		}
 	}()
 	a := []int{}
-	for a[step("I")!!] = range -1 {
+	for a[step("I")!] = range -1 {
 
 	}
 	return nil

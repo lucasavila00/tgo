@@ -8,7 +8,7 @@ import (
 )
 
 func run() error {
-	v := foreign.Table{{ID: 1}: {Number: int(foreign.Number("A")!!)}, {ID: 2}: {Number: int(foreign.Number("B")!!)}}
+	v := foreign.Table{{ID: 1}: {Number: int(foreign.Number("A")!)}, {ID: 2}: {Number: int(foreign.Number("B")!)}}
 	fmt.Print(len(v))
 	return nil
 }
