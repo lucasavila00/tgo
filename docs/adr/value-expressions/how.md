@@ -1,8 +1,8 @@
 # HOW
 
-Extend the frontend to parse value-producing `if` and `switch`. Copy the pinned
+Extend the frontend to parse value-producing `if`. Copy the pinned
 Go parser into a private frontend package and change expression parsing to
-accept these two forms. Keep its license and upstream version. Keep Go's scanner, token positions,
+accept this form. Keep its license and upstream version. Keep Go's scanner, token positions,
 and ordinary statement grammar. Record each added expression separately and put a generated
 placeholder call in the Go AST. Do not fork the Go toolchain or `go/types`.
 
@@ -42,8 +42,7 @@ storage; no source path can read it before assignment.
 Use the existing expression ordering pass so earlier operands run first and
 skipped Boolean operands stay skipped. Emit no function wrapper: it would move
 returns and defers to another function. Keep header scopes and jump targets
-when generated blocks are necessary. Check exhaustive enum cases against the
-resolved enum declarations, not their names alone.
+when generated blocks are necessary.
 
 The driver connects frontend records, type checking, and lowering. Frontend and
 lowering remain separate internal packages. Format with `go/format` and compile

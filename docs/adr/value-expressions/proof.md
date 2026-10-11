@@ -8,15 +8,13 @@ and `expect.json` (results, ordered effects, and expected errors).
 | Directory | Required cases |
 | --- | --- |
 | `if` | Both branches, nested `else if`, initializer scope |
-| `switch` | Tag once, case order, default, expressionless and type switches |
-| `enum` | Complete `exhaustive:` coverage, missing member, duplicate case |
 | `ordering` | Calls, operators, literals, assignment targets, skipped `&&`/`||` |
 | `branches` | Local bindings, shadowing, final calls, nested expressions |
 | `types` | Named types, interfaces, constants, nil, generics, contextual types |
-| `control` | Return, panic, loop continue, labels, goto, enclosing break |
+| `control` | Return, panic, all branches terminate, loop continue, labels, goto, enclosing break |
 | `errors` | `!` wrapping, `!!` identity, skipped branches, deferred calls |
-| `invalid` | Missing else/value, mixed types, tuple result, switch break/fallthrough |
-| `statements` | Unchanged ordinary Go if/switch behavior |
+| `invalid` | Missing else/value, mixed types, tuple result |
+| `statements` | Unchanged ordinary Go if behavior |
 
 `TestValueExpressions` loops over every directory. It compiles the TGo source,
 formats the result, and compares it with `output.go`. Compile and run the
@@ -25,7 +23,7 @@ same output, side-effect trace, panic, and defer order. For error identity,
 assert equality with the source sentinel inside each program.
 
 Use multiple inputs per fixture to reach every branch and skipped path. Put
-observable effects in headers, case expressions, earlier operands, branch
+observable effects in headers, earlier operands, branch
 statements, and later operands. A snapshot alone cannot prove evaluation order.
 
 `TestValueExpressionDiagnostics` checks each invalid source against expected
