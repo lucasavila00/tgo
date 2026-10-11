@@ -30,7 +30,7 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 				var tgo2 Failure
 				tgo1, tgo2 = next(fail)
 				if tgo2 != nil {
-					return tgo3, fmt_tgo5.Errorf("%s: %w", "next", tgo2)
+					return tgo3, fmt_tgo5.Errorf("next: %w", tgo2)
 				}
 				_ = tgo1
 			}
@@ -64,7 +64,7 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 				var tgo10 Failure
 				tgo9, tgo10 = next(fail)
 				if tgo10 != nil {
-					return tgo11, fmt_tgo5.Errorf("%s: %w", "next", tgo10)
+					return tgo11, fmt_tgo5.Errorf("next: %w", tgo10)
 				}
 				_ = tgo9
 			}
@@ -96,7 +96,7 @@ func annotated(Result int, fail, wrap bool) (Visible, Failure) {
 			var tgo17 Failure
 			tgo16, tgo17 = next(fail)
 			if tgo17 != nil {
-				return tgo18, fmt_tgo5.Errorf("%s: %w", "next", tgo17)
+				return tgo18, fmt_tgo5.Errorf("next: %w", tgo17)
 			}
 			_ = tgo16
 		}
@@ -123,7 +123,7 @@ func local(fail, wrap bool) (int, error) {
 			var tgo22 Failure
 			tgo21, tgo22 = next(fail)
 			if tgo22 != nil {
-				return tgo23, fmt_tgo5.Errorf("%s: %w", "next", tgo22)
+				return tgo23, fmt_tgo5.Errorf("next: %w", tgo22)
 			}
 			_ = tgo21
 		}

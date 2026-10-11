@@ -48,7 +48,7 @@ L:
 	var tgo4 error
 	tgo3, tgo4 = next(fail)
 	if tgo4 != nil {
-		return fmt_tgo5.Errorf("%s: %w", "next", tgo4)
+		return fmt_tgo5.Errorf("next: %w", tgo4)
 	}
 	value := tgo3
 	trace = append(trace, fmt.Sprint(value))
@@ -88,7 +88,7 @@ L:
 	var tgo9 error
 	tgo8, tgo9 = next(fail)
 	if tgo9 != nil {
-		return fmt_tgo5.Errorf("%s: %w", "next", tgo9)
+		return fmt_tgo5.Errorf("next: %w", tgo9)
 	}
 	var value = tgo8
 	trace = append(trace, fmt.Sprint(value))

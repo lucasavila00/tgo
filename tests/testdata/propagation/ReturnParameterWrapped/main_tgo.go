@@ -12,7 +12,7 @@ func run(error int) error {
 		var tgo2 Failure
 		tgo1, tgo2 = next()
 		if tgo2 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "next", tgo2)
+			return fmt_tgo3.Errorf("next: %w", tgo2)
 		}
 		_ = tgo1
 	}

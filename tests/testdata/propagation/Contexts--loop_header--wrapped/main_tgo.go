@@ -45,7 +45,7 @@ func run() error {
 		var tgo6 error
 		tgo5, tgo6 = step("I")
 		if tgo6 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "step", tgo6)
+			return fmt_tgo3.Errorf("step: %w", tgo6)
 		}
 		var tgo7 bool = 0 == 0
 		for i := tgo5; ; {
@@ -59,7 +59,7 @@ func run() error {
 			var tgo2 error
 			tgo1, tgo2 = step("C")
 			if tgo2 != nil {
-				return fmt_tgo3.Errorf("%s: %w", "step", tgo2)
+				return fmt_tgo3.Errorf("step: %w", tgo2)
 			}
 			if !(tgo4 < tgo1+1) {
 				break

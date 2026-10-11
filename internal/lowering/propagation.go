@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"strconv"
+	"strings"
 )
 
 type returnFrame struct {
@@ -91,7 +92,7 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 			r.formatAlias = r.nameFor("fmt")
 			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 		}
-		errorValue = &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("%s: %w")}, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(operation.CallName)}, errorValue}}
+		errorValue = &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w")}, errorValue}}
 	}
 	results := append(append([]ast.Expr(nil), r.frame.values...), errorValue)
 	failure := []ast.Stmt{&ast.ReturnStmt{Results: results}}

@@ -36,7 +36,7 @@ func run() error {
 		var tgo7 error
 		tgo6, tgo7 = next()
 		if tgo7 != nil {
-			return fmt_tgo8.Errorf("%s: %w", "next", tgo7)
+			return fmt_tgo8.Errorf("next: %w", tgo7)
 		}
 		var tgo11 int = min(tgo6, 8)
 		var tgo9 int
