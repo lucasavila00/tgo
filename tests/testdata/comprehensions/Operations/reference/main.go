@@ -41,6 +41,18 @@ func main() {
 		copied = append(copied, x)
 	}
 	fmt.Println(copied, source)
+	indices := []int{}
+	for i, x := range []int{4, 5, 6} {
+		i = 0
+		indices = append(indices, x+i)
+	}
+	fmt.Println(indices)
+	indices = []int{}
+	for i := range [2]int{} {
+		i = 10
+		indices = append(indices, i)
+	}
+	fmt.Println(indices)
 	outer := []int{1, 2}
 	shadowed := []int{}
 	for _, outer := range outer {

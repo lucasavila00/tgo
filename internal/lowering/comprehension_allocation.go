@@ -57,7 +57,10 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	switch sourceType.(type) {
 	case *types.Slice, *types.Array:
 	default:
-		return nil
+		sourceKey, element := types.ComprehensionTypes(r.typeOf(loop.X))
+		if sourceKey != nil || element == nil {
+			return nil
+		}
 	}
 	copy := *loop
 	var before []ast.Stmt
@@ -74,7 +77,8 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 		index := r.name()
 		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
 			object := r.source.checked.TypesInfo.Defs[sourceKey]
-			index = ast.NewIdent(r.bindings[object])
+			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.bindings[object]))
+			copy.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
 		} else {
 			copy.Key = index
 			copy.Tok = token.DEFINE

@@ -92,77 +92,117 @@ func main() {
 	}
 	copied := tgo16
 	fmt.Println(copied, source)
-	outer := []int{1, 2}
+	var tgo25 []int = ([]int{4, 5, 6})
+	var tgo22 []int = make([]int, len(tgo25))
 	{
-		var tgo24 []int = (outer)
-		var tgo22 []int = make([]int, len(tgo24))
+		for i_tgo23, x_tgo24 := range tgo25 {
+			var tgo26 int = i_tgo23
+			{
+				var tgo27 int
+				if true {
+					i_tgo23 = 0
+					tgo27 = x_tgo24 + i_tgo23
+				} else {
+					tgo27 = x_tgo24
+				}
+				var tgo28 int = tgo27
+				tgo22[tgo26] = tgo28
+			}
+		}
+	}
+	indices := tgo22
+	fmt.Println(indices)
+	{
+		var tgo29 []int = make([]int, 2)
 		{
-			for tgo25, outer_tgo23 := range tgo24 {
+			for i_tgo30 := range [2]int{} {
+				var tgo31 int = i_tgo30
 				{
-					var tgo26 int = outer_tgo23
-					tgo22[tgo25] = tgo26
+					var tgo32 int
+					if true {
+						i_tgo30 = 10
+						tgo32 = i_tgo30
+					} else {
+						tgo32 = 0
+					}
+					var tgo33 int = tgo32
+					tgo29[tgo31] = tgo33
 				}
 			}
 		}
-		fmt.Println(tgo22)
+		fmt.Println(tgo29)
+	}
+	outer := []int{1, 2}
+	{
+		var tgo36 []int = (outer)
+		var tgo34 []int = make([]int, len(tgo36))
+		{
+			for tgo37, outer_tgo35 := range tgo36 {
+				{
+					var tgo38 int = outer_tgo35
+					tgo34[tgo37] = tgo38
+				}
+			}
+		}
+		fmt.Println(tgo34)
 	}
 	stores := [1][]int{}
 	{
-		var tgo27 int = mark("destination", 0)
-		var tgo28 []int = []int{}
+		var tgo39 int = mark("destination", 0)
+		var tgo40 []int = []int{}
 		{
-			for x_tgo29 := range 2 {
+			for x_tgo41 := range 2 {
 				{
-					var tgo30 int = mark("output", x_tgo29)
-					tgo28 = append(tgo28, tgo30)
+					var tgo42 int = mark("output", x_tgo41)
+					tgo40 = append(tgo40, tgo42)
 				}
 			}
 		}
-		stores[tgo27] = tgo28
+		stores[tgo39] = tgo40
 	}
 	fmt.Println(stores, trace)
 	trace = nil
 	channel := make(chan string, 1)
 	{
-		var tgo34 func(values []int) = func(values []int) { channel <- fmt.Sprint(values) }
-		var tgo31 []int = []int{}
+		var tgo46 func(values []int) = func(values []int) { channel <- fmt.Sprint(values) }
+		var tgo43 []int = []int{}
 		{
-			for x_tgo32 := range 2 {
+			for x_tgo44 := range 2 {
 				{
-					var tgo33 int = mark("go argument", x_tgo32)
-					tgo31 = append(tgo31, tgo33)
+					var tgo45 int = mark("go argument", x_tgo44)
+					tgo43 = append(tgo43, tgo45)
 				}
 			}
 		}
-		go tgo34(tgo31)
+		go tgo46(tgo43)
 	}
 	fmt.Println(<-channel, trace)
 	trace = nil
 	ready := make(chan int, 1)
 	ready <- 7
 	{
-		var tgo35 []chan int = []chan int{}
+		var tgo47 []chan int = []chan int{}
 
 		{
 			for range 1 {
 				{
-					var tgo36 chan int
+					var tgo48 chan int
 					if true {
 						trace = append(trace, "select operand")
-						tgo36 = ready
+						tgo48 = ready
 					} else {
-						tgo36 = nil
+						tgo48 = nil
 					}
-					var tgo37 chan int = tgo36
-					tgo35 = append(tgo35, tgo37)
+					var tgo49 chan int = tgo48
+					tgo47 = append(tgo47, tgo49)
 				}
 			}
 		}
-		var tgo38 chan int = (tgo35)[0]
-		var tgo39 int
+		var tgo50 chan int = (tgo47)[0]
+		var tgo51 int
 		select {
-		case tgo39 = <-tgo38:
-			value := tgo39
+		case tgo51 = <-tgo50:
+			value := tgo51
 			fmt.Println(value, trace)
 		}
 	}

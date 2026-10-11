@@ -27,7 +27,10 @@ func main() {
 	fmt.Println(retained, mapping)
 	copied := []int{if x == 1 {source[1] = 9; x} else {x} for _, x := range source}
 	fmt.Println(copied, source)
-	outer := []int{1, 2}
+	indices := []int{if true {i = 0; x + i} else {x} for i, x := range []int{4, 5, 6}}
+    fmt.Println(indices)
+    fmt.Println([]int{if true {i = 10; i} else {0} for i := range [2]int{}})
+    outer := []int{1, 2}
 	fmt.Println([]int{outer for _, outer := range outer})
 	stores := [1][]int{}
 	stores[mark("destination", 0)] = []int{mark("output", x) for x := range 2}
