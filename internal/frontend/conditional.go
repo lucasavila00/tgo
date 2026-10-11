@@ -46,7 +46,7 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool, conditionals map[string]token.Position) error {
 	end := conditionalEnd(filename, s.text, start, sourceTokens(s.text))
 	if end < 0 {
-		return fmt.Errorf("%s: invalid if expression", original.Position(original.Pos(s.offsets[start])))
+		return fmt.Errorf("%s: invalid conditional expression", original.Position(original.Pos(s.offsets[start])))
 	}
 	name := ""
 	for n := 1; ; n++ {

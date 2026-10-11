@@ -22,12 +22,13 @@
  	// Context is the context used for resolving global identifiers. If nil, the
  	// type checker will initialize this field with a newly created context.
  	Context *Context
-@@ -200,6 +203,13 @@
+@@ -200,6 +203,14 @@
  // If the package has type errors, the collected information may
  // be incomplete.
  type Info struct {
 +	// TGoBranches records whether each conditional branch can reach its end.
 +	TGoBranches map[*ast.BlockStmt]bool
++	// TGoCases records whether each value switch case can reach its end.
 +	TGoCases map[*ast.CaseClause]bool
 +
 +	// TGoReturnBlocks marks function bodies that need one final generated return.
@@ -112,6 +113,19 @@
  		nargs = len(args)
  		for _, a := range args {
  			if !a.isValid() {
+@@ -681,10 +681,8 @@
+ 
+ 	case _Panic:
+ 		// panic(x)
+-		// record panic call if inside a function with result parameters
+-		// (for use in Checker.isTerminating)
+-		if check.sig != nil && check.sig.results.Len() > 0 {
+-			// function has result parameters
++		// Record panic calls for return and TGo completion checks.
++		if check.conf.TGo != nil || check.sig != nil && check.sig.results.Len() > 0 {
+ 			p := check.isPanic
+ 			if p == nil {
+ 				// allocate lazily
 --- a/types/call.go
 +++ b/types/call.go
 @@ -7,9 +7,9 @@
@@ -186,7 +200,7 @@
  
 --- a/types/check.go
 +++ b/types/check.go
-@@ -8,10 +8,10 @@ package types
+@@ -8,10 +8,10 @@
  
  import (
  	"fmt"
@@ -198,7 +212,7 @@
  	"os"
  )
  
-@@ -36,6 +36,8 @@ type exprInfo struct {
+@@ -36,6 +36,8 @@
  // An environment represents the environment within which an object is
  // type-checked.
  type environment struct {
@@ -207,7 +221,7 @@
  	decl          *declInfo              // package-level declaration whose init expression/function body is checked
  	scope         *Scope                 // top-most scope for lookups
  	version       goVersion              // current accepted language version; changes across files
-@@ -116,6 +118,14 @@ type actionDesc struct {
+@@ -116,6 +118,14 @@
  // A Checker maintains the state of the type checker.
  // It must be created with [NewChecker].
  type Checker struct {
@@ -704,7 +718,7 @@
  	"slices"
  )
  
-@@ -45,7 +45,7 @@ func (check *Checker) funcBody(decl *declInfo, name string, sig *Signature, body
+@@ -45,7 +45,7 @@
  		check.labels(body)
  	}
  
@@ -713,7 +727,7 @@
  		check.error(atPos(body.Rbrace), MissingReturn, "missing return")
  	}
  
-@@ -409,6 +409,10 @@ L:
+@@ -409,6 +409,10 @@
  
  // stmt typechecks statement s.
  func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
@@ -724,7 +738,7 @@
  	// statements must end with the same top scope as they started with
  	if debug {
  		defer func(scope *Scope) {
-@@ -464,11 +468,16 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -464,11 +468,16 @@
  	case *ast.SendStmt:
  		var ch, val operand
  		check.expr(nil, &ch, s.Chan)
@@ -742,7 +756,7 @@
  			check.assignment(&val, elem, "send")
  		}
  
-@@ -538,9 +547,17 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -538,9 +547,17 @@
  		check.suspendedCall("go", s.Call)
  
  	case *ast.DeferStmt:
@@ -760,7 +774,7 @@
  		res := check.sig.results
  		// Return with implicit results allowed for function with named results.
  		// (If one is named, all are named.)
-@@ -606,7 +623,9 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -606,7 +623,9 @@
  		check.openScope(s, "if")
  		defer check.closeScope()
  
@@ -771,9 +785,12 @@
  		var x operand
  		check.expr(nil, &x, s.Cond)
  		if x.isValid() && !allBoolean(x.typ()) {
-@@ -629,7 +648,10 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -629,7 +648,13 @@
  		check.openScope(s, "switch")
  		defer check.closeScope()
++		if check.sig == nil && len(check.conditionalCases) > 0 {
++			defer check.usage(check.scope)
++		}
  
 -		check.simpleStmt(s.Init)
 +		if s.Init != nil {
@@ -783,7 +800,7 @@
  		var x operand
  		if s.Tag != nil {
  			check.expr(nil, &x, s.Tag)
-@@ -658,6 +680,11 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -658,6 +680,11 @@
  				check.error(c, InvalidSyntaxTree, "incorrect expression switch case")
  				continue
  			}
@@ -795,7 +812,7 @@
  			check.caseValues(&x, clause.List, seen)
  			check.openScope(clause, "case")
  			inner := inner
-@@ -666,7 +693,11 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -666,7 +693,11 @@
  			} else {
  				inner |= finalSwitchCase
  			}
@@ -808,9 +825,12 @@
  			check.closeScope()
  		}
  
-@@ -675,7 +706,10 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -675,7 +706,13 @@
  		check.openScope(s, "type switch")
  		defer check.closeScope()
++		if check.sig == nil && len(check.conditionalCases) > 0 {
++			defer check.usage(check.scope)
++		}
  
 -		check.simpleStmt(s.Init)
 +		if s.Init != nil {
@@ -820,7 +840,7 @@
  
  		// A type switch guard must be of the form:
  		//
-@@ -762,7 +796,11 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -762,7 +796,11 @@
  				// Collect them for later analysis.
  				lhsVars = append(lhsVars, obj)
  			}
@@ -833,20 +853,7 @@
  			check.closeScope()
  		}
  
-@@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
- 			if clause.Comm != nil {
- 				check.stmt(inner, clause.Comm)
- 			}
--			check.stmtList(inner, clause.Body)
-+			if branch := check.conditionalCases[clause]; branch != nil {
-+				branch.values = check.conditionalCase(clause, branch.context)
-+			} else {
-+				check.stmtList(inner, clause.Body)
-+			}
- 			check.closeScope()
- 		}
- 
-@@ -833,7 +875,10 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -833,7 +871,10 @@
  		check.openScope(s, "for")
  		defer check.closeScope()
  
@@ -858,7 +865,7 @@
  		if s.Cond != nil {
  			var x operand
  			check.expr(nil, &x, s.Cond)
-@@ -841,7 +886,9 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -841,7 +882,9 @@
  				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
  			}
  		}
@@ -869,7 +876,7 @@
  		// spec: "The init statement may be a short variable
  		// declaration, but the post statement must not."
  		if s, _ := s.Post.(*ast.AssignStmt); s != nil && s.Tok == token.DEFINE {
-@@ -855,6 +902,7 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
+@@ -855,6 +898,7 @@
  
  	case *ast.RangeStmt:
  		inner |= breakOk | continueOk

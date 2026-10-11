@@ -194,7 +194,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	}
 	if context != nil {
 		for _, branch := range values {
-			check.assignment(branch, context, "if expression branch")
+			check.assignment(branch, context, "conditional expression branch")
 			if !branch.isValid() {
 				return expression
 			}
@@ -209,7 +209,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 			continue
 		}
 		if typ != nil && !Identical(typ, candidate) {
-			check.error(call, IncompatibleAssign, "if branch types differ; add an explicit type annotation")
+			check.error(call, IncompatibleAssign, "conditional branch types differ; add an explicit type annotation")
 			return expression
 		}
 		typ = candidate
@@ -243,7 +243,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 		}
 	}
 	if typ == nil {
-		check.error(call, IncompatibleAssign, "if result type is unknown; add an explicit type annotation")
+		check.error(call, IncompatibleAssign, "conditional result type is unknown; add an explicit type annotation")
 		return expression
 	}
 	x.mode_, x.typ_ = value, typ
@@ -252,7 +252,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 
 func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
 	for _, branch := range check.conditionalValues[call] {
-		check.assignment(branch, typ, "if expression branch")
+		check.assignment(branch, typ, "conditional expression branch")
 	}
 }
 
@@ -288,11 +288,11 @@ func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) [
 }
 
 func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*operand {
-	check.openScope(body, "if expression branch")
+	check.openScope(body, "conditional expression branch")
 	defer check.closeScope()
 	list := trimTrailingEmptyStmts(body.List)
 	if len(list) == 0 {
-		check.error(body, InvalidSyntaxTree, "if expression branch requires a final value")
+		check.error(body, InvalidSyntaxTree, "conditional expression branch requires a final value")
 		return []*operand{{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]}}
 	}
 	check.stmtList(check.statementContext, list[:len(list)-1])
@@ -339,14 +339,14 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 	}
 	if statement, ok := last.(*ast.ExprStmt); ok {
 		branch := new(operand)
-		check.rawExpr(newTarget(context, "if expression branch"), branch, statement.X, nil, false)
+		check.rawExpr(newTarget(context, "conditional expression branch"), branch, statement.X, nil, false)
 		check.exclude(branch, 1<<builtin|1<<typexpr)
 		if branch.mode() == novalue && check.isTerminating(statement, "") {
 			return nil
 		}
 		check.singleValue(branch)
 		if branch.mode() == novalue && reachable {
-			check.error(statement, InvalidSyntaxTree, "if expression branch requires one value")
+			check.error(statement, InvalidSyntaxTree, "conditional expression branch requires one value")
 			branch.invalidate()
 		}
 		return []*operand{branch}
@@ -358,7 +358,7 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 	if branch, ok := last.(*ast.BranchStmt); ok && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {
 		return nil
 	}
-	check.error(last, InvalidSyntaxTree, "if expression branch requires a final value")
+	check.error(last, InvalidSyntaxTree, "conditional expression branch requires a final value")
 	return []*operand{{expr: &ast.BadExpr{From: last.Pos()}, typ_: Typ[Invalid]}}
 }
 
@@ -633,6 +633,7 @@ func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*
 	if !hasDefault {
 		check.error(statement, InvalidSyntaxTree, "switch expression requires default")
 	}
+	ast.Walk(valueSwitchBreakVisitor{check: check, depth: -1}, statement)
 	check.stmt(check.statementContext, statement)
 	var values []*operand
 	for _, statement := range body.List {
@@ -659,4 +660,28 @@ func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*o
 		check.TGoCases[clause] = check.TGoBranches[body]
 	}
 	return values
+}
+
+type valueSwitchBreakVisitor struct {
+	check *Checker
+	depth int
+}
+
+func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
+	switch node := node.(type) {
+	case nil, *ast.FuncLit:
+		return nil
+	case *ast.CallExpr:
+		if body := visitor.check.operationStatements(node); body != nil {
+			ast.Walk(visitor, body)
+			return nil
+		}
+	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
+		visitor.depth++
+	case *ast.BranchStmt:
+		if node.Tok == token.BREAK && node.Label == nil && visitor.depth == 0 {
+			visitor.check.error(node, InvalidSyntaxTree, "break cannot target a switch expression")
+		}
+	}
+	return visitor
 }

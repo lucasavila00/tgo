@@ -1,0 +1,34 @@
+package main
+
+import "fmt"
+
+type small int8
+func pick[T any](x,y T) T {return x}
+func identity[T any](x T) T {return x}
+func use[T any](x T, fn func(int) int) int {return fn(6)}
+func exits(n int) int {var x int = switch n {case 0: return 10; default: return 20}; return x}
+
+func main() {
+	var n small = switch 1 {case 1: 127; default: 0}
+	fmt.Println(n, n+1)
+	var p *int = switch 1 {case 1: nil; default: nil}
+	fmt.Println(p==nil)
+	var a any = switch 1 {case 1: "text"; default: 3}
+	fmt.Println(a)
+	fmt.Println(pick(switch 1 {case 1: 4; default: "text"},any(5)))
+	fmt.Println(use(1, switch 1 {case 1: identity; default: identity}))
+	fmt.Println(exits(0),exits(1))
+	fmt.Println(switch 1 {case 1: switch 2 {case 2: 7; default: 8}; default: 9})
+	fmt.Println(if true {switch 2 {case 2: 8; default: 9}} else {10})
+	xs:=[]int{0,0}
+	xs[switch 1 {case 1: 0; default: 1}], xs[1] = switch 1 {case 1: 11;default: 0}, switch 1 {case 1: 12; default: 0}
+	fmt.Println(xs)
+	ch:=make(chan int,1)
+	select {case ch <- switch 1 {case 1: 13; default: 0}:}
+	fmt.Println(<-ch)
+	i:=0
+	for range switch 1 {case 1: []int{1,2}; default: nil} {i++}
+	fmt.Println(i)
+	switch 1 {case 1: fmt.Print("ordinary "); fallthrough; default: fmt.Println("fallthrough")}
+	for {switch 1 {case 1: break}; fmt.Println("ordinary break");break}
+}

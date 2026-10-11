@@ -84,7 +84,7 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
-			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
+			return nil, fmt.Errorf("%s: conditional expression was not lowered", s.checked.Fset.Position(call.Pos()))
 		}
 	}
 	return output, nil

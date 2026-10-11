@@ -261,15 +261,18 @@ func TestSwitchExpressionErrors(t *testing.T) {
 	for _, test := range []struct{ source, message string }{
 		{`func f(n int) { _=switch n {case 1: 2} }`, "requires default"},
 		{`func f(n int) { _=switch n {case 1: ; default: 2} }`, "final value"},
-		{`func f(n int) { _=switch n {case 1: break; default: 2} }`, "break not in"},
-		{`func f(n int) { for { _=switch n {case 1: break; default: 2} } }`, "break not in"},
+		{`func f(n int) { _=switch n {case 1: break; default: 2} }`, "break cannot target"},
+		{`func f(n int) { for { _=switch n {case 1: break; default: 2} } }`, "break cannot target"},
 		{`func f(n int) { _=switch n {case 1: fallthrough; default: 2} }`, "fallthrough"},
+		{`func f(n int) { _=switch if n>0 {break} else {1} {case 1: 2; default: 3} }`, "break cannot target"},
+		{`func f(n int) { _=switch n {case if n>0 {break} else {1}: 2; default: 3} }`, "break cannot target"},
 		{`func f(n int) { _=switch n {case 1: 2; case 1: 3; default: 4} }`, "duplicate case"},
 		{`func f(n int) { _=switch n {case 1: 2; default: "three"} }`, "explicit type annotation"},
 		{`func f(n int) { const x=switch n {case 1: 2; default: 3}; _=x }`, "not constant"},
 		{`func f(n int) { _=switch x:=n; x {case 1: x; default: 2}; _=x }`, "undefined: x"},
 		{`func pair()(int,int){return 1,2}; func f(n int) { _=switch n {case 1: pair(); default: 2} }`, "multiple-value"},
 		{`func f(n int) int8 { return switch n {case 1: 128; default: 0} }`, "overflows"},
+		{`var x=switch 1 {case 1:unused:=1;2;default:3}`, "declared and not used"},
 	} {
 		t.Run(test.source, func(t *testing.T) {
 			_, err := checkTGo(t, test.source)
