@@ -30,12 +30,14 @@ infer a new interface or convert between unrelated named types. Branches that
 cannot complete do not contribute a result type.
 
 The expression produces one result. An ordinary block is not an expression.
-The result need not be a compile-time constant, even when its branches contain
-constants. If no branch can complete, use the surrounding expected type;
+An `if` expression is not a Go constant, even when its branches contain
+constants. Reject it where Go requires a constant, including `const` declarations
+and array lengths. If no branch can complete, use the surrounding expected type;
 without one, require an explicit conversion.
 
-This decision restores the `if` part of the language proposal from
-[commit 4578415](https://github.com/lucasavila00/tgo/blob/4578415333b40c0395b99ae1e7399f601cda06e6/docs/adr/value-producing-control-flow.md)
-and makes its type rule explicit.
+The design follows [Kotlin conditional expressions](https://kotlinlang.org/docs/control-flow.html),
+where `if` and `when` produce values. This ADR covers `if`; the second phase
+covers the switch-like construct. Only these conditional constructs produce
+branch values. Do not add general block expressions.
 
 [HOW](how.md) defines implementation. [PROOF](proof.md) defines checks.

@@ -2,7 +2,7 @@
 
 Add table-driven integration fixtures under
 `tests/testdata/value-expressions/`. Each directory contains `input.tgo`,
-`output.go` (the reviewed generated-code snapshot), handwritten `reference.go`,
+`input_tgo.go` (the reviewed generated-code snapshot), handwritten `reference.go`,
 and `expect.json` (results, ordered effects, and expected errors).
 
 | Directory | Required cases |
@@ -10,14 +10,15 @@ and `expect.json` (results, ordered effects, and expected errors).
 | `if` | Both branches, nested `else if`, initializer scope |
 | `ordering` | Calls, operators, literals, assignment targets, skipped `&&`/`||` |
 | `branches` | Local bindings, shadowing, final calls, nested expressions |
+| `initialization` | Package dependencies, declaration order, selected effects |
 | `types` | Named types, interfaces, constants, nil, generics, contextual types |
 | `control` | Return, panic, all branches terminate, loop continue, labels, goto, enclosing break |
 | `errors` | `!` wrapping, `!!` identity, skipped branches, deferred calls |
-| `invalid` | Missing else/value, mixed types, tuple result |
+| `invalid` | Missing else/value, mixed types, tuple result, constant-only context |
 | `statements` | Unchanged ordinary Go if behavior |
 
 `TestValueExpressions` loops over every directory. It compiles the TGo source,
-formats the result, and compares it with `output.go`. Compile and run the
+formats the result, and compares it with `input_tgo.go`. Compile and run the
 result and the handwritten Go reference in separate test modules. Require the
 same output, side-effect trace, panic, and defer order. For error identity,
 assert equality with the source sentinel inside each program.
