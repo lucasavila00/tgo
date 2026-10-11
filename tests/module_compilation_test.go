@@ -20,8 +20,26 @@ func TestCompileFromSubdirectory(t *testing.T) {
 	})
 	root := filepath.Join(base, "source")
 	input := map[string][]byte{
-		"go.mod":                 []byte("module example.com/source\n\ngo 1.27.1\n\nrequire example.com/dependency v0.0.0\nreplace example.com/dependency => ../dependency\n"),
-		"cmd/app/main.tgo":       []byte("package main\nimport (\"fmt\"; \"example.com/dependency\")\nfunc run() error { fmt.Println(dependency.Value()!); return nil }\nfunc main() { if err := run(); err != nil { panic(err) } }\n"),
+		"go.mod": []byte("module example.com/source\n\ngo 1.27.1\n\nrequire example.com/dependency v0.0.0\nreplace example.com/dependency => ../dependency\n"),
+		"cmd/app/main.tgo": []byte(`package main
+
+import (
+	"fmt"
+
+	"example.com/dependency"
+)
+
+func run() error {
+	fmt.Println(dependency.Value()!)
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		panic(err)
+	}
+}
+`),
 		"cmd/app/main_tgo.go":    []byte("invalid stale generated file"),
 		"asset.txt":              []byte("keep this file\n"),
 		".git/ignored.txt":       []byte("not module output"),
