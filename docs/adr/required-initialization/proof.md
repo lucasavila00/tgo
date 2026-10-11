@@ -11,19 +11,22 @@ where output text cannot prove behavior.
 | `bindings.tgo` | Parameters, receivers, range, select, type switch |
 | `literals.tgo` | Complete/missing fields; embedding; nested values; aliases |
 | `collections.tgo` | Array/slice gaps, inferred length, empty values, maps |
-| `results.tgo` | Named results, explicit/bare returns, partial field stores |
-| `branches.tgo` | Both/one branch assigns; terminating branch; switches |
-| `loops.tgo` | Zero iterations, continue/post, break, labels, goto |
-| `closures.tgo` | Capture/address before assignment; deferred reads/writes |
+| `results.tgo` | Reject named/blank results in declarations, literals, types |
+| `returns.tgo` | Explicit results; reject bare value returns; allow void returns |
+| `closures.tgo` | Initialized captures; deferred local and reference changes |
 | `generics.tgo` | Generic results, constrained literals, explicit allocation |
 | `interop.tgo` | Imported private fields, factory calls, zero-valued Go calls |
 | `errors.tgo` | Failure commas, propagation, checked failure values |
 
-Verify that named results do not obtain assignment from a loop's later
-iteration, an unreachable store, a called helper, or a closure body. Include
-select receive assignment and switch fallthrough. Verify that explicit return
-values become visible to a previously registered defer and that the defer can
-change the returned values. Initialize captured results before registration.
+Reject named results in function aliases, nested function types, and interface
+methods as well as executable functions. Reject initializer-free locals even
+when every branch assigns them before use. Accept calls to imported Go
+functions with named results and assignments to unnamed function types.
+
+Verify that return expressions run before deferred calls. A deferred closure
+can change an initialized local, but that change does not replace a returned
+scalar value. A returned pointer can expose a deferred change to its pointee.
+Include result-free bare returns and failure commas with unnamed results.
 
 For valid cases, compare side-effect traces with handwritten Go references:
 initializer order, tuple assignment, keyed literal evaluation, panic timing,

@@ -7,9 +7,8 @@ initializer for every local and package `var` declaration, including grouped
 and blank declarations. Keep `:=`, parameters, receivers, range bindings,
 select receives, and type-switch bindings: their operations supply values.
 
-Choose declaration-time initialization for locals. Do not allow a local
-`var x T` followed by assignments, even if all paths assign before use. This
-keeps each local declaration complete and limits flow analysis to named results.
+Require declaration-time initialization for locals. Reject `var x T` even if
+later assignments cover all paths. No definite-assignment analysis is needed.
 
 ```text
 var count int          // Invalid.
@@ -24,10 +23,17 @@ maps remain valid. Map literals need only their stated entries. Nested literals
 follow these rules. Imported structs with inaccessible fields require a factory
 call; a partial exported-field literal is invalid.
 
-Keep named results, but treat them as uninitialized at function entry. Every
-read and bare return must follow assignment on all incoming paths. An explicit
-return assigns its results before deferred calls. A closure cannot capture an
-uninitialized result; deferred assignment does not satisfy a bare return.
+Forbid named results in all TGo-authored function declarations, function
+literals, and function type signatures, including interface methods. Reject
+blank result names too. Returns from functions with results must supply their
+values; a result-free function can use `return`. Keep failure-return commas as
+explicit failure syntax. Imported Go signatures can have result names: these
+are not TGo source declarations and do not restrict calls or assignments.
+
+Deferred closures can read or change explicitly initialized locals. Return
+expressions evaluate before deferred calls; a later local assignment does not
+replace an already returned value. Reference values retain normal Go behavior.
+Consider named results later together with deferred local initialization.
 
 Keep `new(T)`, `new(expression)`, and `make`: these explicitly request Go
 allocation. `make([]T, n)` explicitly requests zero-filled elements; capacity
@@ -39,11 +45,9 @@ Keep failure-return commas and `!` / `!!`: omitted non-error results become
 typed zeros, including generic results. These failure values preserve the Go
 error API; they do not establish a checked value's invariant.
 
-Tradeoff: complete literals increase review detail and prevent accidental
-omissions, but reduce compatibility with Go literals and field additions.
-Explicit allocation retains Go APIs and generic zero construction. A ban on
-all zero production would also require new collection, error, and interop
-semantics. This proposal does not make that change.
+Tradeoff: complete literals prevent omissions but reduce Go compatibility.
+Explicit allocation retains zero production. A complete zero-value ban would
+also change collection, error, and interop semantics.
 
 Approval must settle the explicit-allocation exception and complete-literal
 rule. Neither is assumed to be an accepted language rule.

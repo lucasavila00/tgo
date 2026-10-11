@@ -17,24 +17,24 @@ Require distinct supplied indices to cover that length. An empty slice has
 length zero. For a type parameter, use the underlying literal type required
 by Go; apply the same rule. Do not inspect map keys for completeness.
 
-Build a control-flow graph for each source function. Track one assignment bit
-per named result. Entry starts with no bits. Merge reachable predecessors by
-intersection; iterate loops to a fixed point. An assignment sets a bit only
-after its RHS evaluates. Compound assignments and increments first read their
-target. Reads, addresses, and closure captures require the bit. Field or index
-stores do not initialize an entire result. Explicit returns assign all results;
-bare returns require all bits.
+Inspect each source `go/ast.FuncType.Results` field list. Reject any result
+field with a nonempty `Names` list, including `_`. This covers declarations,
+function literals, nested function types, aliases, and interface methods.
+Report the error at the source result name. Check source syntax, not names in
+an imported `go/types.Signature`; imported Go functions remain callable and
+assignable to unnamed TGo function types.
 
-Include switch fallthrough, select alternatives, labeled jumps, loop post
-statements, and goto edges. A loop can execute zero times. A switch without a
-default and a select default have their normal paths. A terminating path does
-not enter a later merge. Do not infer assignment from called functions or
-closure bodies. Thus captured result storage must be initialized before a
-closure is created, even when a programmer knows a later call order.
+For functions with results, require explicit return operands or the existing
+failure-return syntax. Keep `return` in result-free functions. Let Go check
+return arity, types, and missing returns. Do not build a control-flow graph or
+track assignment state for this rule. Local declarations must have initializers
+regardless of later assignments.
 
-Emit normal Go after checks. Preserve named-result storage and Go defer timing.
-Keep generated typed zeros for failure returns and propagation. Do not add
-runtime state, constructors, collection wrappers, or interop guards.
+Emit normal Go after checks. Preserve return-expression evaluation before
+normal deferred calls. Deferred closures can capture explicitly initialized
+locals; no new capture restriction is needed. Keep generated typed zeros for
+failure returns and propagation. Do not add runtime state, constructors,
+collection wrappers, or interop guards.
 
 The [Go specification][go] defines the retained behavior. Prior decisions on
 [checked fields][checked] and [failure returns][returns] provide context; their
