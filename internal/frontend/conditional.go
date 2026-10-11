@@ -61,16 +61,41 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 			break
 		}
 	}
+	source := prepareSource(sourceName, input, used, result.Propagations)
+	for {
+		temporary := token.NewFileSet()
+		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
+		if err == nil {
+			return result.finish(fset, file, temporary.File(file.Pos()), original, source.offsets), nil
+		}
+		errors, ok := err.(scanner.ErrorList)
+		if !ok {
+			return nil, err
+		}
+		start := conditionalStart(file, temporary, source.text, errors)
+		if start < 0 {
+			for _, diagnostic := range errors {
+				diagnostic.Pos = original.Position(original.Pos(source.offsets[diagnostic.Pos.Offset]))
+			}
+			return nil, errors
+		}
+		if err := source.wrapConditional(filename, original, start, used, result.Conditionals); err != nil {
+			return nil, err
+		}
+	}
+}
+
+func prepareSource(sourceName string, input []byte, used map[string]bool, propagations map[string]Marker) mappedSource {
 	source := originalSource(input)
 	// Postfix comments let Go parse the surrounding expression. Build the same
 	// replacement as MarkPostfix while retaining every original byte offset.
-	MarkPostfix(sourceName, input, used, result.Propagations)
+	MarkPostfix(sourceName, input, used, propagations)
 	// Find edits in source order; MarkPostfix reserves names in scan order.
 	var edits []struct {
 		start, end int
 		name       string
 	}
-	for name, op := range result.Propagations {
+	for name, op := range propagations {
 		end := op.Position.Offset + 1
 		if end < len(input) && input[end] == '!' {
 			end++
@@ -92,100 +117,96 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 		source.replace(edit.start, edit.end, text, insertedOffsets(len(text), edit.start))
 		edits = append(edits[:index], edits[index+1:]...)
 	}
-	for {
-		temporary := token.NewFileSet()
-		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
-		if err == nil {
-			mapPositions(file, temporary.File(file.Pos()), original, source.offsets, make(map[ast.Node]bool))
-			result.File = file
-			for expression, operation := range MarkerExpressions(fset, file, result.Propagations) {
-				result.Propagations[operation.Name] = operation
-				WrapMarker(file, expression, operation)
-			}
-			ast.Inspect(file, func(node ast.Node) bool {
-				if call, ok := node.(*ast.CallExpr); ok {
-					if id, ok := call.Fun.(*ast.Ident); ok {
-						if op, found := result.Propagations[id.Name]; found {
-							width := 1
-							if op.Wrap {
-								width++
-							}
-							call.Rparen = original.Pos(op.Position.Offset + width - 1)
-						}
-					}
-				}
-				return true
-			})
-			return result, nil
-		}
-		errors, ok := err.(scanner.ErrorList)
-		if !ok {
-			return nil, err
-		}
-		candidates := expressionIfTokens(source.text)
-		start := -1
-		for _, diagnostic := range errors {
-			if diagnostic.Msg == "expected operand, found 'if'" && candidates[diagnostic.Pos.Offset] && diagnostic.Pos.Offset > start {
-				start = diagnostic.Pos.Offset
-			}
-		}
-		var parents []ast.Node
-		ast.Inspect(file, func(node ast.Node) bool {
-			if node == nil {
-				parents = parents[:len(parents)-1]
-				return false
-			}
-			if bad, ok := node.(*ast.BadExpr); ok {
-				offset := temporary.Position(bad.Pos()).Offset
-				syntaxOperand := false
-				switch parents[len(parents)-1].(type) {
-				case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr:
-					syntaxOperand = true
-				}
-				if offset+2 <= len(source.text) && source.text[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
-					start = offset
-				}
-			}
-			parents = append(parents, node)
-			return true
-		})
-		if start < 0 {
-			for _, diagnostic := range errors {
-				diagnostic.Pos = original.Position(original.Pos(source.offsets[diagnostic.Pos.Offset]))
-			}
-			return nil, errors
-		}
-		const prefix = "package p; func f() { "
-		statementSet := token.NewFileSet()
-		statementFile, _ := parser.ParseFile(statementSet, filename, prefix+source.text[start:]+"\n}", parser.AllErrors|parser.SkipObjectResolution)
-		var conditional *ast.IfStmt
-		if statementFile != nil && len(statementFile.Decls) != 0 {
-			if fn, ok := statementFile.Decls[0].(*ast.FuncDecl); ok && fn.Body != nil && len(fn.Body.List) != 0 {
-				conditional, _ = fn.Body.List[0].(*ast.IfStmt)
-			}
-		}
-		if conditional == nil || conditional.Body == nil || !conditional.Body.Rbrace.IsValid() {
-			return nil, fmt.Errorf("%s: invalid if expression", original.Position(original.Pos(source.offsets[start])))
-		}
-		end := start + statementSet.Position(conditional.End()).Offset - len(prefix)
-		if end <= start || end > len(source.text) {
-			return nil, fmt.Errorf("%s: incomplete if expression", original.Position(original.Pos(source.offsets[start])))
-		}
-		name := ""
-		for n := 1; ; n++ {
-			name = fmt.Sprintf("tgoConditional%d", n)
-			if !used[name] {
-				used[name] = true
-				break
-			}
-		}
-		result.Conditionals[name] = original.Position(original.Pos(source.offsets[start]))
-		before, after := name+"(func(){", "})"
-		offsets := insertedOffsets(len(before), source.offsets[start])
-		offsets = append(offsets, source.offsets[start:end]...)
-		offsets = append(offsets, insertedOffsets(len(after), source.offsets[end-1])...)
-		source.replace(start, end, before+source.text[start:end]+after, offsets)
+	return source
+}
+
+func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File, offsets []int) *Parsed {
+	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
+	result.File = file
+	for expression, operation := range MarkerExpressions(fset, file, result.Propagations) {
+		result.Propagations[operation.Name] = operation
+		WrapMarker(file, expression, operation)
 	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				if op, found := result.Propagations[id.Name]; found {
+					width := 1
+					if op.Wrap {
+						width++
+					}
+					call.Rparen = original.Pos(op.Position.Offset + width - 1)
+				}
+			}
+		}
+		return true
+	})
+	return result
+}
+
+func conditionalStart(file *ast.File, temporary *token.FileSet, source string, errors scanner.ErrorList) int {
+	candidates := expressionIfTokens(source)
+	start := -1
+	for _, diagnostic := range errors {
+		if diagnostic.Msg == "expected operand, found 'if'" && candidates[diagnostic.Pos.Offset] && diagnostic.Pos.Offset > start {
+			start = diagnostic.Pos.Offset
+		}
+	}
+	var parents []ast.Node
+	ast.Inspect(file, func(node ast.Node) bool {
+		if node == nil {
+			parents = parents[:len(parents)-1]
+			return false
+		}
+		if bad, ok := node.(*ast.BadExpr); ok {
+			offset := temporary.Position(bad.Pos()).Offset
+			syntaxOperand := false
+			switch parents[len(parents)-1].(type) {
+			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr:
+				syntaxOperand = true
+			}
+			if offset+2 <= len(source) && source[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
+				start = offset
+			}
+		}
+		parents = append(parents, node)
+		return true
+	})
+	return start
+}
+
+func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool, conditionals map[string]token.Position) error {
+	const prefix = "package p; func f() { "
+	statementSet := token.NewFileSet()
+	statementFile, _ := parser.ParseFile(statementSet, filename, prefix+s.text[start:]+"\n}", parser.AllErrors|parser.SkipObjectResolution)
+	var conditional *ast.IfStmt
+	if statementFile != nil && len(statementFile.Decls) != 0 {
+		if fn, ok := statementFile.Decls[0].(*ast.FuncDecl); ok && fn.Body != nil && len(fn.Body.List) != 0 {
+			conditional, _ = fn.Body.List[0].(*ast.IfStmt)
+		}
+	}
+	if conditional == nil || conditional.Body == nil || !conditional.Body.Rbrace.IsValid() {
+		return fmt.Errorf("%s: invalid if expression", original.Position(original.Pos(s.offsets[start])))
+	}
+	end := start + statementSet.Position(conditional.End()).Offset - len(prefix)
+	if end <= start || end > len(s.text) {
+		return fmt.Errorf("%s: incomplete if expression", original.Position(original.Pos(s.offsets[start])))
+	}
+	name := ""
+	for n := 1; ; n++ {
+		name = fmt.Sprintf("tgoConditional%d", n)
+		if !used[name] {
+			used[name] = true
+			break
+		}
+	}
+	conditionals[name] = original.Position(original.Pos(s.offsets[start]))
+	before, after := name+"(func(){", "})"
+	offsets := insertedOffsets(len(before), s.offsets[start])
+	offsets = append(offsets, s.offsets[start:end]...)
+	offsets = append(offsets, insertedOffsets(len(after), s.offsets[end-1])...)
+	s.replace(start, end, before+s.text[start:end]+after, offsets)
+	return nil
 }
 
 // expressionIfTokens distinguishes operand tokens from ordinary if statements.
