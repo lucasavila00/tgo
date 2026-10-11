@@ -34,3 +34,5 @@ lengths.
 
 Follow [Kotlin](https://kotlinlang.org/docs/control-flow.html): conditional expressions produce values. This decision covers
 `if`; switch has a separate issue. Ordinary blocks are not expressions.
+
+[Modernization](../modernization/what.md) defines the Go upgrade path.
