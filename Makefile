@@ -1,5 +1,5 @@
 GOMARKDOC = go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0
-DOC_PACKAGES = ./cmd/tgo ./pkg/transpiler ./internal/driver ./internal/frontend ./internal/lowering
+DOC_PACKAGES = ./cmd/tgo ./pkg/transpiler ./internal/driver ./internal/checker ./internal/frontend ./internal/lowering
 
 .PHONY: prepare docs docs-check lint
 

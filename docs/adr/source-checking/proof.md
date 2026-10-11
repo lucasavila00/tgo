@@ -41,7 +41,6 @@ remain separate packages. Do not set an unmeasured speed target.
 
 Rebuild private upstream source from the pinned version and patches. Check
 ordinary Go acceptance and rejection cases as well as TGo feature cases after
-a version update. Run focused local checks for changed compiler code. Push the
-branch and use GitHub Actions for the full compiler suite.
+a version update.
 
 [WHAT](what.md) records the decision. [HOW](how.md) defines its implementation.

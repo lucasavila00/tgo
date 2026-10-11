@@ -1,4 +1,18 @@
-// Package checker owns source checking with TGo expression rules.
+// Package checker checks TGo source before lowering.
+//
+// A propagation expression has the call's success types. The checker must know
+// those types while it checks outer calls, assignments, and returns. This avoids
+// rewriting files and loading packages for each operator.
+//
+// The loader checks module dependencies first and caches each package identity.
+// Test variants keep separate identities. External dependencies use compiled
+// exports read with the same private Go types as the source checker.
+//
+// Stock Go objects remain in the public Load API. Private checking uses separate
+// objects with the same ordinary syntax. Lowering uses only the private objects.
+// Go checks the emitted module after all source packages have passed checking.
+//
+// Run make prepare to generate the pinned Go sources from the tracked patch.
 package checker
 
 import (

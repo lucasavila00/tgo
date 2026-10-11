@@ -526,7 +526,6 @@ func contextswitchDirect(err *PointerError) (int, error) {
 			use(7)
 		}
 	}
-
 	return 7, nil
 }
 func contextswitchWrapped(err *PointerError) (int, error) {
@@ -544,7 +543,6 @@ func contextswitchWrapped(err *PointerError) (int, error) {
 			use(7)
 		}
 	}
-
 	return 7, nil
 }
 func contextcaseExprDirect(err *PointerError) (int, error) {
@@ -568,7 +566,6 @@ func contextcaseExprDirect(err *PointerError) (int, error) {
 			use(7)
 		}
 	}
-
 	return 7, nil
 }
 func contextcaseExprWrapped(err *PointerError) (int, error) {
@@ -592,7 +589,6 @@ func contextcaseExprWrapped(err *PointerError) (int, error) {
 			use(7)
 		}
 	}
-
 	return 7, nil
 }
 func contextshortCircuitDirect(err *PointerError) (int, error) {

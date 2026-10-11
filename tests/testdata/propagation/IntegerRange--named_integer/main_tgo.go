@@ -69,7 +69,6 @@ func main() {
 		}
 	}
 }
-
 func tgo4[tgo5 interface {
 }](tgo6 *tgo5) (tgo7 tgo5) {
 	return
