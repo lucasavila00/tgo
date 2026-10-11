@@ -98,8 +98,9 @@ checked source unchanged.
 ## Source controls output
 
 Generated files can be stale, so they do not participate in source checking.
-Compilation works in a separate directory and returns file contents. The
-caller writes them.
+Compilation reads the original module and returns file contents. Two overlays
+replace TGo paths for package selection and generated-Go checking. Ordinary
+Go and assets stay on disk. The caller writes the returned files.
 
 `name.tgo` produces `name_tgo.go`. Test and platform suffixes stay last:
 `name_linux_test.tgo` produces `name_tgo_linux_test.go`. Physical paths decide

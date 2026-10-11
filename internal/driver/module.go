@@ -18,13 +18,14 @@ type moduleFiles struct {
 	names []string
 }
 
-// preparedModule contains the separate files used for Go package checking.
+// preparedModule maps generated paths to in-memory contents for Go checking.
 type preparedModule struct {
 	source     *moduleFiles
 	dir        string
 	tgoFiles   map[string]string
 	used       map[string]bool
 	moduleData []byte
+	overlay    map[string][]byte
 }
 
 // findModule returns the module root that Go selects for dir.
@@ -80,8 +81,8 @@ func readModule(root string) *moduleFiles {
 	return &moduleFiles{root: root, files: files, names: names}
 }
 
-// prepareModule copies source to work and keeps replacement paths valid.
-func prepareModule(source *moduleFiles, work string) *preparedModule {
+// prepareModule keeps source at its original paths and prepares a Go overlay.
+func prepareModule(source *moduleFiles) *preparedModule {
 	used := make(map[string]bool)
 	// Reserve source identifiers before the compiler adds names.
 	for _, content := range source.files {
@@ -92,19 +93,17 @@ func prepareModule(source *moduleFiles, work string) *preparedModule {
 		}
 	}
 	tgoFiles := make(map[string]string)
+	overlay := make(map[string][]byte)
 	for _, name := range source.names {
-		content := source.files[name]
 		if strings.HasSuffix(name, ".tgo") {
 			goName := generatedName(name)
 			tgoFiles[goName] = name
-			name = goName
+			overlay[filepath.Join(source.root, goName)] = source.files[name]
 		}
-		path := filepath.Join(work, name)
-		must(os.MkdirAll(filepath.Dir(path), 0700))
-		must(os.WriteFile(path, content, 0600))
 	}
+
 	// Relative replacement paths still refer to the source module's dependencies.
-	moduleData, err := os.ReadFile(filepath.Join(work, "go.mod"))
+	moduleData, err := os.ReadFile(filepath.Join(source.root, "go.mod"))
 	must(err)
 	mod, err := modfile.Parse("go.mod", moduleData, nil)
 	must(err)
@@ -115,8 +114,7 @@ func prepareModule(source *moduleFiles, work string) *preparedModule {
 	}
 	moduleData, err = mod.Format()
 	must(err)
-	must(os.WriteFile(filepath.Join(work, "go.mod"), moduleData, 0600))
-	return &preparedModule{source: source, dir: work, tgoFiles: tgoFiles, used: used, moduleData: moduleData}
+	return &preparedModule{source: source, dir: source.root, overlay: overlay, tgoFiles: tgoFiles, used: used, moduleData: moduleData}
 }
 
 // collectOutput keeps source and emits Go only for selected TGo files.
@@ -130,8 +128,7 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 			if !checked.activeFiles[goName] {
 				continue
 			}
-			generated, err := os.ReadFile(filepath.Join(module.dir, goName))
-			must(err)
+			generated := module.overlay[filepath.Join(module.dir, goName)]
 			output[goName] = generated
 		} else {
 			if name == "go.mod" {

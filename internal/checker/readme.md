@@ -26,7 +26,9 @@ Loader checks module packages and imports compiled dependencies. Every package u
 type Loader struct {
     Root     string
     TGoFiles map[string]string
-    Used     map[string]bool
+    // Inputs supplies original TGo contents at selected generated Go paths.
+    Inputs map[string][]byte
+    Used   map[string]bool
     // contains filtered or unexported fields
 }
 ```

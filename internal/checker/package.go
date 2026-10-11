@@ -49,6 +49,8 @@ type Package struct {
 type Loader struct {
 	Root     string
 	TGoFiles map[string]string
+	// Inputs supplies original TGo contents at selected generated Go paths.
+	Inputs   map[string][]byte
 	Used     map[string]bool
 	packages map[string]*Package
 	checking map[string]bool
@@ -102,9 +104,13 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 		filenames = metadata.GoFiles
 	}
 	for _, filename := range filenames {
-		input, err := os.ReadFile(filename)
-		if err != nil {
-			return nil, err
+		input, supplied := loader.Inputs[filename]
+		if !supplied {
+			var err error
+			input, err = os.ReadFile(filename)
+			if err != nil {
+				return nil, err
+			}
 		}
 		name, err := filepath.Rel(loader.Root, filename)
 		if err != nil {
