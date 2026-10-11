@@ -1,5 +1,0 @@
-package fresh
-
-func Value() string {
-	return "fresh"
-}

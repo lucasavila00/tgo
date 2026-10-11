@@ -1,8 +1,0 @@
-package errors
-
-func flush() error { return nil }
-
-func useFlush() error {
-	value := flush()!
-	return value
-}

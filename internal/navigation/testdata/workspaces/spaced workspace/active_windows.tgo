@@ -1,7 +1,0 @@
-//go:build windows
-
-package spaced
-
-func Active() string {
-	return "windows"
-}

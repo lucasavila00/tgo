@@ -1,7 +1,0 @@
-package sample
-
-type Account enum {
-    Personal struct { Name string }
-}
-
-var account = Account.Business{Company: "Acme"}

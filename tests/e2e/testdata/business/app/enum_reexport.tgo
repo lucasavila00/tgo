@@ -1,7 +1,0 @@
-package app
-
-import alias "example.com/business/bridge"
-
-func OnlyReexportedAccount(name string) any {
-	return alias.Account.Personal{Name: name}
-}

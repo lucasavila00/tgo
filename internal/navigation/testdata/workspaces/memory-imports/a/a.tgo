@@ -1,7 +1,0 @@
-package a
-
-import "time"
-
-func Make() (time.Time, error) {
-	return time.Unix(0, 0),
-}

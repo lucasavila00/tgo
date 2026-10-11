@@ -1,8 +1,0 @@
-package dep
-
-type Choice enum {
-	One struct {
-		Name string
-	}
-	Two struct{}
-}

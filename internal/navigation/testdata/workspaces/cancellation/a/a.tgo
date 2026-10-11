@@ -1,5 +1,0 @@
-package a
-
-type First struct {
-	Value string
-}
