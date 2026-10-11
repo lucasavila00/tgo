@@ -25,10 +25,6 @@ func must(err error) {
 	}
 }
 
-func loadProject(dir string) []*packages.Package {
-	return loadProjectOverlay(dir, nil)
-}
-
 func loadProjectOverlay(dir string, overlay map[string][]byte) []*packages.Package {
 	roots, err := packages.Load(&packages.Config{Dir: dir, Overlay: overlay, Tests: true, Mode: packages.NeedName | packages.NeedTypes | packages.NeedImports | packages.NeedDeps}, "./...")
 	must(err)
