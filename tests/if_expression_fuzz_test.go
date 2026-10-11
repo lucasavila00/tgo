@@ -61,7 +61,7 @@ var ifFuzzBodies = []struct{ source, reference string }{
 	{`return if FLAG {defer mark(80); EXPR} else {defer mark(81); EXPR}`, `if FLAG {defer mark(80); return EXPR}; defer mark(81); return EXPR`},
 	{`value := if FLAG {return EXPR} else {EXPR}; return value+1`, `if FLAG {return EXPR}; value := EXPR; return value+1`},
 	{`var value int = if FLAG {return EXPR} else {return EXPR}; return value`, `if FLAG {return EXPR}; return EXPR`},
-	{`value := if FLAG {goto done} else {EXPR}; mark(value); done: return 7`, `if FLAG {goto done}; {value := EXPR; mark(value)}; done: return 7`},
+	{`var value int; value = if FLAG {goto done} else {EXPR}; mark(value); done: return 7`, `var value int; if FLAG {goto done}; value = EXPR; mark(value); done: return 7`},
 	{`sum := 0; for i:=0; i<3; i++ {value := if i==1 {continue} else {EXPR}; sum+=value}; return sum`, `sum := 0; for i:=0; i<3; i++ {if i==1 {continue}; value := EXPR; sum+=value}; return sum`},
 	{`sum := 0; outer: for i:=0; i<3; i++ {value := if i==1 {break outer} else {EXPR}; sum+=value}; return sum`, `sum := 0; outer: for i:=0; i<3; i++ {if i==1 {break outer}; value := EXPR; sum+=value}; return sum`},
 	{`value := if FLAG {step()OP; EXPR} else {EXPR}; return value`, `var value int; if FLAG {if _, e:=step(); e!=nil {failureReturn(e)}; value=EXPR} else {value=EXPR}; return value`},
