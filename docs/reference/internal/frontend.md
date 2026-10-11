@@ -10,17 +10,7 @@ import "github.com/lucasavila00/tgo/internal/frontend"
 
 Package frontend prepares TGo postfix syntax for Go parsing and type checking.
 
-## Index
-
-- [func MarkPostfix\(filename string, input \[\]byte, used map\[string\]bool, operations map\[string\]Marker\) \[\]byte](<#MarkPostfix>)
-- [func MarkerDeclaration\(operation Marker, count int\) ast.Decl](<#MarkerDeclaration>)
-- [func MarkerExpressions\(fset \*token.FileSet, file \*ast.File, operations map\[string\]Marker\) map\[ast.Expr\]Marker](<#MarkerExpressions>)
-- [func WrapMarker\(file \*ast.File, expression ast.Expr, operation Marker\)](<#WrapMarker>)
-- [type Marker](<#Marker>)
-
-
-<a name="MarkPostfix"></a>
-## func [MarkPostfix](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/postfix.go#L25>)
+## func MarkPostfix
 
 ```go
 func MarkPostfix(filename string, input []byte, used map[string]bool, operations map[string]Marker) []byte
@@ -28,8 +18,7 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 
 MarkPostfix replaces postfix \! and \!\! with named comments that Go can parse. It reserves fresh names in used and records each operator in operations.
 
-<a name="MarkerDeclaration"></a>
-## func [MarkerDeclaration](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/postfix.go#L146>)
+## func MarkerDeclaration
 
 ```go
 func MarkerDeclaration(operation Marker, count int) ast.Decl
@@ -37,8 +26,7 @@ func MarkerDeclaration(operation Marker, count int) ast.Decl
 
 MarkerDeclaration builds a generic helper that returns count success arguments. The helper accepts and discards the final error argument during type checking.
 
-<a name="MarkerExpressions"></a>
-## func [MarkerExpressions](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/postfix.go#L76>)
+## func MarkerExpressions
 
 ```go
 func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[string]Marker) map[ast.Expr]Marker
@@ -46,8 +34,7 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 
 MarkerExpressions matches recorded comments to calls in the parsed file. It records the source call name and panics if an operator does not follow a call.
 
-<a name="WrapMarker"></a>
-## func [WrapMarker](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/postfix.go#L121>)
+## func WrapMarker
 
 ```go
 func WrapMarker(file *ast.File, expression ast.Expr, operation Marker)
@@ -55,8 +42,7 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker)
 
 WrapMarker replaces the selected expression with a helper call for type checking. It changes file in place and removes the comment for this operation.
 
-<a name="Marker"></a>
-## type [Marker](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/postfix.go#L16-L21>)
+## type Marker
 
 Marker records a postfix operation in Go\-compatible source.
 

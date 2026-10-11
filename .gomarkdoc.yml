@@ -1,7 +1,9 @@
 output: "docs/reference/{{.Dir}}.md"
-repository:
-  url: https://github.com/lucasavila00/tgo
-  defaultBranch: main
-  path: /
 header: |-
   Generated from Go declarations and source comments. Run `make docs` to update this file.
+templateFile:
+  package: docs/contrib/gomarkdoc/package.gotxt
+  func: docs/contrib/gomarkdoc/func.gotxt
+  type: docs/contrib/gomarkdoc/type.gotxt
+  value: docs/contrib/gomarkdoc/value.gotxt
+  example: docs/contrib/gomarkdoc/example.gotxt

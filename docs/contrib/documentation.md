@@ -15,11 +15,16 @@ make docs-check
 one reference file per package under `docs/reference/`. The configuration is
 [.gomarkdoc.yml](../../.gomarkdoc.yml). The package list is in `Makefile`. It
 includes the command, public API, and internal packages. Add each new production
-package to that list. Repository links always point to `main`.
+package to that list.
 
 Commit the generated file with the source change. `make docs-check` exits with
 an error when the file differs from the source. Each package is checked in a
 separate tool call. The pull request job runs this check with the test suite.
+
+Templates in `docs/contrib/gomarkdoc/` produce plain headings, signatures,
+comments, and examples. Each package has its own file. Unrelated source edits
+do not change line links or a repeated symbol list. This keeps review diffs
+small and reduces merge conflicts.
 
 Keep package READMEs, guides, architecture documents, and the language vision
 as hand-written explanations. The generated reference contains declarations

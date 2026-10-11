@@ -10,13 +10,7 @@ import "github.com/lucasavila00/tgo/internal/driver"
 
 Package driver compiles TGo modules and returns their output files.
 
-## Index
-
-- [func Compile\(dir string\) map\[string\]\[\]byte](<#Compile>)
-
-
-<a name="Compile"></a>
-## func [Compile](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/compile.go#L26>)
+## func Compile
 
 ```go
 func Compile(dir string) map[string][]byte

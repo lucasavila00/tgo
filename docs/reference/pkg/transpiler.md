@@ -10,18 +10,7 @@ import "github.com/lucasavila00/tgo/pkg/transpiler"
 
 Package transpiler emits Go source from TGo modules.
 
-## Index
-
-- [func Compile\(dir string\) map\[string\]\[\]byte](<#Compile>)
-- [type After](<#After>)
-- [type Site](<#Site>)
-- [type Source](<#Source>)
-  - [func Load\(dir, pattern string\) \(\*Source, error\)](<#Load>)
-  - [func \(s \*Source\) InsertAfter\(site Site, after After\) \(map\[string\]\[\]byte, error\)](<#Source.InsertAfter>)
-
-
-<a name="Compile"></a>
-## func [Compile](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L40>)
+## func Compile
 
 ```go
 func Compile(dir string) map[string][]byte
@@ -29,8 +18,7 @@ func Compile(dir string) map[string][]byte
 
 Compile emits a Go module from the TGo files in a module directory. Invalid source and compiler failures panic.
 
-<a name="After"></a>
-## type [After](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L21>)
+## type After
 
 After receives references to the evaluated expression results.
 
@@ -38,8 +26,7 @@ After receives references to the evaluated expression results.
 type After = lowering.After
 ```
 
-<a name="Site"></a>
-## type [Site](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L11>)
+## type Site
 
 Site identifies an expression in the original source. Offsets are bytes.
 
@@ -47,8 +34,7 @@ Site identifies an expression in the original source. Offsets are bytes.
 type Site = lowering.Site
 ```
 
-<a name="Source"></a>
-## type [Source](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L14-L18>)
+## type Source
 
 Source contains the original syntax and its type information.
 
@@ -60,8 +46,7 @@ type Source struct {
 }
 ```
 
-<a name="Load"></a>
-### func [Load](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L24>)
+### func Load
 
 ```go
 func Load(dir, pattern string) (*Source, error)
@@ -69,8 +54,7 @@ func Load(dir, pattern string) (*Source, error)
 
 Load reads one Go package. It does not change its syntax tree.
 
-<a name="Source.InsertAfter"></a>
-### func \(\*Source\) [InsertAfter](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/transpiler.go#L34>)
+### func \(\*Source\) InsertAfter
 
 ```go
 func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error)

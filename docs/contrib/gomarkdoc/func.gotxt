@@ -1,0 +1,10 @@
+{{- if .Receiver -}}
+{{- header .Level (printf "func (%s) %s" .Receiver .Name) -}}
+{{- else -}}
+{{- header .Level (printf "func %s" .Name) -}}
+{{- end -}}
+{{- spacer -}}{{- codeBlock "go" .Signature -}}
+{{- spacer -}}{{- template "doc" .Doc -}}
+{{- range .Examples -}}
+{{- spacer -}}{{- template "example" . -}}
+{{- end -}}

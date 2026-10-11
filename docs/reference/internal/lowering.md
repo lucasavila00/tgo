@@ -10,20 +10,7 @@ import "github.com/lucasavila00/tgo/internal/lowering"
 
 Package lowering inserts statements into typed Go expressions and lowers error propagation.
 
-## Index
-
-- [type After](<#After>)
-- [type Propagation](<#Propagation>)
-- [type Site](<#Site>)
-- [type Source](<#Source>)
-  - [func Load\(dir, pattern string\) \(\*Source, error\)](<#Load>)
-  - [func SourceFromPackage\(p \*packages.Package, dir string\) \(\*Source, error\)](<#SourceFromPackage>)
-  - [func \(s \*Source\) InsertAfter\(site Site, after After\) \(map\[string\]\[\]byte, error\)](<#Source.InsertAfter>)
-  - [func \(s \*Source\) LowerPropagations\(operations map\[string\]Propagation\) \(map\[string\]\[\]byte, error\)](<#Source.LowerPropagations>)
-
-
-<a name="After"></a>
-## type [After](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/expressions.go#L11>)
+## type After
 
 After receives references to the evaluated expression results.
 
@@ -31,8 +18,7 @@ After receives references to the evaluated expression results.
 type After func(results []ast.Expr) []ast.Stmt
 ```
 
-<a name="Propagation"></a>
-## type [Propagation](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/operation.go#L6-L10>)
+## type Propagation
 
 Propagation defines the error action for a typed marker call.
 
@@ -44,8 +30,7 @@ type Propagation struct {
 }
 ```
 
-<a name="Site"></a>
-## type [Site](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source.go#L14-L22>)
+## type Site
 
 Site identifies an expression in the original source. Offsets are bytes.
 
@@ -61,8 +46,7 @@ type Site struct {
 }
 ```
 
-<a name="Source"></a>
-## type [Source](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source.go#L25-L30>)
+## type Source
 
 Source contains the original syntax and its type information.
 
@@ -74,8 +58,7 @@ type Source struct {
 }
 ```
 
-<a name="Load"></a>
-### func [Load](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source.go#L34>)
+### func Load
 
 ```go
 func Load(dir, pattern string) (*Source, error)
@@ -83,8 +66,7 @@ func Load(dir, pattern string) (*Source, error)
 
 Load reads and type\-checks one Go package selected by pattern in dir. It records expression positions for later statement insertion.
 
-<a name="SourceFromPackage"></a>
-### func [SourceFromPackage](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source.go#L52>)
+### func SourceFromPackage
 
 ```go
 func SourceFromPackage(p *packages.Package, dir string) (*Source, error)
@@ -92,8 +74,7 @@ func SourceFromPackage(p *packages.Package, dir string) (*Source, error)
 
 SourceFromPackage records expression positions and insertion limits in a checked package. File names are relative to dir; a package with type errors returns an error.
 
-<a name="Source.InsertAfter"></a>
-### func \(\*Source\) [InsertAfter](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/insert.go#L15>)
+### func \(\*Source\) InsertAfter
 
 ```go
 func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error)
@@ -101,8 +82,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error)
 
 InsertAfter returns Go files with the callback's statements after the selected expression. The callback receives saved results; the original syntax tree stays unchanged.
 
-<a name="Source.LowerPropagations"></a>
-### func \(\*Source\) [LowerPropagations](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/insert.go#L36>)
+### func \(\*Source\) LowerPropagations
 
 ```go
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error)
