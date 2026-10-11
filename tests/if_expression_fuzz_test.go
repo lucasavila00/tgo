@@ -192,12 +192,10 @@ func FuzzIfExpressionBehavior(f *testing.F) {
 		want := fuzzRun(t, referenceDir, reference)
 		sourceDir := t.TempDir()
 		writeFiles(t, sourceDir, map[string][]byte{"go.mod": module, "main.tgo": []byte(source)})
-		files := fuzzCompile(t, sourceDir, source)
-		output := t.TempDir()
-		writeFiles(t, output, files)
-		got := fuzzRun(t, output, source)
+		fuzzCompile(t, sourceDir, source)
+		got := fuzzRun(t, sourceDir, source)
 		if !bytes.Equal(got, want) {
-			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", source, reference, want, got, files["main_tgo.go"])
+			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", source, reference, want, got, readFiles(t, sourceDir)["main_tgo.go"])
 		}
 	})
 }
