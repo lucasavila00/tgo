@@ -1,0 +1,79 @@
+package main
+
+import "fmt"
+
+func pair[T any](first, second T) (T, T) {
+	return first, second
+}
+
+func last[T any](first T, rest ...T) T {
+	return rest[len(rest)-1]
+}
+
+func partial[A, B any](first A, second B, third A, fourth B) B {
+	return fourth
+}
+
+func identity[T any](value T) T {
+	return value
+}
+
+func apply[T any](value T, fn func(int) int) int {
+	return fn(6)
+}
+
+func exits(ok bool) uint64 {
+	_, value := pair(if ok {
+		return 1
+	} else {
+		return 2
+	}, uint64(3))
+	return value
+}
+
+func main() {
+	point := 7
+	for _, ok := range []bool{false, true} {
+		if apply(1, if ok { identity } else { identity }) != 6 {
+			panic("function parameter context")
+		}
+		first, second := pair(if ok { nil } else { nil }, if ok { &point } else { &point })
+		if first != nil || second != &point {
+			panic("pointer inference")
+		}
+		calls := 0
+		left, right := pair(if ok {
+			calls++
+			(if !ok { 1 } else { "two" })
+		} else {
+			calls++
+			"three"
+		}, any(4))
+		var want any = "three"
+		if ok {
+			want = "two"
+		}
+		if left != want || right != 4 || calls != 1 {
+			panic("interface parameter")
+		}
+		count, exact := pair(if ok { 1 } else { 2 }, uint64(3))
+		if exact != 3 || count != 1 && ok || count != 2 && !ok {
+			panic("constant conversion")
+		}
+		if last(&point, if ok { nil } else { nil }) != nil {
+			panic("variadic inference")
+		}
+		value := partial[any](if ok { "one" } else { 2 }, uint8(3), any(nil), if ok { 4 } else { 5 })
+		if ok && value != 4 || !ok && value != 5 {
+			panic("partial type arguments")
+		}
+		wantExit := uint64(2)
+		if ok {
+			wantExit = 1
+		}
+		if exits(ok) != wantExit {
+			panic("terminating argument")
+		}
+	}
+	fmt.Println("ok")
+}

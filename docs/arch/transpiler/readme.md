@@ -60,6 +60,13 @@ statements in the source function. The frontend's call markers identify added
 syntax; they do not create source functions. This keeps returns and defers in
 their original function.
 
+In a generic call, another argument can supply the if value's type.
+For `pair(if ok { nil } else { nil }, pointer)`, a pointer of type `*int`
+determines `T` as `*int`. Infer from every branch that produces a value and
+from the other arguments together. Then check each branch against the resolved
+parameter type. This supplies nil's type and checks branch constants for
+overflow. A branch that returns or jumps supplies no inference operand.
+
 `make prepare` builds the checker and its compiled-package reader from one
 pinned Go source version and checked-in patches. Generated upstream source
 stays out of Git. See [the patch instructions](../../../internal/checker/upstream.md).

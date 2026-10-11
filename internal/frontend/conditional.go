@@ -72,7 +72,7 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 		if !ok {
 			return nil, err
 		}
-		start := conditionalStart(file, temporary, source.text, errors)
+		start := conditionalStart(file, temporary, source.text)
 		if start < 0 {
 			for _, diagnostic := range errors {
 				diagnostic.Pos = original.Position(original.Pos(source.offsets[diagnostic.Pos.Offset]))
@@ -144,12 +144,14 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 	return result
 }
 
-func conditionalStart(file *ast.File, temporary *token.FileSet, source string, errors scanner.ErrorList) int {
+func conditionalStart(file *ast.File, temporary *token.FileSet, source string) int {
 	candidates := expressionIfTokens(source)
 	start := -1
-	for _, diagnostic := range errors {
-		if diagnostic.Msg == "expected operand, found 'if'" && candidates[diagnostic.Pos.Offset] && diagnostic.Pos.Offset > start {
-			start = diagnostic.Pos.Offset
+	// Prepare inner operands first. Parser recovery can truncate an outer if
+	// when another if value remains inside parentheses in its branch.
+	for offset, operand := range candidates {
+		if operand && offset > start {
+			start = offset
 		}
 	}
 	if start >= 0 {
@@ -165,7 +167,7 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string, e
 			offset := temporary.Position(bad.Pos()).Offset
 			syntaxOperand := false
 			switch parents[len(parents)-1].(type) {
-			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr:
+			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr, *ast.SliceExpr:
 				syntaxOperand = true
 			}
 			if offset+2 <= len(source) && source[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
@@ -228,7 +230,7 @@ func expressionIfTokens(source string) map[int]bool {
 		}
 		if current == token.IF {
 			switch previous {
-			case token.ASSIGN, token.DEFINE, token.COMMA, token.COLON,
+			case token.ASSIGN, token.DEFINE, token.COMMA,
 				token.LPAREN, token.LBRACK, token.RETURN, token.RANGE,
 				token.IF, token.FOR, token.SWITCH, token.CASE, token.GO, token.DEFER:
 				result[file.Offset(position)] = true

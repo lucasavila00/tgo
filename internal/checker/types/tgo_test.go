@@ -52,6 +52,11 @@ func TestConditionalTypes(t *testing.T) {
 		`func f(ok bool) int { return if ok { if !ok {1} else {2} } else {3} }`,
 		`func f(ok bool) int { return if ok {1} else if !ok {2} else {3} }`,
 		`func use(x any) {} ; func f(ok bool) { use(if ok {1} else {"two"}) }`,
+		`func identity[T any](value T) T {return value}; func use[T any](value T, fn func(int) int) int {return fn(3)}; func f(ok bool) int {return use(1, if ok {identity} else {identity})}`,
+		`func pick[T any](a,b T) T {return b}; func f(ok bool, p *int) *int {return pick(if ok {nil} else {nil}, if ok {p} else {p})}`,
+		`func pick[T any](a,b T) T {return b}; func f(ok bool) any {return pick(if ok {1} else {"two"}, any(3))}`,
+		`func pick[T any](a,b T) T {return b}; func f(ok bool) uint64 {return pick(if ok {return 1} else {return 2}, uint64(3))}`,
+		`func pick[T any](a,b T) T {return b}; func f(ok bool) any {return pick(if ok {if !ok {1} else {"two"}} else {"three"}, any(3))}`,
 		`func use[T ~int](x T) T {return x}; func f[T ~int](ok bool, a,b T) T {return use(if ok {a} else {b})}`,
 		`func f(ok bool) int { for { x:=if ok {break} else {1}; return x }; return 0 }`,
 		`func f(ok bool) { for { if x:=if ok {break} else {1}; x>0 {} } }`,
@@ -107,6 +112,9 @@ func TestConditionalTypes(t *testing.T) {
 
 func TestConditionalTypeErrors(t *testing.T) {
 	for _, test := range []struct{ source, message string }{
+		{`func pick[T any](a,b T) T {return b}; func f(ok bool) {pick(if ok {128} else {0}, int8(1))}`, "overflows"},
+		{`func pick[T any](a,b T) T {return b}; func f(ok bool) {pick(if ok {int8(1)} else {int16(2)}, int8(3))}`, "does not match"},
+		{`func identity[T any](value T) T {return value}; func f(ok bool) {identity(if ok {nil} else {nil})}`, "cannot infer"},
 		{`func f(ok bool, dst []int) { copy(dst, if ok {"one"} else {"two"}) }`, "cannot use"},
 		{`func f(ok bool, dst []byte) { copy(dst, if ok {"one"} else {nil}) }`, "cannot use"},
 		{`func f(ok bool, dst []byte) { copy(dst, if ok {var x []byte = if ok {"one"} else {"two"}; x} else {nil}) }`, "cannot use"},

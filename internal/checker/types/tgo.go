@@ -125,6 +125,15 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 			return expression
 		}
 	}
+	// Generic calls determine the parameter type from all branch values.
+	if context == nil && check.inferConditionals[call] {
+		typ := Type(Typ[UntypedNil])
+		if len(values) != 0 {
+			typ = values[0].typ()
+		}
+		x.mode_, x.typ_ = value, typ
+		return expression
+	}
 	// A byte-slice source of copy or append can instead be a string.
 	// Keep its own string type when every value branch produces a string.
 	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) && len(values) != 0 {
@@ -369,4 +378,88 @@ func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(*ast.
 		_, function := node.(*ast.FuncLit)
 		return !function
 	})
+}
+
+// prepareConditionalArgument records direct and nested branch values for inference.
+func (check *Checker) prepareConditionalArgument(expr ast.Expr) {
+	call, ok := ast.Unparen(expr).(*ast.CallExpr)
+	if !ok {
+		return
+	}
+	operation, found := check.tgoOperation(call)
+	if !found || !operation.Conditional {
+		return
+	}
+	if check.inferConditionals == nil {
+		check.inferConditionals = make(map[*ast.CallExpr]bool)
+	}
+	check.inferConditionals[call] = true
+	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt))
+}
+
+func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
+	switch statement := statement.(type) {
+	case *ast.IfStmt:
+		check.prepareConditionalTails(statement.Body)
+		if statement.Else != nil {
+			check.prepareConditionalTails(statement.Else)
+		}
+	case *ast.BlockStmt:
+		if list := trimTrailingEmptyStmts(statement.List); len(list) != 0 {
+			check.prepareConditionalTails(list[len(list)-1])
+		}
+	case *ast.LabeledStmt:
+		check.prepareConditionalTails(statement.Stmt)
+	case *ast.ExprStmt:
+		check.prepareConditionalArgument(statement.X)
+	}
+}
+
+// conditionalInference checks each completing branch with the same parameter.
+// Terminating branches supply no operand; the other arguments must supply its type.
+func (check *Checker) conditionalInference(params *Tuple, args []*operand) (*Tuple, []*operand) {
+	var expandedParams []*Var
+	var expandedArgs []*operand
+	var add func(*Var, *operand)
+	add = func(param *Var, arg *operand) {
+		if call, ok := ast.Unparen(arg.expr).(*ast.CallExpr); ok && check.inferConditionals[call] && arg.isValid() {
+			for _, branch := range check.conditionalValues[call] {
+				add(param, branch)
+			}
+			return
+		}
+		expandedParams, expandedArgs = append(expandedParams, param), append(expandedArgs, arg)
+	}
+	for i, arg := range args {
+		add(params.At(i), arg)
+	}
+	return NewTuple(expandedParams...), expandedArgs
+}
+
+// assignConditionalArgument checks each branch against the inferred parameter.
+func (check *Checker) assignConditionalArgument(arg *operand, typ Type, context string) bool {
+	call, ok := ast.Unparen(arg.expr).(*ast.CallExpr)
+	if !ok || !check.inferConditionals[call] || !arg.isValid() {
+		return false
+	}
+	for _, branch := range check.conditionalValues[call] {
+		if !check.assignConditionalArgument(branch, typ, context) {
+			check.assignment(branch, typ, context)
+		}
+		if !branch.isValid() {
+			arg.invalidate()
+			return true
+		}
+	}
+	arg.mode_, arg.typ_, arg.val = value, typ, nil
+	for expr := arg.expr; ; {
+		delete(check.untyped, expr)
+		check.recordTypeAndValue(expr, value, typ, nil)
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expr = paren.X
+	}
+	return true
 }
