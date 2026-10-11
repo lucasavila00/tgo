@@ -58,7 +58,7 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 	type tgo12 = T
 	if wrap {
 		run := func() (T T, err Failure) {
-			var tgo11 tgo12 = T
+			var tgo11 tgo12
 			{
 				var tgo9 int
 				var tgo10 Failure
@@ -73,7 +73,7 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 		return run()
 	}
 	run := func() (T T, err Failure) {
-		var tgo15 tgo12 = T
+		var tgo15 tgo12
 		{
 			var tgo13 int
 			var tgo14 Failure

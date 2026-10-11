@@ -17,7 +17,7 @@ func next(fail bool) (int, error) {
 }
 
 func named(fail, wrap bool) (value int, err error) {
-	var tgo3 int = value
+	var tgo3 int
 	defer func() {
 		value += 100
 		if err != nil && !errors.Is(err, sentinel) {
@@ -50,7 +50,7 @@ func named(fail, wrap bool) (value int, err error) {
 }
 
 func grouped(fail bool) (first, last error) {
-	var tgo9 error = first
+	var tgo9 error
 	first = sentinel
 	{
 		var tgo7 int

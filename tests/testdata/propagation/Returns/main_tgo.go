@@ -31,7 +31,7 @@ func unnamed(label string) (Value, error) {
 }
 
 func named() (value Value, err error) {
-	var tgo6 Value = value
+	var tgo6 Value
 	value = 5
 	err = sentinel
 	{

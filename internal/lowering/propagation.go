@@ -36,20 +36,16 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 	}
 	var prefix []ast.Stmt
 	for i, field := range original.Results.List {
-		names := field.Names
-		if len(names) == 0 {
-			names = []*ast.Ident{nil}
+		count := len(field.Names)
+		if count == 0 {
+			count = 1
 		}
-		for j, name := range names {
-			if i == len(original.Results.List)-1 && j == len(names)-1 {
+		for j := 0; j < count; j++ {
+			if i == len(original.Results.List)-1 && j == count-1 {
 				break
 			}
-			var initial ast.Expr
-			if name != nil && name.Name != "_" {
-				initial = name
-			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type, original.End()), initial))
+			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
 			r.frame.values = append(r.frame.values, value)
 		}
 	}
