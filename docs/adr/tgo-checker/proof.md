@@ -34,4 +34,5 @@ Check evaluation order, skipped work, panics, return and defer timing, `!!`
 error identity, and `!` wrapping. Failed ABI result slots must stay unavailable.
 
 Record `unsafe` and cgo boundaries without claiming they are proved safe.
-Check links and word limits locally. Use hosted CI for the full fixture suite.
+Run all fixture checks as project tests. Require every expected decision,
+diagnostic, inventory entry, generated snapshot, and runtime comparison to pass.
