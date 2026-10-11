@@ -1,13 +1,19 @@
-# Source checks
+# Compiler preparation and source checks
 
-`check-source-size.go` limits tracked Go and TGo source files to 700 lines.
-The check includes tests and fixture inputs. It reports the path and line count
-for each file that exceeds the limit. An empty file has zero lines. A final line
-without a newline still counts as one line.
+`prepare-checker.sh` builds private Go checker source from a pinned version and
+patch. `make prepare` calls it. See
+[checker preparation](../internal/checker/upstream.md) for inputs, generated
+files, and Go updates.
 
-The check excludes compiler outputs named `*_tgo.go` and `*_tgo_test.go`.
-These files come from fixture inputs and can exceed the limit after lowering.
-The check uses `git ls-files`, so build files that are not tracked are excluded.
+`check-source-size.go` limits each tracked Go or TGo source file to 700 lines.
+It uses `git ls-files`, reads the listed files, and reports each path that exceeds
+the limit. Comments and blank lines count. A final line without a newline also
+counts; an empty file has zero lines.
 
-Run `make lint` from the repository root. This runs the size check, Go linters,
-and the Go format check. Pull request CI runs the same command.
+The size check includes tests, fixture inputs, and reference programs. It skips
+names ending exactly in `_tgo.go` or `_tgo_test.go`. Untracked generated checker
+source is not in the Git file list.
+
+`make lint` prepares the checker, runs the source-size check, runs Go linters,
+and checks Go formatting. The pull request workflow runs the same command.
+See [source checks](../docs/guide/lint.md) for tool versions and limits.

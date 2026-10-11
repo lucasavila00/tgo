@@ -1,19 +1,25 @@
-// Package driver owns module compilation.
+// Package driver runs module compilation and writes generated Go.
 //
-// A module is the unit of compilation because imports, build constraints, and
-// test packages decide which files form a program. The driver keeps those
-// choices consistent across frontend checking and lowering. It uses Go's build
-// rules so TGo files belong to the same packages as their Go equivalents.
+// Compile finds the Go module for the supplied directory. It lists module paths,
+// reads owned Go and TGo source, and excludes stale generated files. Assets,
+// vendor dependencies, data directories, and nested modules are not source inputs
+// for this driver.
 //
-// Source files are authoritative. Existing generated files can be stale and
-// must not affect source checking. The driver first writes original TGo at
-// generated paths, then replaces it with checked generated Go.
+// The driver writes original TGo at each final generated Go path. Go's package
+// tools then select files, imports, build constraints, and test variants. The
+// private checker reads the selected source through the frontend. After all
+// source checks pass, the lowerer builds ordinary Go and the driver writes it at
+// the same generated paths. Excluded generated paths are removed. Stock Go checks
+// the final module.
 //
-// Compilation passes data through these steps: read module files, prepare a
-// generated Go path for each TGo input, select source with Go's build rules,
-// check source packages, lower expressions, and check emitted Go.
-// Each step keeps the data required by the next step.
+// Compilation returns no file contents and creates no temporary module or
+// separate temporary source files. Original TGo, ordinary Go, and assets stay at
+// their paths. A failure can leave a source version or completed output at a
+// generated path. The next compilation replaces it from the TGo input.
 //
-// The driver writes generated Go in the source module. Expression evaluation
-// rules belong to the lowerer.
+// Start with compile.go for the steps. module.go handles ownership and disk
+// writes. propagation.go coordinates selection, checking, and lowering for both
+// propagation and if values. filename.go preserves test and platform suffixes.
+// The unsafe operand check rejects propagation inside unsafe size and offset
+// operands. Expression behavior belongs to the lowerer.
 package driver

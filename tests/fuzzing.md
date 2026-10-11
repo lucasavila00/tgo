@@ -1,54 +1,32 @@
-# Lowering fuzz tests
+# Fuzz lowering against separate Go references
 
-Run from the repository root:
+The `loweringfuzz` build tag enables two campaigns. Each mutation produces a
+TGo program and a separate ordinary Go reference. The test compiles TGo in its
+test directory, runs both programs, and compares their reported behavior.
+References do not use compiler lowering code.
+
+## Propagation
 
 ```sh
 GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
   -fuzz '^FuzzPropagationBehavior$' -parallel=1 -fuzztime=10m
 ```
 
-The `loweringfuzz` build tag keeps this campaign out of the normal test suite.
-No CI change is needed. Go saves a failing mutation in
-`tests/testdata/fuzz/FuzzPropagationBehavior/` and prints a command to replay it.
+Bytes choose the context, operand values, failing call, and propagation operator.
+Cases include calls, assignments, array and slice stores, maps, skipped Boolean
+operands, loops, switches, selects, deferred arguments, methods, and panics.
 
-## What the test checks
+The Go reference uses a private panic value to stop a function on propagation,
+and catches only that value at the function boundary. Ordinary panics still
+reach the outer reporting handler. Source defers run before the boundary handler.
+Generated test bodies exclude source recover, goroutines, and nested propagating
+functions; those would need different reference rules.
 
-The generator makes bounded TGo programs with calls, assignments, array and
-slice stores, maps, short-circuit expressions, loops, switches, selects,
-deferred arguments, method calls, and operations that can panic. Bytes choose
-the context, operand values, failing call, and propagation operator.
+The comparison includes traces, values, final storage, error text and identity,
+error chains, and panic types. Failures are saved under
+`tests/testdata/fuzz/FuzzPropagationBehavior/`.
 
-Each input has a separate Go reference. The reference uses a helper that stops
-the enclosing function on an error. It uses a private panic value and catches
-only that value at the function boundary. Ordinary panics still reach the
-program's outer panic handler. Source deferred calls run before the boundary
-handler. The test bodies do not use `recover`, goroutines, or nested functions that
-propagate errors. The reference and outer harness use `recover` only to report
-the function result and ordinary panics.
-
-The test compares call traces, values, final storage, error text, error identity,
-error chains, and panic types. The reference does not use TGo or compiler
-lowering code. Both programs run with the current Go toolchain.
-
-## How to use a failure
-
-Replay the saved input. Read the TGo source, Go reference, and generated output
-in the failure report. Reduce the input and confirm that Go specifies the order
-on which the failure depends. Go does not specify the order of every variable
-read relative to a call. A difference in an unspecified order is not sufficient
-evidence of a compiler bug.
-
-Open a bug issue only after that check. Include the small input, actual result,
-expected result, and compiler version. Keep the saved input so the failure can
-be replayed. Add a normal regression fixture with the fix.
-
-This generator checks a bounded set of program forms. It does not prove that
-all valid TGo programs compile correctly. The separate audits check types,
-source positions, build selection, closures, and other forms.
-
-## If expressions
-
-Run the if-expression campaign:
+## If values
 
 ```sh
 GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
@@ -56,15 +34,30 @@ GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
   -fuzzminimizetime=1x -timeout=15m
 ```
 
-Bytes select a statement context, nested branch shapes, conditions, leaf values,
-and propagation failures. The test compares call traces, final values, deferred
-calls, errors, and error identity with a separate Go program. Value-only reference
-branches use Go functions. References for return, defer, break, continue, and goto
-use ordinary Go statements, so these operations keep their function and loop.
+Bytes choose statement contexts, nested branches, conditions, values, and
+propagation failures. The comparison includes traces, results, deferred calls,
+errors, and error identity.
 
-Go saves failures under `tests/testdata/fuzz/FuzzIfExpressionBehavior/`.
-Check and reduce each failure before creating a bug issue.
+Value-only reference branches use Go functions. References for return, defer,
+break, continue, and goto use ordinary statements so those operations retain
+their function and loop targets. Cases also cover generic inference, contextual
+types, loops, skipped operands, ranges, and selects. Failures are saved under
+`tests/testdata/fuzz/FuzzIfExpressionBehavior/`.
 
-Each mutation compiles and runs two programs. Limit automatic reduction to one
-execution per input; reduce confirmed failures separately. This keeps the
-campaign focused on testing new inputs.
+Each mutation compiles and runs two programs. The command limits automatic
+reduction to one execution per input; reduce confirmed failures separately.
+
+## Investigate a failure
+
+Go prints a replay command for a saved input. Replay it, read the source,
+reference, and generated Go in the report, then reduce the case. Check that Go
+specifies the evaluation order on which the difference depends. A difference
+in unspecified order is not sufficient evidence of a compiler bug.
+
+A confirmed report should include the small input, expected and actual result,
+and compiler version. Keep the saved input and add a normal regression fixture
+with the fix.
+
+These campaigns cover bounded program forms, not every valid program. Normal
+CI does not run them. The normal tests separately check types, positions, build
+selection, closures, and other cases.

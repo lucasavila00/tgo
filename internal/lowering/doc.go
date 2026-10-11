@@ -1,16 +1,21 @@
-// Package lowering preserves expression behavior when adding statements.
+// Package lowering replaces checked expressions with equivalent Go statements.
 //
-// An expression can run after earlier operands, inside a selected branch, or
-// on each loop visit. Added statements must run at that same point. For
-// use(first(), target()!, last()), first runs before target; failure returns
-// before last runs. Moving every check to the start of the statement would
-// change that behavior.
+// The driver supplies source syntax, checked types, bindings, and TGo operation
+// records. LowerPropagations handles propagation and if values. It returns
+// formatted Go file contents; the driver writes owned generated files.
 //
-// Checked types determine temporary storage. Explicit types preserve conversions
-// that the surrounding source supplies. Fresh names preserve source bindings.
-// Assignments retain their original storage, and each function retains its own
-// return target.
+// The lowerer evaluates each call once, checks its error at that point, and
+// returns on failure before later operands run. It saves earlier operands when
+// needed. Branch work stays in the selected branch, loop work keeps its repeated
+// execution, and assignment destinations keep their original storage.
 //
-// Rewrites copy changed syntax. The checked input stays available for another
-// rewrite. Module selection and file output belong to the caller.
+// Saved values use explicit checked types and fresh local names. Propagation
+// checks the original error result before return conversion. Returns, defers,
+// and jumps retain their source function and targets. If branches that leave the
+// function or jump out need no result assignment.
+//
+// InsertAfter is a separate operation for ordinary Go. It inserts a caller's
+// statements after one selected expression. Both operations build changed syntax
+// without changing the checked input, so callers can make several rewrites from
+// one source. Module selection and disk writes belong to the driver or caller.
 package lowering

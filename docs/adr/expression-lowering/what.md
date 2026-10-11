@@ -1,20 +1,20 @@
-# WHAT
+# Add statements at an expression's evaluation point
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-`!` evaluates a call, checks its error, and returns that same error before
-using the call's other results. These examples run inside a function that
-returns `error`.
+Error propagation needs statements inside larger expressions. The lowerer must
+run those statements where the original expression executes, without repeating
+it or moving later work ahead of an error return.
 
 ## Inside a call
 
-Source:
+For a function that returns `error`:
 
 ```text
 join(first(), target()!, last())
 ```
 
-Generated Go:
+The generated Go must have this behavior:
 
 ```go
 firstValue := first()
@@ -25,37 +25,33 @@ if err != nil {
 join(firstValue, targetValue, last())
 ```
 
-`first()` runs before `target()`. If `target()` fails, neither `last()` nor
-`join()` runs.
+`first` runs before `target`. Failure returns before `last` or `join` runs.
+Actual output uses fresh names and checked types.
 
-## Inside a conditional expression
+## Inside a skipped operand
 
-`left()` returns `bool`. `right()` returns `(bool, error)`.
-
-Source:
+If `left` returns `bool` and `right` returns `(bool, error)`:
 
 ```text
 use(left() && right()!)
 ```
 
-Generated Go:
+The behavior is:
 
 ```go
-r := left()
-if r {
+value := left()
+if value {
     rightValue, err := right()
     if err != nil {
         return err
     }
-    r = rightValue
+    value = rightValue
 }
-use(r)
+use(value)
 ```
 
-If `left()` is false, `right()` does not run. If `right()` fails, `use()` does
-not run. Otherwise, `use()` receives the Boolean result.
+`right` runs only when `left` is true. Putting its check before the condition
+would change execution.
 
-#248 proves after-evaluation statement insertion. #247 adds the error check
-and `!` / `!!` syntax. No before-insertion API is needed.
-
-[HOW](how.md) chooses the tools. [PROOF](proof.md) defines the tests.
+The same placement rule supports the public `InsertAfter` API and TGo lowering.
+[HOW](how.md) describes the implementation. [PROOF](proof.md) defines checks.

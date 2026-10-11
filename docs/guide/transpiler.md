@@ -1,14 +1,13 @@
-# Transpiler use and API
+# Use the TGo compiler
 
-The transpiler reads `.tgo` files in a Go module and emits a Go module.
-It adds postfix error propagation and value-producing `if` to Go syntax.
+Write TGo in `.tgo` files inside a Go module. Compilation writes ordinary Go
+beside those inputs, then checks it with Go. Use Go's normal commands to build,
+test, or run the result.
 
-## Propagate errors
+## Return a call's error
 
-`call()!` returns the original non-nil error from the current function.
-`call()!!` wraps it once with the source call name and `%w`. `errors.Is` and
-`errors.As` can still find the original error. Both operators remove the
-call's final error result from its success values.
+`call()!` returns the call's error on failure. On success, the expression
+provides the call's results before the error:
 
 ```text
 package example
@@ -21,22 +20,36 @@ func Parse(text string) (int, error) {
 }
 ```
 
-The containing function must end its result list with an error interface.
-For `!`, the call's final result must be assignable to that interface. For `!!`,
-the wrapped `error` must be assignable to it. On failure, other results receive
-typed zero values. Earlier effects remain; later work
-stops. Deferred calls run. A function literal has its own return target.
-Propagation works inside calls, assignments, literals, short-circuit expressions,
-loops, switches, ranges, selects, and arguments to `defer` and `go`.
+This has the behavior of:
 
-`!` and `!!` are not allowed anywhere inside an operand of
-`unsafe.Sizeof`, `unsafe.Alignof`, or `unsafe.Offsetof`. This includes nested
-function bodies and generic operands. Import aliases do not change this rule.
-The diagnostic identifies the operator's source position and the builtin.
+```go
+func Parse(text string) (int, error) {
+    value, err := strconv.Atoi(text)
+    if err != nil {
+        return 0, err
+    }
+    return value, nil
+}
+```
 
-## Choose a value
+`call()!!` does the same check but wraps failure with the source call name and
+`%w`. For example, a failure from `strconv.Atoi(text)!!` gets `strconv.Atoi`
+context. `errors.Is` and `errors.As` can still find the original error.
 
-An `if` expression runs one branch and uses its final expression as its value:
+The enclosing function must end its result list with an error interface. The
+original error must fit that result for `!`; the wrapped `error` must fit it for
+`!!`. Failure returns zero values for the other results. Source deferred calls
+still run. A real function literal has its own return target.
+
+Propagation can appear inside larger expressions. In
+`consume(first(), fetch()!, last())`, `first` runs before `fetch`. If `fetch`
+fails, `last` and `consume` do not run. Propagation is not allowed inside an
+operand of `unsafe.Sizeof`, `unsafe.Alignof`, or `unsafe.Offsetof`, including
+inside nested function bodies in that operand.
+
+## Use an if expression as a value
+
+An if value executes one branch and uses its final expression:
 
 ```text
 name := if active {
@@ -47,20 +60,23 @@ name := if active {
 }
 ```
 
-Require `else`. Branches can contain ordinary statements. Return, defer,
-propagation, and jumps act in the enclosing function. A branch that returns or
-cannot complete needs no final value. A `continue` cannot target a range whose
-collection is still being computed.
+An if value requires `else`. Branches can contain statements. A return, defer,
+propagation, or jump belongs to the enclosing function. A path that returns or
+cannot reach the branch end needs no final value.
 
 An assignment, return, argument, or conversion can supply the result type.
-Otherwise, typed branches must have the same type. Untyped constants use Go's
-constant rules. Add an explicit type or conversion when the type is unknown or
-branches have different types. The result is not a constant; branches supply
-one value each. Ordinary `if` statements keep their Go behavior.
+Otherwise, typed branch results must have the same type, with Go's rules for
+untyped constants. `nil` cannot establish a type on its own. Use a type or
+conversion when the result type is unknown or branch types differ.
 
-## Command
+Each completing branch supplies one value. An if value is not a constant, so it
+cannot be a `const` initializer or an array length. Ordinary if statements keep
+Go behavior. A `continue` cannot target a range while its collection is still
+being computed.
 
-Run from the repository root:
+## Compile and run
+
+From the repository root:
 
 ```sh
 make prepare
@@ -69,41 +85,49 @@ go -C /path/to/source build ./...
 go -C /path/to/source test ./...
 ```
 
-The source directory must be inside a Go module. The command writes generated
-Go beside its `.tgo` source. `name.tgo` produces `name_tgo.go`;
-`name_test.tgo` produces `name_tgo_test.go`. Target suffixes stay at the end:
-`name_linux_amd64_test.tgo` produces `name_tgo_linux_amd64_test.go`.
-Compilation writes and checks generated files in the source module.
-TGo inputs control these files. Selected files contain final Go after success.
-Generated files for excluded inputs are removed. Go can update module metadata.
+The argument can be a module subdirectory. The compiler finds its `go.mod` and
+works from the module root. There is no output-directory option.
 
-Go build constraints select which TGo files to compile, including test packages.
-Excluded files retain their `.tgo` source. Assets and local dependencies stay at
-their original paths. Relative module replacements remain unchanged.
-Invalid source and compiler failures cause a panic.
+| TGo source | Generated Go |
+| --- | --- |
+| `name.tgo` | `name_tgo.go` |
+| `name_test.tgo` | `name_tgo_test.go` |
+| `name_linux_amd64_test.tgo` | `name_tgo_linux_amd64_test.go` |
 
-## Go API
+Go build constraints and platform rules select the files, including test
+variants. Existing generated snapshots are replaced from their TGo inputs.
+Generated files for excluded inputs are removed; the `.tgo` inputs remain.
+Nested modules, vendor dependencies, and data directories are not compiler
+outputs. Assets, headers, and local dependencies stay at their original paths.
+
+The compiler writes the source-checking and final versions at the same generated
+paths. It creates no temporary module. A failure can leave a source-checking
+version or completed output at those paths. Correct the TGo input and compile
+again. Invalid source and compiler failures panic. Normal Go module loading can
+update `go.mod` and `go.sum`.
+
+See [the complete compilation process](../arch/transpiler/readme.md) for each step.
+
+## Call the Go API
 
 Import `github.com/lucasavila00/tgo/pkg/transpiler`.
 
-| Operation | Result |
+| Operation | What it does |
 | --- | --- |
-| `Compile(directory string)` | Writes and checks generated Go in the source module; panics on failure |
-| `Load(directory, pattern string) (*Source, error)` | One Go package with syntax and type information |
-| `source.InsertAfter(site Site, after After) (map[string][]byte, error)` | Formatted Go files keyed by absolute path |
+| `Compile(directory string)` | Writes and checks generated Go in the module; returns nothing and panics on failure. |
+| `Load(directory, pattern string) (*Source, error)` | Loads one ordinary Go package and records expression sites. |
+| `source.InsertAfter(site Site, after After) (map[string][]byte, error)` | Builds Go file contents with added statements; does not write files. |
 
-`Load` reads ordinary Go syntax. `Source.Package` contains the loaded
-`packages.Package`; `Source.Sites` lists the original expressions. Each `Site`
-records its file, byte offsets, and AST kind. `Reason` explains syntax that has
-no evaluation in the current function. `ErrorReturn` identifies a function
-with one `error` result; `ReturnReason` explains other return signatures.
+`Compile` is the module compiler. `Load` and `InsertAfter` form a separate API
+for tools that insert statements after an ordinary Go expression.
 
-`After` is a callback with type `func([]ast.Expr) []ast.Stmt`. Its expression
-references are the evaluated results, including multiple results from a call.
-An assignment destination supplies no value result. The callback must return
-valid Go statements for the insertion scope.
+`Source.Package` retains the stock `packages.Package`. `Source.Sites` lists
+expressions by file, byte offsets, and AST kind. A `Reason` marks syntax with no
+value evaluation in the current function, such as a type name. `ErrorReturn`
+identifies an enclosing function with one `error` result.
 
-For a site inside a function with an `err` binding and one `error` result:
+The `After` callback receives references to saved results. Using those
+references does not evaluate the original expression again:
 
 ```go
 files, err := source.InsertAfter(site, func(results []ast.Expr) []ast.Stmt {
@@ -113,15 +137,12 @@ files, err := source.InsertAfter(site, func(results []ast.Expr) []ast.Stmt {
 })
 ```
 
-The insertion executes after the selected expression and before its parent
-uses the result. It executes only when the expression executes. The source AST
-stays unchanged, so callers can generate independent variants from one load.
-An unknown site or a site without a current-function evaluation returns an error.
+This example requires a site inside a function that returns only `error`, with
+`err` in scope. The caller handles `err` and writes `files`. Returned paths are
+absolute. Added statements execute after the selected expression and before its
+parent uses the result, only when that expression runs. The checked tree stays
+unchanged, so callers can produce several rewrites from one load.
 
-See the [architecture](../arch/transpiler/readme.md) for lowering and package dependencies,
-and the [test guide](../../tests/readme.md) for behavior checks and snapshots.
-
-Generated temporaries have explicit types. A source operation is rejected if
-saving its value requires a private imported type or a hidden type name that
-Go cannot use in a declaration. The diagnostic gives the source position and
-type. Expose an accessible type at that boundary.
+Generated saved values use explicit types. If a required declaration needs a
+private imported type or a hidden type name, compilation reports its position
+and type. An accessible type or conversion at that source boundary can resolve it.

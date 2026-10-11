@@ -1,21 +1,21 @@
-# HOW
+# Use the final generated paths for both stages
 
-1. List module paths. Read owned Go and TGo source, excluding matching stale
-   generated files. Record TGo inputs and their generated paths. A nested
-   `go.mod` marks a separate module. Exclude nested modules, vendor dependencies,
-   `testdata`, and directories whose names start with `.` or `_`. Do not read
-   unrelated asset contents.
-2. Write each original TGo input at its generated path in the module. Run
-   `go/packages` there to select files, dependencies, exports, and test variants.
-3. Have the private checker read these staged source files through the frontend.
-   Check each package identity once and keep its checked types and positions.
-4. Lower selected source packages. Write generated Go only to paths owned by TGo
-   inputs. Remove generated paths for excluded inputs.
-5. Run stock Go checking against the final files on disk. Return no file contents.
+1. Find the module root. List file paths, exclude stale outputs, and read owned
+   Go and TGo source. Nested `go.mod` files mark separate modules. Exclude
+   vendor, testdata, and directories starting with `.` or `_` from ownership.
+2. Write each TGo input at its generated Go path. Keep platform and test suffixes
+   at the end. Ask `go/packages` for file selection and dependency metadata.
+3. Check selected source through the frontend and private checker. Cache each
+   package ID and keep types and source positions for lowering.
+4. Lower checked expressions. Write ordinary Go only to owned generated paths.
+   Remove owned paths for inputs excluded from this build.
+5. Check the final module with stock Go. Return no file contents.
 
-Go performs normal module loading and metadata updates in the source directory.
-Keep filename suffixes and build constraints. The compiler stages and replaces
-generated files. Go reads ordinary Go, embed assets, and cgo headers at their
-original paths.
+The compiler creates no separate temporary files or module. Ordinary Go,
+embedded assets, headers, and dependencies stay at their original paths.
+Relative local replacements stay relative. Go can update `go.mod` and `go.sum`
+through normal module loading.
 
-[WHAT](what.md) records the decision. [PROOF](proof.md) defines the checks.
+See [the complete process](../../arch/transpiler/readme.md) for examples and
+file responsibilities. [WHAT](what.md) explains the decision; [PROOF](proof.md)
+defines the checks.

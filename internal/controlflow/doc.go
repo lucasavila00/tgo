@@ -1,13 +1,16 @@
-// Package controlflow checks which source paths can reach a branch value.
+// Package controlflow finds which paths can reach an if branch's value.
 //
-// An if expression can contain return, break, continue, or goto before its final
-// expression. These paths leave the branch without supplying a value. The
-// checker must exclude them when it chooses the result type. Lowering must use
-// the same decision when it emits an assignment to the result variable.
+// An if value can contain statements before its final expression. A return,
+// break, continue, or goto can leave the branch before that value is reached.
+// The checker must know which paths supply a value to determine its type. The
+// lowerer needs the same answer before it emits a result assignment.
 //
-// The analysis follows statements and expressions through a graph. Each point
-// has edges to the next possible steps. Return ends a path. Loop exits, labels,
-// and fallthrough have explicit targets. Calls into real function literals keep
-// their own control flow. The checker supplies the meaning of added conditional
-// calls, panic, and unevaluated operands. This package depends only on Go syntax.
+// Branch reports whether execution can reach the last statement and whether it
+// can reach the end of the branch. The analysis builds a graph of possible next
+// steps. Returns end paths. Loops, labels, and switch fallthrough have jump
+// targets. Real function literals have separate control flow.
+//
+// The caller supplies functions that identify added if expressions, terminating
+// calls such as panic, and unevaluated operands. This package reads Go syntax;
+// it does not type check source or generate code.
 package controlflow

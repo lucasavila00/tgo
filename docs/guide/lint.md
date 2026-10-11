@@ -1,23 +1,32 @@
-# Source checks
+# Source checks in CI
 
-Run `make lint` before you submit code. Install golangci-lint v2.14.0 first:
+The pull request workflow runs `make lint` before documentation and tests. It
+prepares the private checker, checks source-file size, runs Go lint checks, and
+checks formatting.
+
+## Tools and limits
+
+The repository pins golangci-lint v2.14.0. Its checks cover unchecked errors,
+Go vet findings, Staticcheck bugs, unused code, documentation, and basic names.
+Revive supplies style checks. The formatter checks Go formatting.
+
+Each function is limited to 100 lines, including comments. Each tracked Go or
+TGo source file is limited to 700 lines, including comments and blank lines.
+Split work into steps with clear inputs and results when a limit is exceeded.
+
+The file-size check includes fixture inputs and reference programs. It skips
+names ending exactly in `_tgo.go` or `_tgo_test.go`. Go lint and formatting exclude
+`tests/testdata`; normal test files outside that directory remain checked.
+
+## Run the checks
+
+Where local validation is permitted, install the pinned tool and use:
 
 ```sh
 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 make lint
 ```
 
-The checks cover unchecked errors, Go vet findings, Staticcheck bug checks,
-unused code, documentation, basic names, and Go formatting. Revive supplies the
-style checks that replace the archived golint tool.
-
-Each function has a limit of 100 lines, including comments. Split a long function
-into operations with clear inputs and results. Each tracked Go or TGo source file
-has a limit of 700 lines, including comments and blank lines.
-
-The file check includes fixture inputs and reference programs. Generated
-`*_tgo.go` and `*_tgo_test.go` outputs are excluded from the file limit. Go lint
-checks exclude `tests/testdata`, which contains generated outputs and independent
-test programs. Test functions in the main test package remain checked.
-
-Pull request CI runs `make lint` before the test suite.
+Use hosted CI for full compiler validation. See the
+[test guide](testing.md) for the remaining workflow steps and
+[the scripts](../../scripts/README.md) for the file-size check.
