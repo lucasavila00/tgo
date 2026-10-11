@@ -1,0 +1,1 @@
+sizeof_plain_wrapped.tgo:10:31: ! is not allowed inside unsafe.Sizeof operands

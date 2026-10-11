@@ -17,6 +17,7 @@ type Marker struct {
 	Name     string
 	Wrap     bool
 	CallName string
+	Position token.Position
 }
 
 // MarkPostfix changes suffixes into comments that survive Go parsing.
@@ -50,7 +51,7 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 					break
 				}
 			}
-			operations[name] = Marker{Name: name, Wrap: count == 1}
+			operations[name] = Marker{Name: name, Wrap: count == 1, Position: file.Position(pos)}
 			output.Write(input[copied:offset])
 			fmt.Fprintf(&output, "/*%s*/", name)
 			copied = offset + count

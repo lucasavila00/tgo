@@ -1,0 +1,1 @@
+sizeof_dot_direct.tgo:9:27: !! is not allowed inside unsafe.Sizeof operands
