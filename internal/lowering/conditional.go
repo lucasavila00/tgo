@@ -136,6 +136,9 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 			before, values := r.expression(statement.X)
 			if result == nil {
 				for _, value := range values {
+					if tv.Value != nil {
+						value = &ast.BinaryExpr{X: value, Op: token.EQL, Y: value}
+					}
 					if tv.IsNil() {
 						value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
 					}

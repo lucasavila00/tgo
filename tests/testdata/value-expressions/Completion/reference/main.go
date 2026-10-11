@@ -9,6 +9,13 @@ func early(flag bool) int {
 	return 9
 }
 
+func wide(flag bool) int {
+	if flag {
+		return 7
+	}
+	return 9
+}
+
 func nested(flag bool) int {
 	if flag {
 		if !flag {
@@ -64,7 +71,7 @@ func main() {
 			expect, nestedExpect, jumpExpect, breakExpect = 7, 8, 127, 3
 			traceExpect = "D"
 		}
-		if early(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
+		if early(flag) != expect || wide(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
 			panic("branch result")
 		}
 		if deferred(flag, &trace) != expect || trace != traceExpect {

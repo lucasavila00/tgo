@@ -7,7 +7,7 @@ func early(flag bool) int {
 		var tgo1 int
 		if flag {
 			return 7
-			_ = "unreachable"
+			_ = "unreachable" == "unreachable"
 		} else {
 			tgo1 = 9
 		}
@@ -16,16 +16,12 @@ func early(flag bool) int {
 
 }
 
-func nested(flag bool) int {
+func wide(flag bool) int {
 	{
 		var tgo2 int
 		if flag {
-			if !flag {
-				return 6
-			} else {
-				return 8
-			}
-			_ = "unreachable"
+			return 7
+			_ = 1<<100 == 1<<100
 		} else {
 			tgo2 = 9
 		}
@@ -34,52 +30,48 @@ func nested(flag bool) int {
 
 }
 
-func jump(flag bool) int8 {
+func nested(flag bool) int {
 	{
-		var tgo3 int8
+		var tgo3 int
 		if flag {
-			goto value
-			return 0
-		value:
-			tgo3 = 127
+			if !flag {
+				return 6
+			} else {
+				return 8
+			}
+			_ = "unreachable" == "unreachable"
 		} else {
-			tgo3 = 1
+			tgo3 = 9
 		}
 		return tgo3
 	}
 
 }
 
-func deferred(flag bool, trace *string) int {
+func jump(flag bool) int8 {
 	{
-		var tgo4 int
+		var tgo4 int8
 		if flag {
-			defer func() { *trace += "D" }()
-			return 7
-			_ = interface {
-			}(nil)
+			goto value
+			return 0
+		value:
+			tgo4 = 127
 		} else {
-			tgo4 = 9
+			tgo4 = 1
 		}
 		return tgo4
 	}
 
 }
 
-func argument(flag bool) int {
+func deferred(flag bool, trace *string) int {
 	{
 		var tgo5 int
 		if flag {
-			var tgo6 int
-			if !flag {
-				return 6
-			} else {
-				return 8
-			}
-			var ignored int = tgo6
-
-			_ = ignored
-			_ = "unreachable"
+			defer func() { *trace += "D" }()
+			return 7
+			_ = interface {
+			}(nil)
 		} else {
 			tgo5 = 9
 		}
@@ -88,18 +80,40 @@ func argument(flag bool) int {
 
 }
 
+func argument(flag bool) int {
+	{
+		var tgo6 int
+		if flag {
+			var tgo7 int
+			if !flag {
+				return 6
+			} else {
+				return 8
+			}
+			var ignored int = tgo7
+
+			_ = ignored
+			_ = "unreachable" == "unreachable"
+		} else {
+			tgo6 = 9
+		}
+		return tgo6
+	}
+
+}
+
 func innerBreak(flag bool) int {
 	{
-		var tgo7 int
+		var tgo8 int
 		if flag {
 			for {
 				break
 			}
-			tgo7 = 3
+			tgo8 = 3
 		} else {
-			tgo7 = 9
+			tgo8 = 9
 		}
-		return tgo7
+		return tgo8
 	}
 
 }
@@ -112,7 +126,7 @@ func main() {
 			expect, nestedExpect, jumpExpect, breakExpect = 7, 8, 127, 3
 			traceExpect = "D"
 		}
-		if early(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
+		if early(flag) != expect || wide(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
 			panic("branch result")
 		}
 		if deferred(flag, &trace) != expect || trace != traceExpect {
