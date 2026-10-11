@@ -14,7 +14,8 @@ func (r *rewrite) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 		leftBefore, left := r.expression(e.X)
 		rightBefore, right := r.expression(e.Y)
 		before = leftBefore
-		copy.X, copy.Y = left[0], right[0]
+		copy.X = left[0]
+		copy.Y = right[0]
 		if len(rightBefore) == 0 {
 			result = &copy
 			return before, result
@@ -35,7 +36,8 @@ func (r *rewrite) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 	} else {
 		var values []ast.Expr
 		before, values = r.operands([]ast.Expr{e.X, e.Y})
-		copy.X, copy.Y = values[0], values[1]
+		copy.X = values[0]
+		copy.Y = values[1]
 		result = &copy
 	}
 	return before, result
@@ -79,13 +81,15 @@ func (r *rewrite) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 		before, base = r.arrayBase(e.X)
 		setup, index := r.expression(e.Index)
 		before = append(before, setup...)
-		copy.X, copy.Index = base, index[0]
+		copy.X = base
+		copy.Index = index[0]
 		result = &copy
 		return before, result
 	}
 	var values []ast.Expr
 	before, values = r.operands([]ast.Expr{e.X, e.Index})
-	copy.X, copy.Index = values[0], values[1]
+	copy.X = values[0]
+	copy.Index = values[1]
 	result = &copy
 	return before, result
 }
@@ -153,20 +157,20 @@ func (r *rewrite) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 	var values []ast.Expr
 	before, values = r.operands(input)
 	copy.Elts = make([]ast.Expr, len(e.Elts))
-	i := 0
-	for j, element := range e.Elts {
+	operandIndex := 0
+	for elementIndex, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			kv := *pair
+			keyValue := *pair
 			if tv := r.source.checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
-				kv.Key = values[i]
-				i++
+				keyValue.Key = values[operandIndex]
+				operandIndex++
 			}
-			kv.Value = values[i]
-			i++
-			copy.Elts[j] = &kv
+			keyValue.Value = values[operandIndex]
+			operandIndex++
+			copy.Elts[elementIndex] = &keyValue
 		} else {
-			copy.Elts[j] = values[i]
-			i++
+			copy.Elts[elementIndex] = values[operandIndex]
+			operandIndex++
 		}
 	}
 	result = &copy
