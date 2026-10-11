@@ -8,6 +8,10 @@ import (
 
 func TestInsertJumps(t *testing.T) {
 	cases := []struct{ name, code, target, want string }{
+		{"labeled short declaration", `func run() { goto L; L: x:=right(); fmt.Print(x) }`, "right()", "RM1"},
+		{"labeled var declaration", `func run() { goto L; L: var x=right(); fmt.Print(x) }`, "right()", "RM1"},
+		{"backward declaration jump", `func run() { n:=0; L: x:=right(); fmt.Print(x); n++; if n<2 {goto L} }`, "right()", "RM1RM1"},
+		{"nested declaration labels", `func run() { goto A; A: B: x:=right(); fmt.Print(x); if false {goto B} }`, "right()", "RM1"},
 		{"skip generated locals", `func run() { var x int; goto Done; x=right(); Done: fmt.Print(x) }`, "right()", "0"},
 		{"labeled continue", `func run() { L: for i:=0; i<2; i=next(i) { fmt.Print(i); continue L } }`, "next(i)", "0TM1TM"},
 		{"goto and continue", `func run() { again:=false; L: for i:=0; i<2; i=next(i) { fmt.Print(i); if !again { again=true; goto L }; continue L } }`, "next(i)", "00TM1TM"},

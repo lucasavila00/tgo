@@ -235,6 +235,25 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 			defer delete(r.labels, s.Label.Name)
 		}
 		statements := r.statement(s.Stmt)
+		// Keep source declarations in their original scope, including nested labels.
+		declaration := s.Stmt
+		for {
+			label, ok := declaration.(*ast.LabeledStmt)
+			if !ok {
+				break
+			}
+			declaration = label.Stmt
+		}
+		switch declaration := declaration.(type) {
+		case *ast.DeclStmt:
+			copy.Stmt = statements[0]
+			return append([]ast.Stmt{&copy}, statements[1:]...)
+		case *ast.AssignStmt:
+			if declaration.Tok == token.DEFINE {
+				copy.Stmt = statements[0]
+				return append([]ast.Stmt{&copy}, statements[1:]...)
+			}
+		}
 		if !jump {
 			if len(statements) == 1 {
 				if block, ok := statements[0].(*ast.BlockStmt); ok {

@@ -1,0 +1,120 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+)
+
+var sentinel = errors.New("sentinel")
+var trace []string
+
+func next(fail bool) (int, error) {
+	trace = append(trace, "call")
+	if fail {
+		return 7, sentinel
+	}
+	return 7, nil
+}
+
+func shortDirect(fail bool) error {
+	defer func() { trace = append(trace, "defer") }()
+	visits := 0
+	goto L
+L:
+	value := next(fail) !!
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func shortWrapped(fail bool) error {
+	defer func() { trace = append(trace, "defer") }()
+	visits := 0
+	goto L
+L:
+	value := next(fail) !
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func varDirect(fail bool) error {
+	defer func() { trace = append(trace, "defer") }()
+	visits := 0
+	goto L
+L:
+	var value = next(fail) !!
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func varWrapped(fail bool) error {
+	defer func() { trace = append(trace, "defer") }()
+	visits := 0
+	goto L
+L:
+	var value = next(fail) !
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func nestedLabels(fail bool) error {
+	goto Outer
+Outer:
+Inner:
+	value := next(fail) !!
+	trace = append(trace, fmt.Sprint(value))
+	if false {
+		goto Inner
+	}
+	return nil
+}
+
+func main() {
+	for _, entry := range []struct {
+		name   string
+		run    func(bool) error
+		wrap   bool
+		visits int
+	}{
+		{"short-direct", shortDirect, false, 2},
+		{"short-wrapped", shortWrapped, true, 2},
+		{"var-direct", varDirect, false, 2},
+		{"var-wrapped", varWrapped, true, 2},
+	} {
+		for _, fail := range []bool{false, true} {
+			trace = nil
+			got := entry.run(fail)
+			actual := append([]string(nil), trace...)
+			trace = nil
+			want := reference(fail, entry.wrap, entry.visits)
+			if fmt.Sprint(got) != fmt.Sprint(want) || !reflect.DeepEqual(actual, trace) || errors.Is(got, sentinel) != errors.Is(want, sentinel) {
+				panic(entry.name)
+			}
+			if fail && !entry.wrap && got != sentinel {
+				panic("error identity changed")
+			}
+			fmt.Println(entry.name, fail, got, actual)
+		}
+	}
+	trace = nil
+	if nestedLabels(false) != nil || !reflect.DeepEqual(trace, []string{"call", "7"}) {
+		panic("nested labels")
+	}
+	fmt.Println("nested labels", trace)
+}

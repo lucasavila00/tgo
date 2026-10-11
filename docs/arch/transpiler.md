@@ -72,6 +72,10 @@ use(leftValue, rightValue)
 Earlier work stays before the insertion. Skipped expressions stay skipped.
 The last call remains in the syntax tree, but cannot run after the return.
 
+A label on a declaration stays on the first added statement. The remaining
+statements stay in the original scope, so later code can still use the source
+variable. Other statements keep blocks when they need a separate scope.
+
 The compiler copies changed syntax nodes. It keeps the original source tree
 and type information, so callers can request another transformation.
 
