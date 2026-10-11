@@ -356,20 +356,9 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
 		// Read types from the original expression, not from the new tree.
-		count := r.resultCount(expr)
-		refs := make([]ast.Expr, count)
-		for i := range refs {
-			refs[i] = r.name()
-		}
-		if count == 0 {
-			before = append(before, &ast.ExprStmt{X: result})
-		} else {
-			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{r.contextLiteral(result, expr)}})
-		}
+		saved, refs := r.save(result)
+		before = append(before, saved...)
 		before = append(before, r.after(refs)...)
-		if count == 1 && r.untypedBoolean(original) {
-			refs = []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
-		}
 		return before, refs
 	}
 	return before, []ast.Expr{result}

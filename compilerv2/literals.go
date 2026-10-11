@@ -178,27 +178,3 @@ func (r *rewrite) prepareSliceImport() {
 }
 
 func isPointer(typ types.Type) bool { _, ok := typ.Underlying().(*types.Pointer); return ok }
-
-func (r *rewrite) snapshotLiteral(literal *ast.CompositeLit, original ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	copy := *literal
-	copy.Elts = make([]ast.Expr, len(literal.Elts))
-	var before []ast.Stmt
-	for i, element := range literal.Elts {
-		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			item := *pair
-			setup, value := r.capture(pair.Value)
-			before = append(before, setup...)
-			item.Value = value
-			copy.Elts[i] = &item
-		} else {
-			setup, value := r.capture(element)
-			before = append(before, setup...)
-			copy.Elts[i] = value
-		}
-	}
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.origins[&copy] = original
-	return before, []ast.Expr{&copy}
-}
