@@ -48,6 +48,10 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 }
 
 func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
+	return r.valueSwitchStatement(s, nil)
+}
+
+func (r *rewrite) valueSwitchStatement(s *ast.SwitchStmt, result *ast.Ident) []ast.Stmt {
 	roots := []ast.Node{s.Init, s.Tag}
 	for _, stmt := range s.Body.List {
 		for _, expr := range stmt.(*ast.CaseClause).List {
@@ -72,8 +76,16 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 		}
 		c := *clause
 		c.Body = nil
-		for _, body := range clause.Body {
-			c.Body = append(c.Body, r.statement(body)...)
+		if result != nil {
+			branchResult := result
+			if !r.source.checked.TypesInfo.TGoCases[clause] {
+				branchResult = nil
+			}
+			c.Body = r.conditionalBlock(&ast.BlockStmt{List: clause.Body}, branchResult).List
+		} else {
+			for _, body := range clause.Body {
+				c.Body = append(c.Body, r.statement(body)...)
+			}
 		}
 		cases = append(cases, &c)
 	}
@@ -132,6 +144,10 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 }
 
 func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
+	return r.valueTypeSwitchStatement(s, nil)
+}
+
+func (r *rewrite) valueTypeSwitchStatement(s *ast.TypeSwitchStmt, result *ast.Ident) []ast.Stmt {
 	exit := r.prepareBreakExit(s, s.Init, s.Assign)
 	copy := *s
 	var before []ast.Stmt
@@ -163,8 +179,16 @@ func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
 	for _, statement := range s.Body.List {
 		clause := *statement.(*ast.CaseClause)
 		clause.Body = nil
-		for _, body := range statement.(*ast.CaseClause).Body {
-			clause.Body = append(clause.Body, r.statement(body)...)
+		if result != nil {
+			branchResult := result
+			if !r.source.checked.TypesInfo.TGoCases[statement.(*ast.CaseClause)] {
+				branchResult = nil
+			}
+			clause.Body = r.conditionalBlock(&ast.BlockStmt{List: statement.(*ast.CaseClause).Body}, branchResult).List
+		} else {
+			for _, body := range statement.(*ast.CaseClause).Body {
+				clause.Body = append(clause.Body, r.statement(body)...)
+			}
 		}
 		copy.Body.List = append(copy.Body.List, &clause)
 	}

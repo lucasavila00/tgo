@@ -27,7 +27,7 @@ type rewrite struct {
 	comprehensions      map[*ast.CallExpr]*frontend.Comprehension
 	comprehensionRanges map[*ast.RangeStmt]bool
 	collectionOutputs   map[string]*collectionDestination
-	conditionals        map[*ast.CallExpr]*ast.IfStmt
+	conditionals        map[*ast.CallExpr]ast.Stmt
 	lowered             map[ast.Expr]bool
 	frame               *returnFrame
 	formatAlias         *ast.Ident

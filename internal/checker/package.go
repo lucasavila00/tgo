@@ -27,7 +27,7 @@ type Package struct {
 	Errors         []error
 	Operations     map[string]types.TGoOperation
 	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-	Conditionals   map[*ast.CallExpr]*ast.IfStmt
+	Conditionals   map[*ast.CallExpr]ast.Stmt
 }
 
 // Loader checks source packages and reads compiled dependency types.
@@ -83,7 +83,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	loader.checking[metadata.ID] = true
 	defer delete(loader.checking, metadata.ID)
 	pkg := &Package{Fset: loader.fset, TypesInfo: newInfo(), GoFiles: metadata.GoFiles,
-		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]ast.Stmt)}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
 		filenames = metadata.GoFiles
@@ -147,7 +147,7 @@ func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package,
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
 				if id, ok := call.Fun.(*ast.Ident); ok && pkg.Operations[id.Name].Conditional {
-					pkg.Conditionals[call] = call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
+					pkg.Conditionals[call] = call.Args[0].(*ast.FuncLit).Body.List[0]
 				}
 			}
 			return true
@@ -201,7 +201,7 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 		return nil, err
 	}
 	pkg := &Package{Fset: metadata.Fset, Syntax: metadata.Syntax, GoFiles: metadata.GoFiles,
-		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]ast.Stmt)}
 	loader.fset = metadata.Fset
 	return loader.check(metadata, pkg)
 }

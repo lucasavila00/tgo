@@ -157,12 +157,12 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	check.hasCallOrRecv = true
 	x.expr = call
 	x.typ_ = Typ[Invalid]
-	body := call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
+	body := call.Args[0].(*ast.FuncLit).Body.List[0]
 	context := hint
 	if target != nil {
 		context = target.typ
 	}
-	values := check.conditionalBranches(body, context)
+	values := check.conditionalStatement(body, context)
 	if check.conditionalValues == nil {
 		check.conditionalValues = make(map[*ast.CallExpr][]*operand)
 	}
@@ -333,8 +333,9 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 		check.hasLabel = true
 		last = labelled.Stmt
 	}
-	if conditional, ok := last.(*ast.IfStmt); ok {
-		return check.conditionalBranches(conditional, context)
+	switch last.(type) {
+	case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+		return check.conditionalStatement(last, context)
 	}
 	if statement, ok := last.(*ast.ExprStmt); ok {
 		branch := new(operand)
@@ -468,7 +469,7 @@ func (check *Checker) prepareConditionalArgument(expr ast.Expr) {
 		check.inferConditionals = make(map[*ast.CallExpr]bool)
 	}
 	check.inferConditionals[call] = true
-	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt))
+	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0])
 }
 
 func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
@@ -478,6 +479,16 @@ func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
 		if statement.Else != nil {
 			check.prepareConditionalTails(statement.Else)
 		}
+	case *ast.SwitchStmt:
+		for _, clause := range statement.Body.List {
+			check.prepareConditionalTails(clause)
+		}
+	case *ast.TypeSwitchStmt:
+		for _, clause := range statement.Body.List {
+			check.prepareConditionalTails(clause)
+		}
+	case *ast.CaseClause:
+		check.prepareConditionalTails(&ast.BlockStmt{List: statement.Body})
 	case *ast.BlockStmt:
 		if list := trimTrailingEmptyStmts(statement.List); len(list) != 0 {
 			check.prepareConditionalTails(list[len(list)-1])
@@ -592,4 +603,60 @@ func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
 		}
 	}
 	return visitor
+}
+
+type conditionalCase struct {
+	context Type
+	values  []*operand
+}
+
+func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*operand {
+	if statement, ok := statement.(*ast.IfStmt); ok {
+		return check.conditionalBranches(statement, context)
+	}
+	var body *ast.BlockStmt
+	switch statement := statement.(type) {
+	case *ast.SwitchStmt:
+		body = statement.Body
+	case *ast.TypeSwitchStmt:
+		body = statement.Body
+	}
+	if check.conditionalCases == nil {
+		check.conditionalCases = make(map[*ast.CaseClause]*conditionalCase)
+	}
+	hasDefault := false
+	for _, statement := range body.List {
+		clause := statement.(*ast.CaseClause)
+		hasDefault = hasDefault || clause.List == nil
+		check.conditionalCases[clause] = &conditionalCase{context: context}
+	}
+	if !hasDefault {
+		check.error(statement, InvalidSyntaxTree, "switch expression requires default")
+	}
+	check.stmt(check.statementContext, statement)
+	var values []*operand
+	for _, statement := range body.List {
+		clause := statement.(*ast.CaseClause)
+		values = append(values, check.conditionalCases[clause].values...)
+		delete(check.conditionalCases, clause)
+	}
+	if !hasDefault {
+		values = append(values, &operand{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]})
+	}
+	return values
+}
+
+func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*operand {
+	previous := check.statementContext
+	check.statementContext &^= breakOk | fallthroughOk | finalSwitchCase
+	defer func() { check.statementContext = previous }()
+	body := &ast.BlockStmt{Lbrace: clause.Colon, List: clause.Body, Rbrace: clause.End()}
+	values := check.conditionalBlock(body, context)
+	if check.Info != nil {
+		if check.TGoCases == nil {
+			check.TGoCases = make(map[*ast.CaseClause]bool)
+		}
+		check.TGoCases[clause] = check.TGoBranches[body]
+	}
+	return values
 }

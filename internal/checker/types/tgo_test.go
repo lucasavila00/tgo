@@ -231,3 +231,54 @@ func TestPropagationTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestSwitchExpressionTypes(t *testing.T) {
+	for _, source := range []string{
+		`func f(n int) string { return switch n { case 1: "one"; default: "other" } }`,
+		`func f(n int) int { return switch x:=n+1; x { case 1: x; default: 0 } }`,
+		`func f(n int) int { return switch { case n>0: 1; default: 0 } }`,
+		`func f(v any) int { return switch x:=v.(type) { case int: x; case string: len(x); default: 0 } }`,
+		`func f(n int) any { return switch n {case 1: "one"; default: 2} }`,
+		`func f(n int) *int { return switch n {case 1: nil; default: nil} }`,
+		`func f(n int) int { return switch n {case 1: return 2; "dead"; default: 3} }`,
+		`func f(n int) int { var x int = switch n {case 1: return 2; default: return 3}; _=x }`,
+		`func f(n int) int { return switch n {case 1: for {break}; 2; default: 3} }`,
+		`func f(n int) int { loop: for { return switch n {case 1: break loop; default: 3} }; return 4 }`,
+		`func f(n int) int { return switch n {case 1: if n>0 {1} else {2}; default: 3} }`,
+		`func pick[T any](x,y T) T{return x}; func f(n int) any {return pick(switch n {case 1: 1; default: "two"},any(3))}`,
+		`var x = switch 1 {case 1: 2; default: 3}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			_, err := checkTGo(t, source)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSwitchExpressionErrors(t *testing.T) {
+	for _, test := range []struct{ source, message string }{
+		{`func f(n int) { _=switch n {case 1: 2} }`, "requires default"},
+		{`func f(n int) { _=switch n {case 1: ; default: 2} }`, "final value"},
+		{`func f(n int) { _=switch n {case 1: break; default: 2} }`, "break not in"},
+		{`func f(n int) { for { _=switch n {case 1: break; default: 2} } }`, "break not in"},
+		{`func f(n int) { _=switch n {case 1: fallthrough; default: 2} }`, "fallthrough"},
+		{`func f(n int) { _=switch n {case 1: 2; case 1: 3; default: 4} }`, "duplicate case"},
+		{`func f(n int) { _=switch n {case 1: 2; default: "three"} }`, "explicit type annotation"},
+		{`func f(n int) { const x=switch n {case 1: 2; default: 3}; _=x }`, "not constant"},
+		{`func f(n int) { _=switch x:=n; x {case 1: x; default: 2}; _=x }`, "undefined: x"},
+		{`func pair()(int,int){return 1,2}; func f(n int) { _=switch n {case 1: pair(); default: 2} }`, "multiple-value"},
+		{`func f(n int) int8 { return switch n {case 1: 128; default: 0} }`, "overflows"},
+	} {
+		t.Run(test.source, func(t *testing.T) {
+			_, err := checkTGo(t, test.source)
+			if err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("error: %v, want %q", err, test.message)
+			}
+			if err != nil && !strings.Contains(err.Error(), "main.tgo:") {
+				t.Fatalf("missing source position: %v", err)
+			}
+		})
+	}
+}

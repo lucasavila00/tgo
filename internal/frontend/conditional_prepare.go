@@ -79,8 +79,12 @@ func conditionalEnd(filename, source string, start int, tokens []sourceToken) in
 		}
 		if len(parsed.Decls) == 1 {
 			if function, ok := parsed.Decls[0].(*ast.FuncDecl); ok && len(function.Body.List) == 1 {
-				if conditional, ok := function.Body.List[0].(*ast.IfStmt); ok && set.Position(conditional.End()).Offset-len(prefix) == end-start {
-					return end
+				conditional := function.Body.List[0]
+				switch conditional.(type) {
+				case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+					if set.Position(conditional.End()).Offset-len(prefix) == end-start {
+						return end
+					}
 				}
 			}
 		}

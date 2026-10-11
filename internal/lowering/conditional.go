@@ -35,7 +35,7 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }
 
-func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) ([]ast.Stmt, []ast.Expr) {
 	result := r.name()
 	typ := types.Default(r.source.checked.TypesInfo.TypeOf(call))
 	declaration := variable(result, r.temporaryType(typ, call), nil)
@@ -47,7 +47,7 @@ func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]
 	}
 	r.temporaryTypes[result] = typ
 	r.origins[result] = call
-	body := r.conditionalStatement(statement, result)
+	body := r.valueStatement(statement, result)
 	r.lowered[call] = true
 	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}
 }
@@ -117,7 +117,7 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 			tail = label.Stmt
 		}
 		switch tail.(type) {
-		case *ast.ExprStmt, *ast.IfStmt:
+		case *ast.ExprStmt, *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
 		default:
 			return r.statement(statement)
 		}
@@ -131,6 +131,10 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 		return []ast.Stmt{&copy}
 	case *ast.IfStmt:
 		return r.conditionalStatement(statement, result)
+	case *ast.SwitchStmt:
+		return r.valueSwitchStatement(statement, result)
+	case *ast.TypeSwitchStmt:
+		return r.valueTypeSwitchStatement(statement, result)
 	case *ast.ExprStmt:
 		if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 			before, values := r.expression(statement.X)
@@ -150,4 +154,16 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 		}
 	}
 	return r.statement(statement)
+}
+
+func (r *rewrite) valueStatement(statement ast.Stmt, result *ast.Ident) []ast.Stmt {
+	switch statement := statement.(type) {
+	case *ast.IfStmt:
+		return r.conditionalStatement(statement, result)
+	case *ast.SwitchStmt:
+		return r.valueSwitchStatement(statement, result)
+	case *ast.TypeSwitchStmt:
+		return r.valueTypeSwitchStatement(statement, result)
+	}
+	return nil
 }

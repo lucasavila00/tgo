@@ -1,0 +1,63 @@
+package main
+
+import "fmt"
+
+func event(name string, n int) int { fmt.Print(name, " "); return n }
+
+var packageValue = switch event("package", 2) {
+case 1: "one"
+default: "two"
+}
+
+func early(n int) int {
+	defer fmt.Print("defer ")
+	x := switch n {
+	case 1: return event("return", 7)
+	default: event("value", 8)
+	}
+	fmt.Print("after ")
+	return x
+}
+
+func main() {
+	fmt.Println(packageValue)
+	x := switch i := event("init", 2); event("tag", i) {
+	default: event("default", 99)
+	case event("case1", 1), event("case2", 2): event("body", 20)
+	case event("skip", 2): 30
+	}
+	fmt.Println(x)
+	x = switch event("tag", 3) {
+	default: event("default", 99)
+	case if event("conditional", 1)>0 {1} else {2}: 10
+	case event("case2", 2): 20
+	}
+	fmt.Println(x)
+	x = switch {
+	case event("false", 0)>0: 10
+	case event("true", 1)>0: 20
+	default: 30
+	}
+	fmt.Println(x)
+	for _, item := range []any{3,"four",nil} {
+		x = switch v:=item.(type) {
+		case int: v+1
+		case string: len(v)
+		default: 0
+		}
+		fmt.Println(x)
+	}
+	fmt.Println(event("first", 1)+(switch 1 {case 1: event("middle", 2); default: 3})+event("last", 3))
+	fmt.Println(false && switch 1 {case 1: event("skip", 1)>0; default: true})
+	for i:=0; i<switch 1 {case 1: event("loop", 2); default: 0}; i++ { fmt.Print(i," ") }
+	fmt.Println()
+	fmt.Println(early(1), early(2))
+	outer: for i:=0;i<3;i++ {
+		x = switch i {
+		case 0: continue outer
+		case 1: for j:=0;j<1;j++ {break}; 10
+		default: break outer
+		}
+		fmt.Println(x)
+	}
+}

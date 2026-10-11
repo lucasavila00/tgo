@@ -33,7 +33,7 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr, *ast.SliceExpr:
 				syntaxOperand = true
 			}
-			if offset+2 <= len(source) && source[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
+			if offset+2 <= len(source) && (source[offset:offset+2] == "if" || offset+6 <= len(source) && source[offset:offset+6] == "switch") && (candidates[offset] || syntaxOperand) && offset > start {
 				start = offset
 			}
 		}
@@ -79,7 +79,7 @@ func expressionIfTokens(source string) map[int]bool {
 		if current == token.EOF {
 			return result
 		}
-		if current == token.IF {
+		if current == token.IF || current == token.SWITCH {
 			switch previous {
 			case token.ASSIGN, token.DEFINE, token.COMMA,
 				token.LPAREN, token.LBRACK, token.RETURN, token.RANGE,
