@@ -70,6 +70,16 @@ var ifFuzzBodies = []struct{ source, reference string }{
 	{`channel := make(chan int,1); channel<-5; select {case value:= <-(if FLAG {mark(80); channel} else {mark(81); channel}): return value+EXPR}`, `channel := make(chan int,1); channel<-5; if FLAG {mark(80)} else {mark(81)}; select {case value:= <-channel: return value+EXPR}`},
 	{`value := 0; if false && (if FLAG {mark(80); true} else {mark(81); false}) {value=1}; return value+EXPR`, `value := 0; return value+EXPR`},
 	{`value := 0; for range if FLAG {mark(80); [2]int{}} else {mark(81); [2]int{}} {value++}; return value+EXPR`, `value := 0; if FLAG {mark(80)} else {mark(81)}; for range [2]int{} {value++}; return value+EXPR`},
+	{`return pick(EXPR, read(80, 2))`, `return pick(EXPR, read(80, 2))`},
+	{`pointer := pick(if FLAG {nil} else {new(int)}, new(int)); if pointer!=nil {mark(80)}; return EXPR`, `var pointer *int; if !FLAG {pointer=new(int)}; pointer=pick(pointer,new(int)); if pointer!=nil {mark(80)}; return EXPR`},
+	{`return if FLAG {step()OP + EXPR} else {EXPR}`, `if FLAG {v,e:=step(); if e!=nil {failureReturn(e)}; return v+EXPR}; return EXPR`},
+	{`return add(read(80, 1), if FLAG {step()OP} else {EXPR})`, `first:=read(80,1); var second int; if FLAG {v,e:=step(); if e!=nil {failureReturn(e)}; second=v} else {second=EXPR}; return add(first,second)`},
+	{`value:=0; if FLAG && (if test(91,true) {mark(80); true} else {mark(81); false}) {value=1}; return value+EXPR`, `value:=0; if FLAG {if test(91,true) {mark(80); value=1} else {mark(81)}}; return value+EXPR`},
+	{`sum:=0; for i:=0; if i==1 {break} else {i<3}; i++ {sum+=EXPR}; return sum`, `sum:=0; for i:=0; i<3; i++ {if i==1 {break}; sum+=EXPR}; return sum`},
+	{`sum:=0; for i:=0; if i<3 {mark(i); true} else {false}; i++ {sum+=EXPR}; return sum`, `sum:=0; for i:=0; i<3; i++ {mark(i); sum+=EXPR}; return sum`},
+	{`defer mark(if FLAG {EXPR} else {EXPR}); return 3`, `var value int; if FLAG {value=EXPR} else {value=EXPR}; defer mark(value); return 3`},
+	{`return if FLAG {panic("stop")} else {EXPR}`, `if FLAG {panic("stop")}; return EXPR`},
+	{`var value any = if FLAG {EXPR} else {"text"}; mark(80); if number,ok:=value.(int); ok {return number}; return 0`, `var value any; if FLAG {value=EXPR} else {value="text"}; mark(80); if number,ok:=value.(int); ok {return number}; return 0`},
 }
 
 func ifFuzzPrograms(t *testing.T, data []byte) (string, string) {
@@ -93,6 +103,7 @@ func mark(id int) {fmt.Fprintf(&trace,"m%%d;",id)}
 func read(id, value int) int {fmt.Fprintf(&trace,"r%%d;",id); return value}
 func test(id int, value bool) bool {fmt.Fprintf(&trace,"t%%d;",id); return value}
 func add(a,b int) int {return a+b}
+func pick[T any](a,b T) T {return a}
 func step() (int,error) {mark(90); if %t {return 0,sentinel}; return 1,nil}
 func main() {
  defer func(){if p:=recover();p!=nil {fmt.Printf("%%s|panic:%%T\n",trace.String(),p)}}()
