@@ -1,0 +1,74 @@
+package main
+
+import "fmt"
+
+func ready() chan int {
+	channel := make(chan int, 1)
+	channel <- 7
+	return channel
+}
+
+func flowOnly(flag bool) int {
+	if flag {
+		select {
+		case (<-ready()):
+			return 1
+		}
+	}
+	return 2
+}
+
+func bare(flag bool) int {
+	channel := ready()
+	if flag {
+		var other chan int
+		sent := 1
+		select {
+		case (<-channel):
+			return 7
+		case other <- sent:
+			return 99
+		}
+	}
+	return 2
+}
+
+func assigned(flag bool) int {
+	channel := ready()
+	value := 0
+	if flag {
+		var other chan int
+		sent := 1
+		select {
+		case value = (<-channel):
+			return value
+		case other <- sent:
+			return 99
+		}
+	}
+	return 2
+}
+
+func declared(flag bool) int {
+	channel := ready()
+	if flag {
+		var other chan int
+		sent := 1
+		select {
+		case value, open := (<-channel):
+			if !open {
+				panic("closed receive")
+			}
+			return value
+		case other <- sent:
+			return 99
+		}
+	}
+	return 2
+}
+
+func main() {
+	for _, flag := range []bool{true, false} {
+		fmt.Println(flag, flowOnly(flag), bare(flag), assigned(flag), declared(flag))
+	}
+}

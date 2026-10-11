@@ -33,6 +33,8 @@ func TestBranchPaths(t *testing.T) {
 		{"type_switch_returns", `switch n.(type) {case int: return; default: return}; value()`, false, false},
 		{"empty_select", `select {}; value()`, false, false},
 		{"select_returns", `select {case <-ch: return; default: return}; value()`, false, false},
+		{"parenthesized_select_receive", `select {case (<-ch): return}; value()`, false, false},
+		{"parenthesized_select_assignment", `select {case v = ((<-ch)): return}; value()`, false, false},
 		{"select_break", `select {case <-ch: break; default: return}; value()`, true, true},
 		{"outer_break", `break; value()`, false, false},
 		{"outer_continue", `continue; value()`, false, false},

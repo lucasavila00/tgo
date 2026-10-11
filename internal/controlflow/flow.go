@@ -295,9 +295,9 @@ func (g *graph) selectStatement(s *ast.SelectStmt, next *point, t targets, label
 		case *ast.SendStmt:
 			operands = append(operands, comm.Chan, comm.Value)
 		case *ast.ExprStmt:
-			operands = append(operands, comm.X.(*ast.UnaryExpr).X)
+			operands = append(operands, ast.Unparen(comm.X).(*ast.UnaryExpr).X)
 		case *ast.AssignStmt:
-			operands = append(operands, comm.Rhs[0].(*ast.UnaryExpr).X)
+			operands = append(operands, ast.Unparen(comm.Rhs[0]).(*ast.UnaryExpr).X)
 			body = g.expressions(comm.Lhs, body, inner)
 		}
 		choice.next = append(choice.next, body)
