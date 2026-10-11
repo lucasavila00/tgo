@@ -57,9 +57,9 @@ go -C compilerv2 test ./... -run '^TestProof' -count=1
 The manifest records expression sites, including excluded syntax and incompatible
 return signatures. `TestProofCompile` compiles neutral and return variants.
 `TestProofNeutral` runs marker variants against handwritten effect and value
-traces. Handwritten marker-position expectations currently cover `calls.go`;
-the other position expectations and the per-site return oracle are still being
-written. The draft is not complete until all required sites have those checks.
+traces and insertion positions across the corpus. `TestProofReturn` checks
+first and second visits, early exits, deferred calls, closure return boundaries,
+and the identity of the returned error.
 
 Focused execution tests also cover assignments, short circuits, closures,
 loops, switches, ranges, selects, defers, jumps, tuples, Boolean conversions,

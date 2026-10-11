@@ -1882,6 +1882,7 @@
     "start": 66,
     "end": 80,
     "kind": "*ast.CallExpr",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1889,7 +1890,7 @@
     "start": 66,
     "end": 75,
     "kind": "*ast.ParenExpr",
-    "reason": "type syntax",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1897,7 +1898,7 @@
     "start": 67,
     "end": 74,
     "kind": "*ast.StarExpr",
-    "reason": "type syntax",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1905,7 +1906,7 @@
     "start": 68,
     "end": 74,
     "kind": "*ast.ArrayType",
-    "reason": "type syntax",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1913,7 +1914,7 @@
     "start": 69,
     "end": 70,
     "kind": "*ast.BasicLit",
-    "reason": "array length",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1921,7 +1922,7 @@
     "start": 71,
     "end": 74,
     "kind": "*ast.Ident",
-    "reason": "type syntax",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {
@@ -1929,6 +1930,7 @@
     "start": 76,
     "end": 79,
     "kind": "*ast.Ident",
+    "reason": "range expression is not evaluated",
     "error_return": true
   },
   {

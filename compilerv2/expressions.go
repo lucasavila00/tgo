@@ -11,13 +11,14 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source   *Source
-	target   ast.Expr
-	after    After
-	names    map[string]bool
-	next     int
-	inserted bool
-	labels   map[string]string
+	source         *Source
+	target         ast.Expr
+	after          After
+	names          map[string]bool
+	next           int
+	inserted       bool
+	labels         map[string]string
+	suppressedRoot ast.Expr
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -139,8 +140,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	case *ast.UnaryExpr:
 		copy := *e
 		if e.Op == token.AND {
-			before, copy.X = r.place(e.X)
-			result = &copy
+			before, result = r.address(e.X)
 			break
 		}
 		var values []ast.Expr
@@ -186,9 +186,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			_, pointerReceiver := signature.Recv().Type().Underlying().(*types.Pointer)
 			_, pointerValue := r.source.Package.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
 			if pointerReceiver && !pointerValue && r.source.Package.TypesInfo.Types[e.X].Addressable() {
-				var place ast.Expr
-				before, place = r.place(e.X)
-				copy.X = &ast.ParenExpr{X: &ast.UnaryExpr{Op: token.AND, X: place}}
+				before, copy.X = r.address(e.X)
 				result = &copy
 				break
 			}
@@ -292,7 +290,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 		result = &copy
 	}
-	if expr == r.target {
+	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true
 		if r.functionName(expr) {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
@@ -345,9 +343,8 @@ func (r *rewrite) addressableArray(expr ast.Expr) bool {
 }
 
 func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	before, place := r.place(expr)
-	saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: place})
-	return append(before, saved...), &ast.ParenExpr{X: &ast.StarExpr{X: values[0]}}
+	before, pointer := r.address(expr)
+	return before, &ast.ParenExpr{X: &ast.StarExpr{X: pointer}}
 }
 
 func (r *rewrite) untypedBoolean(expr ast.Expr) bool {

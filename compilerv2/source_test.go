@@ -17,6 +17,7 @@ func run(err error) error {
  _ = fixed
  _ = func() int { return 3 }
  _ = func() error { return err }
+ for range (*[2]int)(nil) {}
  defer run(err)
  go run(err)
  return err
@@ -37,12 +38,20 @@ func run(err error) error {
 	for _, site := range source.Sites {
 		expression := text[site.Start:site.End]
 		switch expression {
+		case "(*[2]int)(nil)":
+			if site.Reason != "range expression is not evaluated" {
+				t.Fatalf("range conversion: %+v", site)
+			}
+			found["range conversion"] = true
 		case "1":
 			if site.Reason != "package scope" {
 				t.Fatalf("global: %+v", site)
 			}
 			found["global"] = true
 		case "2":
+			if site.Reason == "range expression is not evaluated" {
+				break
+			}
 			if site.Reason != "constant declaration" {
 				t.Fatalf("constant: %+v", site)
 			}
@@ -65,7 +74,7 @@ func run(err error) error {
 			}
 		}
 	}
-	for _, name := range []string{"global", "constant", "integer closure", "go", "defer"} {
+	for _, name := range []string{"global", "constant", "integer closure", "go", "defer", "range conversion"} {
 		if !found[name] {
 			t.Errorf("missing %s", name)
 		}

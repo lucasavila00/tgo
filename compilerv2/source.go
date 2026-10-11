@@ -170,7 +170,7 @@ func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
 			return false
 		}
-		if call, ok := n.(*ast.CallExpr); ok && s.Package.TypesInfo.Types[call].Value == nil {
+		if call, ok := n.(*ast.CallExpr); ok && s.Package.TypesInfo.Types[call].Value == nil && !s.Package.TypesInfo.Types[call.Fun].IsType() {
 			constantLength = false
 		}
 		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.ARROW {

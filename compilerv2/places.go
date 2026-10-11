@@ -2,6 +2,7 @@ package compilerv2
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -59,9 +60,31 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		}
 		result = &copy
 	}
-	if expr == r.target {
+	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true
-		before = append(before, r.after(nil)...)
+		if r.suppressedRoot != nil {
+			saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: result})
+			before = append(before, saved...)
+			result = &ast.StarExpr{X: values[0]}
+			before = append(before, r.after([]ast.Expr{result})...)
+		} else {
+			before = append(before, r.after(nil)...)
+		}
 	}
 	return before, result
+}
+
+// address completes address checks before it inserts statements.
+func (r *rewrite) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
+	previous := r.suppressedRoot
+	r.suppressedRoot = expr
+	before, place := r.place(expr)
+	r.suppressedRoot = previous
+	saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: place})
+	before = append(before, saved...)
+	if expr == r.target {
+		r.inserted = true
+		before = append(before, r.after([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
+	}
+	return before, values[0]
 }
