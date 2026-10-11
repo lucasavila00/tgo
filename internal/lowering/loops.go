@@ -86,6 +86,9 @@ func (r *rewrite) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 }
 
 func (r *rewrite) initializerJumps(loop *ast.ForStmt) bool {
+	if loop.Init == nil {
+		return false
+	}
 	found := false
 	ast.Inspect(loop.Init, func(node ast.Node) bool {
 		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
