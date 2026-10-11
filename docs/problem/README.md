@@ -30,10 +30,9 @@ both now and in the future.
 
 ## Adoption and automatic modernization
 
-Automatic modernization is a nice-to-have. A language feature can be designed
-and implemented without a linter rule or automatic fix. Users can write the
-new syntax directly. Add automatic fixes where equivalent older forms can be
-converted without changing behavior.
+Automatic modernization is a nice-to-have. Design and implement language
+features for direct use in TGo. Add linter rules and automatic fixes where
+existing code has an equivalent form. Each automatic fix must preserve behavior.
 
 The intended upgrade path is:
 
