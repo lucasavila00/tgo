@@ -34,6 +34,70 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 }
 
 func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
+	problem, unsafePointer, parameterNames := r.typeNameProblem(typ, position)
+	if problem != "" {
+		if r.err == nil {
+			position := r.source.Package.Fset.Position(original.Pos())
+			var selected token.Pos
+			var best int
+			for expr, operation := range r.propagations {
+				distance := int(expr.Pos() - original.Pos())
+				if distance < 0 {
+					distance = -distance
+				}
+				if operation.Position.IsValid() && r.frame != nil && contains(r.frame.function, expr) && (selected == 0 || distance < best || distance == best && expr.Pos() < selected) {
+					position = operation.Position
+					selected = expr.Pos()
+					best = distance
+				}
+			}
+			r.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name", position, typ, problem)
+		}
+		return ast.NewIdent("invalid")
+	}
+	text := types.TypeString(types.Default(typ), func(pkg *types.Package) string {
+		if pkg == r.source.Package.Types {
+			return ""
+		}
+		if r.typeImports == nil {
+			r.typeImports = make(map[*types.Package]*ast.Ident)
+		}
+		alias := r.typeImports[pkg]
+		if alias == nil {
+			alias = r.nameFor(pkg.Name())
+			r.typeImports[pkg] = alias
+			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
+		}
+		return alias.Name
+	})
+	var unsafeAlias *ast.Ident
+	if unsafePointer {
+		unsafeAlias = r.nameFor("unsafe")
+		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
+	}
+	result, err := parser.ParseExpr(text)
+	if err != nil {
+		panic(err)
+	}
+	// Parsed type positions do not refer to the source file set.
+	ast.Inspect(result, func(node ast.Node) bool {
+		if node == nil {
+			return true
+		}
+		value := reflect.ValueOf(node).Elem()
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			if field.Type() == reflect.TypeFor[token.Pos]() {
+				field.SetInt(0)
+			}
+		}
+		return true
+	})
+	r.renameTypeBindings(typ, result, parameterNames, unsafeAlias)
+	return result
+}
+
+func (r *rewrite) typeNameProblem(typ types.Type, position token.Pos) (string, bool, map[*types.TypeParam]string) {
 	var problem string
 	unsafePointer := false
 	parameterNames := make(map[*types.TypeParam]string)
@@ -120,80 +184,14 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		}
 	}
 	check(types.Default(typ))
-	if problem != "" {
-		if r.err == nil {
-			position := r.source.Package.Fset.Position(original.Pos())
-			var selected token.Pos
-			var best int
-			for expr, operation := range r.propagations {
-				distance := int(expr.Pos() - original.Pos())
-				if distance < 0 {
-					distance = -distance
-				}
-				if operation.Position.IsValid() && r.frame != nil && contains(r.frame.function, expr) && (selected == 0 || distance < best || distance == best && expr.Pos() < selected) {
-					position = operation.Position
-					selected = expr.Pos()
-					best = distance
-				}
-			}
-			r.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name", position, typ, problem)
-		}
-		return ast.NewIdent("invalid")
-	}
-	text := types.TypeString(types.Default(typ), func(pkg *types.Package) string {
-		if pkg == r.source.Package.Types {
-			return ""
-		}
-		if r.typeImports == nil {
-			r.typeImports = make(map[*types.Package]*ast.Ident)
-		}
-		alias := r.typeImports[pkg]
-		if alias == nil {
-			alias = r.nameFor(pkg.Name())
-			r.typeImports[pkg] = alias
-			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
-		}
-		return alias.Name
-	})
-	var unsafeAlias *ast.Ident
-	if unsafePointer {
-		unsafeAlias = r.nameFor("unsafe")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
-	}
-	result, err := parser.ParseExpr(text)
-	if err != nil {
-		panic(err)
-	}
-	// Parsed type positions do not refer to the source file set.
-	ast.Inspect(result, func(node ast.Node) bool {
-		if node == nil {
-			return true
-		}
-		value := reflect.ValueOf(node).Elem()
-		for i := 0; i < value.NumField(); i++ {
-			field := value.Field(i)
-			if field.Type() == reflect.TypeFor[token.Pos]() {
-				field.SetInt(0)
-			}
-		}
-		return true
-	})
+	return problem, unsafePointer, parameterNames
+
+}
+
+func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr, parameterNames map[*types.TypeParam]string, unsafeAlias *ast.Ident) {
 	// Follow checked types so equal spellings do not merge different bindings.
 	var rename func(types.Type, ast.Expr)
-	fields := func(tuple *types.Tuple, list *ast.FieldList) {
-		if list == nil {
-			return
-		}
-		for i, field := range list.List {
-			expr := field.Type
-			typ := tuple.At(i).Type()
-			if ellipsis, ok := expr.(*ast.Ellipsis); ok {
-				expr = ellipsis.Elt
-				typ = typ.(*types.Slice).Elem()
-			}
-			rename(typ, expr)
-		}
-	}
+
 	rename = func(typ types.Type, expr ast.Expr) {
 		for {
 			parenthesized, ok := expr.(*ast.ParenExpr)
@@ -244,8 +242,8 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 			}
 		case *types.Signature:
 			e := expr.(*ast.FuncType)
-			fields(t.Params(), e.Params)
-			fields(t.Results(), e.Results)
+			renameTupleFields(t.Params(), e.Params, rename)
+			renameTupleFields(t.Results(), e.Results, rename)
 		case *types.Interface:
 			list := expr.(*ast.InterfaceType).Methods.List
 			for i := 0; i < t.NumExplicitMethods(); i++ {
@@ -257,5 +255,19 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		}
 	}
 	rename(types.Default(typ), result)
-	return result
+}
+
+func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(types.Type, ast.Expr)) {
+	if list == nil {
+		return
+	}
+	for i, field := range list.List {
+		expr := field.Type
+		typ := tuple.At(i).Type()
+		if ellipsis, ok := expr.(*ast.Ellipsis); ok {
+			expr = ellipsis.Elt
+			typ = typ.(*types.Slice).Elem()
+		}
+		rename(typ, expr)
+	}
 }

@@ -127,6 +127,11 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 	if count == 0 {
 		t.Skip("no expression sites selected")
 	}
+	checkProofVariants(t, dir)
+}
+
+func checkProofVariants(t *testing.T, dir string) {
+	t.Helper()
 	cmd := exec.Command("go", "test", "-p", "4", "-json", "./...")
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
