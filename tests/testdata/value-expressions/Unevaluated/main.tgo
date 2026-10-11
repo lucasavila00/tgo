@@ -1,0 +1,64 @@
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type layout struct {
+	First byte
+	Next uint64
+}
+
+func size(ok bool) uintptr {
+	onlyHere := uint64(42)
+	var result uintptr
+	result = unsafe.Sizeof(if ok {
+		goto done
+	} else {
+		fmt.Print("unexpected")
+		onlyHere
+	})
+	done:
+	return result
+}
+
+func sizes[T any](value T) (uintptr, uintptr) {
+	return unsafe.Sizeof(if true { value } else { value }),
+		unsafe.Alignof(if true { value } else { value })
+}
+
+func main() {
+	if size(true) != unsafe.Sizeof(uint64(0)) || size(false) != unsafe.Sizeof(uint64(0)) {
+		panic("operand ran")
+	}
+	size, align := sizes(layout{})
+	if size != unsafe.Sizeof(layout{}) || align != unsafe.Alignof(layout{}) {
+		panic("generic operand type changed")
+	}
+	offset := unsafe.Offsetof((if true {
+		fmt.Print("unexpected")
+		layout{}
+	} else {
+		layout{}
+	}).Next)
+	if offset != unsafe.Offsetof(layout{}.Next) {
+		panic("field offset changed")
+	}
+	count := 0
+	length := len(if true {
+		count++
+		[2]int{}
+	} else {
+		[2]int{}
+	})
+	for range if true {
+		count++
+		[2]int{}
+	} else {
+		[2]int{}
+	} {
+		count++
+	}
+	fmt.Println("ok", length, count)
+}

@@ -200,6 +200,10 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:
+		if r.unsafeOperand(e) {
+			before, result = r.unevaluatedCall(e)
+			break
+		}
 		copy := *e
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr

@@ -71,6 +71,9 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 }
 
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
+	// Branch statements can change state even without a call or receive.
+	// Array len, cap, and range must therefore evaluate an if value.
+	check.hasCallOrRecv = true
 	x.expr = call
 	x.typ_ = Typ[Invalid]
 	body := call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
