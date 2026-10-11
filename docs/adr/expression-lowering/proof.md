@@ -2,63 +2,48 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-## Committed corpus
+## Files to create
 
-Create these files under `spikes/expressionlowering/testdata/proof/`.
-They are planned fixtures, not existing tests.
+Under `spikes/expressionlowering/testdata/proof/`:
 
-| File | Required cases |
+| File | Cases |
 | --- | --- |
 | `calls.go` | Nested calls, tuples, discarded results |
-| `booleans.go` | Both short-circuit paths, named Boolean types |
+| `booleans.go` | Reached and skipped operands, named Boolean types |
 | `declarations.go` | `:=`, grouped declarations, shadowing |
-| `assignments.go` | Arrays, pointers, maps, ordered stores |
-| `loops.go` | Headers, post, continue, captured iteration variables |
-| `switches.go` | Conditional cases, fallthrough, type bindings |
-| `ranges.go` | Skipped array evaluation, later target failure |
-| `selects.go` | Send operands, receives, selected targets |
-| `scheduling.go` | Go calls, defers, direct recover |
-| `jumps.go` | Goto, labeled loops, switches, selects |
+| `assignments.go` | Arrays, pointers, maps, store order, panics |
+| `loops.go` | Headers, post, continue, captured variables |
+| `switches.go` | Case order, fallthrough, type bindings |
+| `ranges.go` | Skipped evaluation, later target failure |
+| `selects.go` | Send operands, receives, targets |
+| `scheduling.go` | Go calls, defers, recover |
+| `jumps.go` | Goto and labeled control flow |
 | `types.go` | Constants, generics, methods, pointer receivers |
-| `nested.go` | Closures and separate return targets |
-| `foreign/foreign.go` | Imported calls and private named types |
+| `nested.go` | Closures, separate return targets |
+| `foreign/foreign.go` | Imported calls, private types |
 
-## Matrix
+## Automatic checks
 
-- Inventory every AST expression by file, byte offsets, and node kind.
-- Commit `manifest.json`: target functions, inputs, sites, classifications.
-  Target functions return `error`; ordinary helpers supply expression values.
-- Generate separate before and after variants for every runtime site.
-- Test conditional sites with reaching and skipping inputs.
-- Report type syntax, statically unevaluated operands, incompatible signatures,
-  and unrepresentable boundaries explicitly. Never silently skip a node.
-- **Neutral:** insert a test-only marker statement. Remove marker events from
-  observations; require original behavior. Also compare marker positions with
-  independent expected positions.
-- **Return:** insert `return err`. For repeated sites, use a test-only guard
-  that triggers on the specified visit. Check first and later visits.
+- Inventory every expression by file and byte offsets in `manifest.json`.
+  Record non-runtime expressions and incompatible return signatures explicitly.
+- For each expression evaluated in the current function, generate an insertion
+  immediately after it. Test reached and skipped paths.
+- **Neutral marker:** require unchanged behavior after removing marker events.
+  Check marker positions against handwritten expected traces.
+- **Return:** insert `return err`; check the expected early exit. A test-only
+  guard selects the first or a later visit for expressions inside loops.
+- Commit handwritten `reference.go` and `expect.json`. Do not generate either
+  with the compiler under test.
+- Compare effects, results, error identity, panics, and defers. Compile every
+  generated variant.
+- Use synchronized channels and one ready select case. Accept the orders that
+  Go permits where evaluation order is unspecified.
 
-## Independent checks
-
-- Commit handwritten `reference.go` and `expect.json`; never generate expected
-  results with the lowering code.
-- Check traces, mutations, results, error identity, panics, and defer order.
-  Skipped sites must preserve baseline behavior. Callers can continue after
-  an injected function return.
-- Use bounded inputs and synchronized channels. Test each select branch with
-  one ready case. Compare permitted outcomes where Go leaves order unspecified.
-- Every variant must compile. Missing sites, wrong placement, unexpected
-  diagnostics, or changed observations fail the suite.
-
-## Planned tests
-
-- `TestProofInventory`: every node accounted for.
-- `TestProofNeutral`: behavior and marker placement.
-- `TestProofReturn`: early exit, visit count, error identity, defers.
-- `TestProofCompile`: every generated variant.
+## Planned command
 
 ```sh
 go -C spikes/expressionlowering test ./... -run '^TestProof' -count=1
 ```
 
-Run the full matrix in hosted CI; retain per-site results as an artifact.
+Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
+`TestProofCompile`. Run the full matrix in hosted CI; retain per-site results.
