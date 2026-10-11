@@ -73,7 +73,82 @@ func deferred() int {
 	}
 }
 
+func headers() int {
+	total := 0
+	for i := 0; if i == 1 {
+		break
+	} else {
+		i < 3
+	}; i++ {
+		total += i
+	}
+	checks := 0
+	for i := 0; if checks++; checks == 1 {
+		continue
+	} else {
+		checks < 3
+	}; i++ {
+		total += i
+	}
+	for i := 0; i < 3; i += if i == 1 {
+		break
+	} else {
+		1
+	} {
+		total += i
+	}
+	for i := 0; i < 5; i++ {
+		if value := if i == 1 {
+			continue
+		} else if i == 3 {
+			break
+		} else {
+			i
+		}; value >= 0 {
+			total += value
+		}
+	}
+	for i := 0; i < 5; i++ {
+		total += if value := if i == 1 {
+			continue
+		} else if i == 3 {
+			break
+		} else {
+			i
+		}; value >= 0 {
+			value
+		} else {
+			0
+		}
+	}
+	return total
+}
+
+func labelledLoop() int {
+	turns := 0
+again:
+	for i := if turns < 2 {
+		turns++
+		0
+	} else {
+		0
+	}; i < 1; i++ {
+		_ = int(if turns < 2 {
+			goto again
+		} else {
+			break again
+		})
+	}
+	return turns
+}
+
 func main() {
+	if labelledLoop() != 2 {
+		panic("loop label")
+	}
+	if headers() != 6 {
+		panic("header jump target")
+	}
 	if tail() != 6 {panic("labelled value")}
 	value, err := checked(false, false)
 	if value != 7 || err != nil {

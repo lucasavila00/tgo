@@ -7,7 +7,6 @@ import (
 	"go/scanner"
 	"go/token"
 	"reflect"
-	"strings"
 )
 
 // Parsed contains Go syntax and records for the added TGo expressions.
@@ -123,14 +122,31 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 		if !ok {
 			return nil, err
 		}
+		candidates := expressionIfTokens(source.text)
 		start := -1
+		for _, diagnostic := range errors {
+			if diagnostic.Msg == "expected operand, found 'if'" && candidates[diagnostic.Pos.Offset] && diagnostic.Pos.Offset > start {
+				start = diagnostic.Pos.Offset
+			}
+		}
+		var parents []ast.Node
 		ast.Inspect(file, func(node ast.Node) bool {
+			if node == nil {
+				parents = parents[:len(parents)-1]
+				return false
+			}
 			if bad, ok := node.(*ast.BadExpr); ok {
 				offset := temporary.Position(bad.Pos()).Offset
-				if strings.HasPrefix(source.text[offset:], "if") && offset > start {
+				syntaxOperand := false
+				switch parents[len(parents)-1].(type) {
+				case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr:
+					syntaxOperand = true
+				}
+				if offset+2 <= len(source.text) && source.text[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
 					start = offset
 				}
 			}
+			parents = append(parents, node)
 			return true
 		})
 		if start < 0 {
@@ -169,6 +185,34 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 		offsets = append(offsets, source.offsets[start:end]...)
 		offsets = append(offsets, insertedOffsets(len(after), source.offsets[end-1])...)
 		source.replace(start, end, before+source.text[start:end]+after, offsets)
+	}
+}
+
+// expressionIfTokens distinguishes operand tokens from ordinary if statements.
+// Parser recovery after a bad operand can report later statements as operands.
+func expressionIfTokens(source string) map[int]bool {
+	set := token.NewFileSet()
+	file := set.AddFile("", -1, len(source))
+	var scan scanner.Scanner
+	scan.Init(file, []byte(source), nil, 0)
+	result := make(map[int]bool)
+	previous := token.ILLEGAL
+	for {
+		position, current, _ := scan.Scan()
+		if current == token.EOF {
+			return result
+		}
+		if current == token.IF {
+			switch previous {
+			case token.ASSIGN, token.DEFINE, token.COMMA, token.COLON,
+				token.LPAREN, token.LBRACK, token.RETURN, token.RANGE,
+				token.IF, token.FOR, token.SWITCH, token.CASE, token.GO, token.DEFER:
+				result[file.Offset(position)] = true
+			default:
+				result[file.Offset(position)] = previous.Precedence() > 0 || previous == token.NOT || previous == token.ARROW || (previous >= token.ADD_ASSIGN && previous <= token.AND_NOT_ASSIGN)
+			}
+		}
+		previous = current
 	}
 }
 

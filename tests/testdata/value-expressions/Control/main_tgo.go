@@ -110,7 +110,168 @@ func deferred() int {
 
 }
 
+func headers() int {
+	total := 0
+	{
+		var tgo13 bool = 0 == 0
+		for i := 0; ; {
+			if tgo13 {
+				tgo13 = 0 != 0
+			} else {
+
+				i++
+			}
+			var tgo12 bool
+			if i == 1 {
+				break
+			} else {
+				tgo12 = i < 3
+			}
+			if !tgo12 {
+				break
+			}
+			{
+				total += i
+			}
+		}
+	}
+	checks := 0
+	{
+		var tgo15 bool = 0 == 0
+		for i := 0; ; {
+			if tgo15 {
+				tgo15 = 0 != 0
+			} else {
+
+				i++
+			}
+			var tgo14 bool
+			if checks++; checks == 1 {
+				continue
+			} else {
+				tgo14 = checks < 3
+			}
+			if !tgo14 {
+				break
+			}
+			{
+				total += i
+			}
+		}
+	}
+	{
+		var tgo17 bool = 0 == 0
+		for i := 0; ; {
+			if tgo17 {
+				tgo17 = 0 != 0
+			} else {
+				var tgo16 int
+				if i == 1 {
+					break
+				} else {
+					tgo16 = 1
+				}
+				i += tgo16
+			}
+			if !(i < 3) {
+				break
+			}
+
+			{
+				total += i
+			}
+		}
+	}
+	for i := 0; i < 5; i++ {
+		{
+			var tgo18 int
+			if i == 1 {
+				continue
+			} else if i == 3 {
+				break
+			} else {
+				tgo18 = i
+			}
+			value := tgo18
+			if value >= 0 {
+				total += value
+			}
+		}
+	}
+	for i := 0; i < 5; i++ {
+		{
+			var tgo19 int
+			{
+				var tgo20 int
+				if i == 1 {
+					continue
+				} else if i == 3 {
+					break
+				} else {
+					tgo20 = i
+				}
+				value := tgo20
+				if value >= 0 {
+					tgo19 = value
+				} else {
+					tgo19 = 0
+				}
+			}
+			total += tgo19
+		}
+
+	}
+	return total
+}
+
+func labelledLoop() int {
+	turns := 0
+again:
+	{
+		{
+			var tgo23 int
+			if turns < 2 {
+				turns++
+				tgo23 = 0
+			} else {
+				tgo23 = 0
+			}
+			var tgo24 bool = 0 == 0
+		tgo21:
+			for i := tgo23; ; {
+				if tgo24 {
+					tgo24 = 0 != 0
+				} else {
+
+					i++
+				}
+				if !(i < 1) {
+					break
+				}
+				{
+					{
+						var tgo22 int
+						if turns < 2 {
+							goto again
+						} else {
+							break tgo21
+						}
+						_ = int(tgo22)
+					}
+				}
+			}
+		}
+	}
+	return turns
+}
+
 func main() {
+	if labelledLoop() != 2 {
+		panic("loop label")
+	}
+	if headers() != 6 {
+		panic("header jump target")
+	}
 	if tail() != 6 {
 		panic("labelled value")
 	}

@@ -19,6 +19,7 @@ func TestParseConditionalExpressions(t *testing.T) {
 		`func f(ok bool) { var x = if func() bool { return ok }() { 1 } else { 2 }; use(x) }`,
 		`func f(ok bool) error { use(if ok { next()! } else { next()!! }); return nil }`,
 		`func f(ok bool) { L: if ok { goto L }; use(if ok { 1 } else { 2 }) }`,
+		`func f() { turns:=0; again: for i:=if turns<2 {turns++;0} else {0}; i<1;i++ { _=int(if turns<2 {goto again} else {break again}) } }`,
 	} {
 		t.Run(source, func(t *testing.T) {
 			input := "package p\n" + source

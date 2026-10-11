@@ -481,7 +481,7 @@
  
  	case *ast.ForStmt:
 -		if s.Cond == nil && !hasBreak(s.Body, label, true) {
-+		if s.Cond == nil && !check.hasBreak(s.Body, label, true) {
++		if s.Cond == nil && !check.hasBreak(s, label, true) && !check.hasBreak(s.Body, label, true) {
  			return true
  		}
  	}
@@ -656,6 +656,36 @@
  		res := check.sig.results
  		// Return with implicit results allowed for function with named results.
  		// (If one is named, all are named.)
+@@ -606,7 +623,9 @@
+ 		check.openScope(s, "if")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
+ 		var x operand
+ 		check.expr(nil, &x, s.Cond)
+ 		if x.isValid() && !allBoolean(x.typ()) {
+@@ -834,6 +853,7 @@
+ 		defer check.closeScope()
+ 
+ 		check.simpleStmt(s.Init)
++		check.statementContext = inner
+ 		if s.Cond != nil {
+ 			var x operand
+ 			check.expr(nil, &x, s.Cond)
+@@ -841,7 +861,9 @@
+ 				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
+ 			}
+ 		}
+-		check.simpleStmt(s.Post)
++		if s.Post != nil {
++			check.stmt(inner, s.Post)
++		}
+ 		// spec: "The init statement may be a short variable
+ 		// declaration, but the post statement must not."
+ 		if s, _ := s.Post.(*ast.AssignStmt); s != nil && s.Tok == token.DEFINE {
 --- a/types/struct.go
 +++ b/types/struct.go
 @@ -7,7 +7,7 @@
