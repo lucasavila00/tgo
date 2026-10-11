@@ -21,13 +21,15 @@ func Parse(text string) (int, error) {
 }
 ```
 
-The containing function must end its result list with `error`. On failure,
-other results receive typed zero values. Earlier effects remain; later work
+The containing function must end its result list with an error interface.
+For `!!`, the call's final result must be assignable to that interface. For `!`,
+the wrapped `error` must be assignable to it. On failure, other results receive
+typed zero values. Earlier effects remain; later work
 stops. Deferred calls run. A function literal has its own return target.
 Propagation works inside calls, assignments, literals, conditional expressions,
 loops, switches, ranges, selects, and arguments to `defer` and `go`.
 
-For now, `!` and `!!` are not allowed anywhere inside an operand of
+`!` and `!!` are not allowed anywhere inside an operand of
 `unsafe.Sizeof`, `unsafe.Alignof`, or `unsafe.Offsetof`. This includes nested
 function bodies and generic operands. Import aliases do not change this rule.
 The diagnostic identifies the operator's source position and the builtin.
@@ -91,8 +93,8 @@ uses the result. It executes only when the expression executes. The source AST
 stays unchanged, so callers can generate independent variants from one load.
 An unknown site or a site without a current-function evaluation returns an error.
 
-See the [architecture](arch/transpiler.md) for lowering and package dependencies,
-and the [test guide](../tests/README.md) for behavior checks and snapshots.
+See the [architecture](../arch/transpiler/readme.md) for lowering and package dependencies,
+and the [test guide](../../tests/README.md) for behavior checks and snapshots.
 
 Generated temporaries have explicit types. A source operation is rejected if
 saving its value requires a private imported type or a hidden type name that

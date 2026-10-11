@@ -1,7 +1,7 @@
 # Language vision
 
 This document describes the intended TGo language and its syntax. TGo uses
-Go packages, imports, types, and calls. See [transpiler use and API](transpiler.md)
+Go packages, imports, types, and calls. See [transpiler use and API](../guide/transpiler.md)
 for the current compiler.
 
 ## Return success or failure
@@ -150,4 +150,4 @@ can bypass generated constructors and other TGo checks.
 
 ## Project direction
 
-See the [project problem](problem/README.md) for the language design goals.
+See the [project problem](README.md) for the language design goals.
