@@ -49,8 +49,7 @@ if active {
 label := tgoResult
 ```
 
-The driver connects frontend records, type checking, and lowering. Frontend and
-lowering remain separate internal packages. Format with `go/format`, then compile
-with Go.
+The driver connects frontend, type checking, and lowering. Format with
+`go/format`, then compile with Go.
 
 [WHAT](what.md) defines semantics. [PROOF](proof.md) defines checks.
