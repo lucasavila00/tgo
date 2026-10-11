@@ -46,4 +46,4 @@ go test ./tests -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
-`TestProofCompile`. Run the full matrix in hosted CI.
+`TestProofCompile`. These checks cover every expression in the manifest.
