@@ -75,11 +75,12 @@ func (r *rewrite) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 			continue
 		}
 		object := r.source.inventory.Checked.TypesInfo.Defs[id]
-		name, zero := r.nameFor(id.Name), r.name()
-		r.bindings[object] = name.Name
-		before = append(before, variable(zero, r.temporaryType(object.Type(), id), nil))
-		header.Lhs = append(header.Lhs, name)
-		header.Rhs = append(header.Rhs, zero)
+		bindingName := r.nameFor(id.Name)
+		zeroValue := r.name()
+		r.bindings[object] = bindingName.Name
+		before = append(before, variable(zeroValue, r.temporaryType(object.Type(), id), nil))
+		header.Lhs = append(header.Lhs, bindingName)
+		header.Rhs = append(header.Rhs, zeroValue)
 	}
 	// The bindings now exist in the loop header; the source initializer stores them.
 	init[len(init)-1].(*ast.AssignStmt).Tok = token.ASSIGN

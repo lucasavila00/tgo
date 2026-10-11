@@ -70,15 +70,15 @@ func (s *Inventory) inventory(file *ast.File, dir string) {
 			if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
 				site.Reason = "type switch assertion syntax"
 			}
-			var fn ast.Node
+			var enclosingFunction ast.Node
 			for i := len(stack) - 1; i >= 0; i-- {
 				switch parent := stack[i].(type) {
 				case *ast.FuncDecl:
-					fn = parent
+					enclosingFunction = parent
 				case *ast.FuncLit:
 					call, _ := s.Parents[parent].(*ast.CallExpr)
 					if s.Checked.Conditionals[call] == nil && s.Checked.Comprehensions[call] == nil {
-						fn = parent
+						enclosingFunction = parent
 					}
 				case *ast.GenDecl:
 					if parent.Tok == token.CONST {
@@ -101,32 +101,32 @@ func (s *Inventory) inventory(file *ast.File, dir string) {
 						site.Reason = "call executes when the function returns"
 					}
 				}
-				if fn != nil {
+				if enclosingFunction != nil {
 					break
 				}
 			}
-			if fn == nil && site.Reason == "" {
+			if enclosingFunction == nil && site.Reason == "" {
 				site.Reason = "package scope"
 			}
-			if fn != nil {
-				var typ *ast.FuncType
-				switch f := fn.(type) {
+			if enclosingFunction != nil {
+				var functionType *ast.FuncType
+				switch function := enclosingFunction.(type) {
 				case *ast.FuncDecl:
-					typ = f.Type
+					functionType = function.Type
 				case *ast.FuncLit:
-					typ = f.Type
+					functionType = function.Type
 				}
-				sig, _ := s.Checked.TypesInfo.TypeOf(typ).(*types.Signature)
-				if sig == nil {
-					if f, ok := fn.(*ast.FuncDecl); ok {
-						sig, _ = s.Checked.TypesInfo.Defs[f.Name].Type().(*types.Signature)
+				signature, _ := s.Checked.TypesInfo.TypeOf(functionType).(*types.Signature)
+				if signature == nil {
+					if function, ok := enclosingFunction.(*ast.FuncDecl); ok {
+						signature, _ = s.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
 					}
-					if f, ok := fn.(*ast.FuncLit); ok {
-						sig, _ = s.Checked.TypesInfo.TypeOf(f).(*types.Signature)
+					if function, ok := enclosingFunction.(*ast.FuncLit); ok {
+						signature, _ = s.Checked.TypesInfo.TypeOf(function).(*types.Signature)
 					}
 				}
-				if sig != nil && sig.Results().Len() == 1 {
-					site.ErrorReturn = types.Identical(sig.Results().At(0).Type(), types.Universe.Lookup("error").Type())
+				if signature != nil && signature.Results().Len() == 1 {
+					site.ErrorReturn = types.Identical(signature.Results().At(0).Type(), types.Universe.Lookup("error").Type())
 				}
 				if !site.ErrorReturn {
 					site.ReturnReason = "function does not return only error"

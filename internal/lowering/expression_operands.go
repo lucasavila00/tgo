@@ -119,9 +119,9 @@ func (r *rewrite) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	before = append(before, setup...)
 	if mixed {
 		for i, value := range values {
-			saved, refs := r.save(value)
-			before = append(before, saved...)
-			values[i] = refs[0]
+			boundSetup, savedBounds := r.save(value)
+			before = append(before, boundSetup...)
+			values[i] = savedBounds[0]
 		}
 	}
 	boundIndex := 0
