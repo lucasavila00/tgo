@@ -2,7 +2,7 @@
 
 Use a whole-program abstract interpreter: compute possible values and storage
 states without executing the program. Share its analysis with the
-[Go checker](../go-checker/what.md); keep the TGo source rules separate.
+[Go checker](https://github.com/lucasavila00/tgo/issues/267); keep the TGo source rules separate.
 
 Load selected packages and dependencies with `go/packages`. Keep source
 positions and `go/types` identities. Check required initializers, result names,
