@@ -1,0 +1,15 @@
+text 1 three 5 7 [9 11] 12
+-3 21 [21 31]
+14 16
+19 text
+if 20
+for 0
+for 1
+range 22
+range 23
+switch 24
+type text
+send 26
+select 27
+go 28
+defer 29

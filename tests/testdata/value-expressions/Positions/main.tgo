@@ -1,0 +1,66 @@
+package main
+
+import "fmt"
+
+type record struct {
+	value any
+}
+
+func identity[T any](value T) T {
+	return value
+}
+
+func main() {
+	ok := true
+	var text any = if ok { "text" } else { 1 }
+	keyed := record{value: if ok { 1 } else { "two" }}
+	positional := record{if ok { "three" } else { 4 }}
+	mapping := map[string]any{if ok { "key" } else { "other" }: if ok { 5 } else { "six" }}
+	values := []any{if ok { 7 } else { "eight" }}
+	array := [2]int{if ok { 9 } else { 10 }, 11}
+	pointer := if ok { &record{12} } else { &record{13} }
+	fmt.Println(text, keyed.value, positional.value, mapping["key"], values[0], array, pointer.value)
+
+	numbers := []int{10, 20, 30}
+	numbers[if ok { 1 } else { 0 }] = if ok { 21 } else { 22 }
+	numbers[if ok { 2 } else { 0 }]++
+	fmt.Println(-(if ok { 3 } else { 4 }), numbers[if ok { 1 } else { 0 }], numbers[if ok { 1 } else { 0 }:if ok { 3 } else { 2 }])
+	fmt.Println(identity(if ok { 14 } else { 15 }), int8(if ok { 16 } else { 17 }))
+	call := if ok { func(value int) int { return value + 1 } } else { func(value int) int { return value + 2 } }
+	fmt.Println(call(if ok { 18 } else { 19 }), (if ok { text } else { any(1) }).(string))
+
+	if value := if ok { 20 } else { 0 }; if ok { value > 0 } else { false } {
+		fmt.Println("if", value)
+	}
+	for i := if ok { 0 } else { 2 }; if ok { i < 2 } else { false }; i += if ok { 1 } else { 2 } {
+		fmt.Println("for", i)
+	}
+	for _, value := range if ok { []int{22, 23} } else { []int{} } {
+		fmt.Println("range", value)
+	}
+	switch value := if ok { 24 } else { 0 }; if ok { value } else { 0 } {
+	case if ok { 24 } else { 25 }:
+		fmt.Println("switch", value)
+	default:
+		panic("wrong case")
+	}
+	switch value := (if ok { text } else { any(1) }).(type) {
+	case string:
+		fmt.Println("type", value)
+	default:
+		panic("wrong type")
+	}
+
+	channel := make(chan any, 1)
+	channel <- if ok { 26 } else { "other" }
+	fmt.Println("send", <-channel)
+	select {
+	case channel <- if ok { 27 } else { "other" }:
+		fmt.Println("select", <-channel)
+	default:
+		panic("blocked send")
+	}
+	go func(value any) { channel <- value }(if ok { 28 } else { "other" })
+	fmt.Println("go", <-channel)
+	defer fmt.Println("defer", if ok { 29 } else { "other" })
+}

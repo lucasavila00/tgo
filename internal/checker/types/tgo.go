@@ -37,11 +37,11 @@ func (check *Checker) expressionType(e ast.Expr, typ Type) {
 	case *ast.ParenExpr:
 		check.expressionType(e.X, typ)
 	case *ast.UnaryExpr:
-		if e.Op == token.ADD || e.Op == token.SUB || e.Op == token.XOR || e.Op == token.NOT {
+		if accepts := unaryOpPredicates[e.Op]; accepts != nil && accepts(typ) {
 			check.expressionType(e.X, typ)
 		}
 	case *ast.BinaryExpr:
-		if !isComparison(e.Op) {
+		if accepts := binaryOpPredicates[e.Op]; (accepts != nil && accepts(typ)) || (isShift(e.Op) && allInteger(typ)) {
 			check.expressionType(e.X, typ)
 			if !isShift(e.Op) {
 				check.expressionType(e.Y, typ)
