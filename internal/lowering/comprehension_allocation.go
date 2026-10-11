@@ -46,7 +46,7 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	if key != nil {
 		outputKey, ok := ast.Unparen(leaf.Args[0]).(*ast.Ident)
 		rangeKey, bound := loop.Key.(*ast.Ident)
-		if !ok || !bound || r.source.checked.TypesInfo.Uses[outputKey] != r.source.checked.TypesInfo.Defs[rangeKey] {
+		if !ok || !bound || r.source.inventory.Checked.TypesInfo.Uses[outputKey] != r.source.inventory.Checked.TypesInfo.Defs[rangeKey] {
 			return nil
 		}
 	}
@@ -76,7 +76,7 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	if key == nil {
 		index := r.name()
 		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
-			object := r.source.checked.TypesInfo.Defs[sourceKey]
+			object := r.source.inventory.Checked.TypesInfo.Defs[sourceKey]
 			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.bindings[object]))
 			copy.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
 		} else {

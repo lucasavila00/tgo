@@ -74,11 +74,13 @@ func (r *rewrite) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 		if id.Name == "_" {
 			continue
 		}
-		object := r.source.checked.TypesInfo.Defs[id]
-		name, zero := r.nameFor(id.Name), r.name()
-		r.bindings[object] = name.Name
-		before = append(before, variable(zero, r.temporaryType(object.Type(), id), nil))
-		header.Lhs, header.Rhs = append(header.Lhs, name), append(header.Rhs, zero)
+		object := r.source.inventory.Checked.TypesInfo.Defs[id]
+		bindingName := r.nameFor(id.Name)
+		zeroValue := r.name()
+		r.bindings[object] = bindingName.Name
+		before = append(before, variable(zeroValue, r.temporaryType(object.Type(), id), nil))
+		header.Lhs = append(header.Lhs, bindingName)
+		header.Rhs = append(header.Rhs, zeroValue)
 	}
 	// The bindings now exist in the loop header; the source initializer stores them.
 	init[len(init)-1].(*ast.AssignStmt).Tok = token.ASSIGN
@@ -103,7 +105,7 @@ func (r *rewrite) initializerJumps(loop *ast.ForStmt) bool {
 }
 
 func (r *rewrite) realFunction(function *ast.FuncLit) bool {
-	call, _ := r.source.parents[function].(*ast.CallExpr)
+	call, _ := r.source.inventory.Parents[function].(*ast.CallExpr)
 	return r.conditionals[call] == nil && r.comprehensions[call] == nil
 }
 
@@ -112,12 +114,12 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
 		return nil
 	}
-	for node := r.source.parents[branch]; node != nil; node = r.source.parents[node] {
+	for node := r.source.inventory.Parents[branch]; node != nil; node = r.source.inventory.Parents[node] {
 		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
 			return nil
 		}
 		if branch.Label != nil {
-			if label, ok := node.(*ast.LabeledStmt); ok && r.source.checked.TypesInfo.Defs[label.Label] == r.source.checked.TypesInfo.Uses[branch.Label] {
+			if label, ok := node.(*ast.LabeledStmt); ok && r.source.inventory.Checked.TypesInfo.Defs[label.Label] == r.source.inventory.Checked.TypesInfo.Uses[branch.Label] {
 				return label.Stmt
 			}
 			continue

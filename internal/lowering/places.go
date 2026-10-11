@@ -9,7 +9,7 @@ import (
 func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	before, values := r.expression(expr)
 	value := values[0]
-	if tv := r.source.checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+	if tv := r.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 		return before, value
 	}
 	if len(before) != 0 && r.isTarget(expr) {
@@ -41,8 +41,8 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &copy
 	case *ast.IndexExpr:
 		copy := *e
-		kind := storageKinds(r.source.checked.TypesInfo.TypeOf(e.X))
-		if kind == arrayStorage|otherStorage && r.source.checked.TypesInfo.Types[e.X].Addressable() {
+		kind := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(e.X))
+		if kind == arrayStorage|otherStorage && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 			before, copy.X = r.genericBase(e.X)
 		} else if kind == arrayStorage {
 			before, copy.X = r.place(e.X)
@@ -55,11 +55,11 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &copy
 	case *ast.SelectorExpr:
 		copy := *e
-		if r.source.checked.TypesInfo.Selections[e] == nil {
+		if r.source.inventory.Checked.TypesInfo.Selections[e] == nil {
 			result = &copy
 			break
 		}
-		if _, pointer := r.source.checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
+		if _, pointer := r.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
 			before, copy.X = r.capture(e.X)
 		} else {
 			before, copy.X = r.place(e.X)

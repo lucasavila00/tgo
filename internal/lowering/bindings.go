@@ -12,9 +12,9 @@ func (r *rewrite) renameBindings(node ast.Node) ast.Node {
 		return node
 	}
 	if id, ok := node.(*ast.Ident); ok {
-		object := r.source.checked.TypesInfo.Uses[id]
+		object := r.source.inventory.Checked.TypesInfo.Uses[id]
 		if object == nil {
-			object = r.source.checked.TypesInfo.Defs[id]
+			object = r.source.inventory.Checked.TypesInfo.Defs[id]
 		}
 		if name := r.bindings[object]; name != "" {
 			copy := *id
@@ -28,7 +28,8 @@ func (r *rewrite) renameBindings(node ast.Node) ast.Node {
 	copy.Elem().Set(original)
 	changed := false
 	for i := 0; i < original.NumField(); i++ {
-		field, output := original.Field(i), copy.Elem().Field(i)
+		field := original.Field(i)
+		output := copy.Elem().Field(i)
 		if child, ok := field.Interface().(ast.Node); ok && !reflect.ValueOf(child).IsNil() {
 			if rewritten := r.renameBindings(child); rewritten != child {
 				output.Set(reflect.ValueOf(rewritten))

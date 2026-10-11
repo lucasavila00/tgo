@@ -76,12 +76,12 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 
 // builtinHidden checks source declarations before emitting a builtin name.
 func (r *rewrite) builtinHidden(name string) bool {
-	for _, object := range r.source.checked.TypesInfo.Defs {
+	for _, object := range r.source.inventory.Checked.TypesInfo.Defs {
 		if object != nil && object.Name() == name {
 			return true
 		}
 	}
-	for _, object := range r.source.checked.TypesInfo.Implicits {
+	for _, object := range r.source.inventory.Checked.TypesInfo.Implicits {
 		if object != nil && object.Name() == name {
 			return true
 		}
@@ -102,7 +102,7 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 		if loop, ok := node.(*ast.RangeStmt); ok {
 			for _, expression := range []ast.Expr{loop.Key, loop.Value} {
 				if id, ok := expression.(*ast.Ident); ok && id.Name != "_" {
-					if object := r.source.checked.TypesInfo.Defs[id]; object != nil && r.bindings[object] == "" {
+					if object := r.source.inventory.Checked.TypesInfo.Defs[id]; object != nil && r.bindings[object] == "" {
 						r.bindings[object] = r.nameFor(id.Name).Name
 					}
 				}

@@ -146,18 +146,18 @@ func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, firs
 			stop = clauses[i+1]
 		}
 		from, to := tokens[clause].offset, clauseEnd(tokens, clause, stop)
-		expression := tokens[clause].end
+		expressionOffset := tokens[clause].end
 		if tokens[clause].kind == token.FOR {
 			for j := clause + 1; j < stop; j++ {
 				if tokens[j].kind == token.RANGE && tokens[j].depth == tokens[clause].depth {
-					expression = tokens[j].end
+					expressionOffset = tokens[j].end
 					break
 				}
 			}
 		}
-		retain(from, expression)
-		insert(" (", expression)
-		retain(expression, to)
+		retain(from, expressionOffset)
+		insert(" (", expressionOffset)
+		retain(expressionOffset, to)
 		insert("){", to)
 		comments(to, tokens[stop].offset)
 	}
@@ -206,21 +206,21 @@ func (s *mappedSource) comprehensionClauses(tokens []sourceToken, first, end int
 		if i+1 < len(clauses) {
 			stop = clauses[i+1]
 		}
-		expression := clause + 1
+		expressionIndex := clause + 1
 		if tokens[clause].kind == token.FOR {
-			for expression < stop && tokens[expression].kind != token.RANGE {
-				expression++
+			for expressionIndex < stop && tokens[expressionIndex].kind != token.RANGE {
+				expressionIndex++
 			}
-			if expression == stop {
+			if expressionIndex == stop {
 				return nil, false
 			}
-			expression++
+			expressionIndex++
 		}
-		if expression >= stop {
+		if expressionIndex >= stop {
 			return nil, false
 		}
-		last := clauseEnd(tokens, expression, stop)
-		if _, err := parser.ParseExpr(s.text[tokens[expression].offset:last]); err != nil {
+		last := clauseEnd(tokens, expressionIndex, stop)
+		if _, err := parser.ParseExpr(s.text[tokens[expressionIndex].offset:last]); err != nil {
 			return nil, false
 		}
 	}

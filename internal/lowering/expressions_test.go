@@ -30,7 +30,7 @@ func main() { use(left(), right()) }
 		t.Fatal(err)
 	}
 	var target ast.Expr
-	for site, expr := range source.expressions {
+	for site, expr := range source.inventory.Expressions {
 		if input[site.Start:site.End] == "right()" {
 			target = expr
 		}
@@ -38,7 +38,7 @@ func main() { use(left(), right()) }
 	if target == nil {
 		t.Fatal("missing expression")
 	}
-	r := &rewrite{source: source, target: target, names: map[string]bool{}, after: func([]ast.Expr) []ast.Stmt {
+	r := &rewrite{source: source, target: target, after: func([]ast.Expr) []ast.Stmt {
 		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
 	}}
 	file := *source.Package.Syntax[0]

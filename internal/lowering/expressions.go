@@ -1,9 +1,9 @@
 package lowering
 
 import (
-	"fmt"
 	"github.com/lucasavila00/tgo/internal/checker/types"
 	"github.com/lucasavila00/tgo/internal/frontend"
+	"github.com/lucasavila00/tgo/internal/lowering/names"
 	"go/ast"
 	"go/token"
 )
@@ -15,8 +15,7 @@ type rewrite struct {
 	source              *Source
 	target              ast.Expr
 	after               After
-	names               map[string]bool
-	next                int
+	names               names.Allocator
 	inserted            bool
 	labels              map[string]string
 	breakExits          map[*ast.BranchStmt]*ast.Ident
@@ -54,17 +53,7 @@ func (r *rewrite) name() *ast.Ident {
 
 // nameFor adds the source name to a fresh generated identifier.
 func (r *rewrite) nameFor(sourceName string) *ast.Ident {
-	for {
-		r.next++
-		name := fmt.Sprintf("tgo%d", r.next)
-		if sourceName != "" {
-			name = sourceName + "_" + name
-		}
-		if !r.names[name] {
-			r.names[name] = true
-			return ast.NewIdent(name)
-		}
-	}
+	return r.names.Fresh(sourceName)
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
@@ -77,8 +66,8 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		count = 1
 	}
 	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && r.temporaryTypes[expr] == nil {
-		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
-			if _, pointer := r.source.checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
+		if pair, ok := r.source.inventory.Parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
+			if _, pointer := r.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
 				return r.materializeKey(expr.(*ast.CompositeLit), literal)
 			}
 		}
@@ -126,19 +115,19 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
-	if tuple, ok := r.source.checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
+	if tuple, ok := r.source.inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
 		return tuple.Len()
 	}
-	if r.source.checked.TypesInfo.Types[expr].HasOk() {
+	if r.source.inventory.Checked.TypesInfo.Types[expr].HasOk() {
 		var node ast.Node = expr
 		for {
-			if paren, ok := r.source.parents[node].(*ast.ParenExpr); ok {
+			if paren, ok := r.source.inventory.Parents[node].(*ast.ParenExpr); ok {
 				node = paren
 			} else {
 				break
 			}
 		}
-		switch parent := r.source.parents[node].(type) {
+		switch parent := r.source.inventory.Parents[node].(type) {
 		case *ast.AssignStmt:
 			if len(parent.Rhs) == 1 && len(parent.Lhs) == 2 {
 				return 2
@@ -163,15 +152,15 @@ func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
 				if r.functionName(value) {
 					continue
 				}
-				if tv, ok := r.source.checked.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin() || tv.IsNil()) {
+				if tv, ok := r.source.inventory.Checked.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin() || tv.IsNil()) {
 					continue
 				}
-				if _, ok := value.(*ast.Ident); ok && r.source.checked.TypesInfo.TypeOf(value) == nil {
+				if _, ok := value.(*ast.Ident); ok && r.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
 					continue
 				}
-				save, saved := r.save(value)
-				statements = append(statements, save...)
-				values[i] = saved[0]
+				saveSetup, savedValues := r.save(value)
+				statements = append(statements, saveSetup...)
+				values[i] = savedValues[0]
 			}
 			statements = append(statements, before...)
 		}
@@ -220,7 +209,8 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr
 		before, values = r.operands(operands)
-		copy.Fun, copy.Args = values[0], values[1:]
+		copy.Fun = values[0]
+		copy.Args = values[1:]
 		result = &copy
 	case *ast.ParenExpr:
 		copy := *e
@@ -286,7 +276,7 @@ func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 		if r.functionName(expr) {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
-		if tv := r.source.checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+		if tv := r.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
 		// Read types from the original expression, not from the new tree.
@@ -301,16 +291,16 @@ func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 func (r *rewrite) functionName(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.Ident:
-		_, ok := r.source.checked.TypesInfo.Uses[e].(*types.Func)
+		_, ok := r.source.inventory.Checked.TypesInfo.Uses[e].(*types.Func)
 		return ok
 	case *ast.SelectorExpr:
-		if r.source.checked.TypesInfo.Selections[e] != nil {
+		if r.source.inventory.Checked.TypesInfo.Selections[e] != nil {
 			return false
 		}
-		_, ok := r.source.checked.TypesInfo.Uses[e.Sel].(*types.Func)
+		_, ok := r.source.inventory.Checked.TypesInfo.Uses[e.Sel].(*types.Func)
 		return ok
 	case *ast.IndexExpr:
-		return r.source.checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
+		return r.source.inventory.Checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
 	case *ast.IndexListExpr:
 		return r.functionName(e.X)
 	}
@@ -318,8 +308,8 @@ func (r *rewrite) functionName(expr ast.Expr) bool {
 }
 
 func (r *rewrite) addressableArray(expr ast.Expr) bool {
-	array := storageKinds(r.source.checked.TypesInfo.TypeOf(expr)) == arrayStorage
-	return array && r.source.checked.TypesInfo.Types[expr].Addressable()
+	array := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
+	return array && r.source.inventory.Checked.TypesInfo.Types[expr].Addressable()
 }
 
 func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
@@ -342,7 +332,7 @@ func (r *rewrite) untypedBoolean(expr ast.Expr) bool {
 			return r.untypedBoolean(e.X)
 		}
 	case *ast.Ident:
-		if obj := r.source.checked.TypesInfo.Uses[e]; obj != nil {
+		if obj := r.source.inventory.Checked.TypesInfo.Uses[e]; obj != nil {
 			if basic, ok := obj.Type().(*types.Basic); ok {
 				return basic.Kind() == types.UntypedBool
 			}

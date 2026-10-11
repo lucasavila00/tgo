@@ -138,8 +138,8 @@ func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package,
 	if metadata.Module != nil {
 		config.GoVersion = "go" + metadata.Module.GoVersion
 	}
-	typ, err := config.Check(metadata.PkgPath, pkg.Fset, pkg.Syntax, pkg.TypesInfo)
-	pkg.Types = typ
+	checkedTypes, err := config.Check(metadata.PkgPath, pkg.Fset, pkg.Syntax, pkg.TypesInfo)
+	pkg.Types = checkedTypes
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +177,9 @@ func (importer packageImporter) Import(path string) (*types.Package, error) {
 }
 
 func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode) (*types.Package, error) {
-	dep := importer.metadata.Imports[path]
-	if dep != nil && dep.Module != nil && (dep.Module.Main || strings.HasPrefix(dep.ID, dep.PkgPath+" [")) {
-		pkg, err := importer.loader.Check(dep)
+	dependency := importer.metadata.Imports[path]
+	if dependency != nil && dependency.Module != nil && (dependency.Module.Main || strings.HasPrefix(dependency.ID, dependency.PkgPath+" [")) {
+		pkg, err := importer.loader.Check(dependency)
 		if err != nil {
 			return nil, err
 		}
