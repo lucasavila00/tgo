@@ -1,32 +1,31 @@
-// Package frontend reads TGo syntax into a Go syntax tree.
+// Package frontend reads TGo source for the type checker.
 //
-// ParseFile accepts source bytes and returns an AST with operation records.
-// Go's standard parser reads headers and statements. The frontend prepares
-// added syntax; the parser itself is not patched.
+// Go's parser cannot read TGo operators such as fetch()! or an if expression.
+// The frontend temporarily replaces added syntax with forms that Go's standard
+// parser can read. It returns a syntax tree: a structure that describes the
+// expressions, statements, and declarations in the file.
 //
-// For postfix propagation, a named comment lets Go parse the surrounding call.
-// The frontend then replaces that call with a marker node and records the
-// operator, call name, and source position.
+// The result also records which parts of that tree represent TGo operations.
+// These records let the [checker] apply TGo rules instead of treating the
+// replacement forms as ordinary Go calls. The frontend does not decide types
+// or generate the final Go code.
 //
-// For if values, it prepares clear expression positions before parsing the
-// file. Parsed syntax resolves ambiguous positions, such as colons in labels,
-// map values, and slice bounds. Independent values share preparation edits;
-// nested values can need more rounds. Placeholder function literals carry
-// branch statements to the checker without creating source function boundaries.
+// # Preserve the meaning of source positions and statements
 //
-// A collection comprehension records its type and ordered range and filter
-// clauses. The marker carries ordinary Go statements and an output call.
-// Generator bindings stay inside those statements. The checker gives the
-// output its element or key and value types.
+// Temporary text can be longer than the original expression. The frontend maps
+// positions back to the input so errors refer to the TGo text that the user
+// wrote. The physical Go filename remains available for Go's file selection.
 //
-// Offsets map prepared text to original source bytes. Physical generated paths
-// control build selection; diagnostic positions identify the original TGo file.
-// This package does not check types or choose where generated statements run.
+// Some replacement forms contain function literals to hold branch statements.
+// These forms do not introduce a function in the source program. For example,
+// a return inside an if expression still exits the enclosing source function.
+// The checker and [lowering] must preserve that rule.
 //
-// See the [checker] for marker types and scope, the [driver] for compilation and
-// shared terms, and [measurements] for parsing costs.
+// A comprehension builds a slice or map from range loops and optional filters.
+// Its records preserve the order of those clauses and the output expression.
+// This lets later compiler steps check names and types in the same scope that
+// the source program defines.
 //
 // [checker]: https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md
-// [driver]: https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md
-// [measurements]: https://github.com/lucasavila00/tgo/blob/main/docs/performance.md
+// [lowering]: https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md
 package frontend
