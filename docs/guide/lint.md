@@ -28,5 +28,5 @@ make lint
 ```
 
 Use hosted CI for full compiler validation. See the
-[test guide](testing.md) for the remaining workflow steps and
+[test guide](../../tests/readme.md) for the remaining workflow steps and
 [the scripts](../../scripts/README.md) for the file-size check.

@@ -1,7 +1,7 @@
 # Language vision
 
 This document describes the intended TGo language and its syntax. TGo uses
-Go packages, imports, types, and calls. See [transpiler use and API](../guide/transpiler.md)
+Go packages, imports, types, and calls. See [compiler use](../guide/transpiler.md)
 for the current compiler.
 
 ## Return success or failure
@@ -101,43 +101,11 @@ enums, and ordinary structs are not valid checked fields.
 
 ## List and map comprehensions
 
-A slice comprehension produces a list of values. An `if` filters the input:
+Build a slice or map with generators, filters, and output expressions. Combine
+those steps in direct loops that write into one result collection.
 
-```text
-names := []string{for _, account := range accounts {
-    if account.Active { account.Name }
-}}
-```
-
-A map comprehension produces a key and value for each input:
-
-```text
-byID := map[ID]Account{for _, account := range accounts {
-    account.ID: account
-}}
-```
-
-Use one expression for a list result and `key: value` for a map result. Filters
-also work in map comprehensions. Nested ranges produce combinations:
-
-```text
-pairs := [][2]int{for _, account := range accounts {
-    for _, sale := range account.Sales {
-        [2]int{len(account.Name), sale}
-    }
-}}
-
-activeByID := map[ID]Account{for _, account := range accounts {
-    if account.Active { account.ID: account }
-}}
-```
-
-Each range uses one or two names with `:=`. The deepest block supplies one
-result. An equal map key replaces its earlier value; map iteration order is
-unspecified. Each range source runs once when its containing loop reaches it.
-Accepted results run once, with map keys before values. An empty list is non-nil.
-Postfix error propagation in a source, filter, or result returns from the
-surrounding function.
+This feature is not implemented. The [comprehension proposal](../adr/collection-comprehensions.md)
+owns the syntax alternatives, behavior, optimization rules, and validation plan.
 
 ## Use TGo with Go
 

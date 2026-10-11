@@ -8,17 +8,33 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/checker"
 ```
 
-Package checker validates TGo source before Go statements are generated.
+Package checker validates TGo types, scope, and jumps before lowering.
 
-The driver supplies selected package metadata and generated paths containing original TGo. Loader reads those files through the frontend and checks their syntax with a private copy of Go's type checker.
+Writing source at a Go path lets Go select files and imports. It does not teach Go the meaning of added expressions. Loader reads those files through the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>), then applies TGo rules with a private copy of Go's checker.
 
-A propagation expression has the call's success types. If a call returns a value and an error, propagation supplies the value to its surrounding expression. The checker can therefore check inner propagation before an outer call in the same source check. It also checks error returns, if branch types, scopes, and jumps.
+### Propagation
 
-Source dependencies are checked as needed. Results are cached by package ID; test variants have separate IDs. External dependency types come from compiled export data, read by the matching private importer.
+If fetch returns \(Value, error\), fetch\(\)\! supplies Value to its surrounding expression. For outer\(inner\(\)\!\)\!, check the inner success type before the outer call, within one source check. There is no package reload per operator.
 
-Private type objects stay separate from stock Go objects. Public Load retains its stock package and checks ordinary syntax separately for lowering. The driver checks the final generated module with stock Go after lowering.
+Several success results stay separate; an error\-only call leaves no value. Check the final error result and the enclosing function's error interface. The original error must fit that return for \!; wrapped error must fit it for \!\!. Actual error checks and returns are emitted by [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>).
 
-Run make prepare to generate the private checker from the pinned Go source and tracked patch. The checker and export reader must use the same version.
+### If values
+
+Check each completing branch against its contextual type. Without context, use branch types and Go constant rules. Nil alone supplies no type. In a generic call, other arguments can supply the type:
+
+```
+pair(if ok { nil } else { nil }, pointer)
+```
+
+For pair\[T any\]\(a, b T\) and pointer of type \*int, T is \*int. Branches that return or jump out supply no inference value. [Control flow](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) identifies reachable branch endings. Branch returns, defers, and jumps remain in their enclosing source function; frontend placeholders do not create a new one.
+
+### Packages and maintenance
+
+Check source dependencies as needed and cache results by package ID. Test variants have separate IDs. Read external dependency export data with the matching private importer. Use the selected Go architecture's word sizes.
+
+Keep private type objects separate from stock objects. Public Load retains its stock package and checks the same ordinary syntax separately for lowering. The [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) checks final output with stock Go after all source checks pass.
+
+Run make prepare to generate the checker and importer from the same pinned Go version and tracked patch. See [preparation](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) for Go updates, [the decision](<https://github.com/lucasavila00/tgo/blob/main/docs/adr/source-checking.md>) for the tradeoff, and [measurements](<https://github.com/lucasavila00/tgo/blob/main/docs/performance.md>) for recorded performance.
 
 ## type Loader
 

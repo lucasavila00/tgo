@@ -36,5 +36,5 @@ Change `patches/go-version`, review the patch against that source, and regenerat
 The script rejects both patch fuzz and offset matches. Check ordinary Go types
 and imports as well as TGo propagation, if values, scopes, and jumps. Use hosted
 CI for full compiler validation. See
-[source checking](../../docs/arch/transpiler/source-checking.md) for the runtime
+[the checker package](readme.md) for the runtime
 compilation process.
