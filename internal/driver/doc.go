@@ -1,21 +1,14 @@
-// Package driver compiles TGo modules and returns their output files.
+// Package driver owns module compilation.
 //
-// The driver implements Compile(directory). It finds the enclosing Go module,
-// copies its files into a work directory, and prepares selected TGo sources for
-// Go parsing. Go's package loader supplies build selection, syntax, and types.
+// A module is the unit of compilation because imports, build constraints, and
+// test packages decide which files form a program. The driver keeps those
+// choices consistent across frontend checking and lowering. It uses Go's build
+// rules so TGo files belong to the same packages as their Go equivalents.
 //
-// The driver calls internal/frontend to record postfix operators and introduce
-// success-only helper calls. Repeated package loading resolves nested calls.
-// It checks final error results, forbidden unsafe operands, and whether the
-// containing function can return each propagated error.
+// Source files are authoritative. Existing generated files can be stale and
+// must not affect source checking. Compiler work uses a separate directory so
+// compilation does not edit the caller's files.
 //
-// It then passes the typed package and propagation records to
-// internal/lowering. The returned Go replaces helper calls with actual calls,
-// checks, and returns. Physical source paths control file selection even when
-// line directives change diagnostic locations.
-//
-// The result is a map of module-relative file names to contents, including
-// source and assets. For example, name_test.tgo adds name_tgo_test.go.
-// The architecture explains the compilation
-// passes and package dependencies.
+// The driver returns the emitted module as file contents. Writing those files
+// belongs to the caller. Expression evaluation rules belong to the lowerer.
 package driver

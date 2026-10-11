@@ -8,15 +8,13 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/pkg/transpiler"
 ```
 
-Package transpiler emits Go source from TGo modules.
+Package transpiler exposes TGo compilation and expression rewriting.
 
-This package exposes module compilation and statement insertion. Applications import github.com/lucasavila00/tgo/pkg/transpiler.
+The public API separates translation from file output. Compile returns file contents; the caller chooses where to write them. This lets commands and other tools use the same compiler.
 
-Compile\(directory\) calls the internal driver. It returns a map from module\-relative paths to emitted file contents. Invalid source and compiler failures cause a panic. The caller decides where to write the files.
+Load and InsertAfter support tools that need statements at an expression's evaluation point. The callback receives evaluated results, not source text that could run the expression again. Source keeps its original checked syntax so callers can apply another rewrite.
 
-Load\(directory, pattern\) loads one package of ordinary Go source. Its Source contains the checked package and expression sites. Each site records its file, byte offsets, and whether it has an evaluation in the current function.
-
-source.InsertAfter\(site, callback\) calls the lowerer. The callback receives references to the evaluated results and returns Go statements. For example, it can insert a return before the parent expression uses those results. The result maps absolute file paths to formatted Go. The original typed AST stays available for another transformation. See the API guide for signatures and callback requirements.
+Go package types remain visible through Source.Package. Keep this API small; module policy and lowering details belong to internal packages.
 
 ## func Compile
 

@@ -8,15 +8,13 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/frontend"
 ```
 
-Package frontend prepares TGo postfix syntax for Go parsing and type checking.
+Package frontend represents TGo syntax for Go parsing and type checking.
 
-The frontend prepares TGo error propagation for Go's parser. It uses Go's scanner and AST utilities. The driver supplies source bytes, reserved names, and a map in which to record operations.
+Ordinary Go syntax should keep ordinary Go meaning. The frontend records the added postfix operators separately, including their positions and wrapping choice. This lets the driver check TGo error rules while Go checks the surrounding expression.
 
-MarkPostfix replaces postfix \! or \!\! after a call with a unique comment. For example, read\(\)\!\! becomes a Go call followed by its marker comment. The operation records the source position and whether the error needs wrapping.
+A checking helper exposes a call's success results. It is a description for the type checker, not an error\-handling implementation. Lowering must replace it with the real call, error check, and return.
 
-MarkerExpressions finds the call associated with each recorded comment. WrapMarker replaces that expression with a helper call. MarkerDeclaration builds a generic helper with the required number of success results. The helper lets Go check the surrounding expression without the call's final error result. The driver later sends these operations to the lowerer, which replaces executable helper calls and removes unused declarations.
-
-See the architecture for nested\-call preparation and the checks performed after typing.
+The frontend preserves the source operation's identity. It does not choose where generated statements execute; that decision needs checked types and belongs to the lowerer.
 
 ## func MarkPostfix
 

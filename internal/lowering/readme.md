@@ -8,15 +8,13 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/lowering"
 ```
 
-Package lowering inserts statements into typed Go expressions and lowers error propagation.
+Package lowering preserves expression behavior when adding statements.
 
-The lowerer changes typed Go expressions into statements and result references. Its input is a checked package. Load loads one ordinary Go package; SourceFromPackage accepts a package already loaded by the driver.
+An expression can run after earlier operands, inside a selected branch, or on each loop visit. Added statements must run at that same point. For use\(first\(\), target\(\)\!, last\(\)\), first runs before target; failure returns before last runs. Moving every check to the start of the statement would change that behavior.
 
-Source.InsertAfter inserts callback statements after a selected expression. Source.LowerPropagations replaces recorded propagation calls with typed saved results, error checks, and returns. Both operations return formatted Go files. Changed AST nodes are copied so the typed source can be used again.
+Checked types determine temporary storage. Explicit types preserve conversions that the surrounding source supplies. Fresh names preserve source bindings. Assignments retain their original storage, and each function retains its own return target.
 
-For use\(first\(\), target\(\)\!\!, last\(\)\), lowering saves the earlier call before checking target\(\)'s error. An error returns before last\(\) runs. Conditional operands stay in their branches. Assignment lowering keeps the original store object and the required check timing. Each function has its own return target.
-
-Fresh names and explicit checked types preserve source bindings and conversions. See the correctness report for implementation rules and the tests that check them.
+Rewrites copy changed syntax. The checked input stays available for another rewrite. Module selection and file output belong to the caller.
 
 ## type After
 
