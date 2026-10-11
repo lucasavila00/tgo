@@ -60,7 +60,9 @@ statements in the source function. The frontend's call markers identify added
 syntax; they do not create source functions. This keeps returns and defers in
 their original function.
 
-The checker and its compiled-package reader use the same pinned Go source.
+`make prepare` builds the checker and its compiled-package reader from one
+pinned Go source version and checked-in patches. Generated upstream source
+stays out of Git. See [the patch instructions](../../../internal/checker/upstream.md).
 Their type objects stay separate from stock `go/types` objects. Public `Load`
 keeps its stock package and checks the same syntax separately for lowering.
 After lowering, stock Go checking checks the emitted module.

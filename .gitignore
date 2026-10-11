@@ -1,0 +1,6 @@
+# The prepare command builds these files from pinned Go source and patches.
+/internal/checker/types/*.go
+!/internal/checker/types/tgo.go
+!/internal/checker/types/tgo_test.go
+/internal/checker/gcimporter/*.go
+/internal/checker/upstream/

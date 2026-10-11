@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/.."
+version=$(cat internal/checker/patches/go-version)
+goroot=$(GOTOOLCHAIN="$version" go env GOROOT)
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+
+copy_package() {
+	from=$1
+	to=$2
+	mkdir -p "$stage/$to"
+	for source in "$goroot/src/$from/"*.go; do
+		case "$source" in
+			*_test.go|*/badlinkname.go|*/generate.go|*/generrordocs.go) continue ;;
+		esac
+		cp "$source" "$stage/$to/"
+	done
+}
+
+copy_package go/types types
+copy_package go/internal/gcimporter gcimporter
+copy_package internal/types/errors upstream/errors
+copy_package internal/goversion upstream/goversion
+copy_package internal/pkgbits upstream/pkgbits
+copy_package internal/exportdata upstream/exportdata
+copy_package internal/saferio upstream/saferio
+
+if ! patch -t -F 0 -p 1 -d "$stage" < internal/checker/patches/source.patch > "$stage/patch.log"; then
+	cat "$stage/patch.log" >&2
+	exit 1
+fi
+if grep -E 'offset|fuzz' "$stage/patch.log"; then
+	echo 'Update the patch for the pinned Go source; shifted matches are not accepted.' >&2
+	exit 1
+fi
+
+for package in types gcimporter upstream/errors upstream/goversion upstream/pkgbits upstream/exportdata upstream/saferio; do
+	destination="internal/checker/$package"
+	mkdir -p "$destination"
+	for source in "$destination/"*.go; do
+		case "$source" in
+			*/tgo.go|*/tgo_test.go) continue ;;
+		esac
+		rm -f "$source"
+	done
+	cp "$stage/$package/"*.go "$destination/"
+done

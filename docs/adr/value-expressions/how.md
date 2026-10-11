@@ -1,7 +1,8 @@
 # HOW
 
-Pin private copies of `go/types` and its compiled-package reader
-together. Extend the existing frontend wrapper. Use Go's parser for headers and
+Pin one Go source version for `go/types` and its compiled-package reader.
+A build script applies checked-in patches and generates their private packages.
+Extend the existing frontend wrapper. Use Go's parser for headers and
 statements. Store branch syntax and source positions beside generated call
 placeholders in the syntax tree.
 
