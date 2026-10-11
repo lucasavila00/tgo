@@ -8,33 +8,31 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/checker"
 ```
 
-Package checker validates TGo types, scope, and jumps before lowering.
+Package checker checks TGo types, name scope, and jumps before code generation.
 
-Writing source at a Go path lets Go select files and imports. It does not teach Go the meaning of added expressions. Loader reads those files through the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>), then applies TGo rules with a private copy of Go's checker.
+It checks the syntax from the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) and supplies types and declarations to [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>). A successful check means that the source follows TGo's rules. The [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) also checks the generated output with Go's unmodified checker.
 
-### Propagation
+### Check TGo expressions in their source context
 
-If fetch returns \(Value, error\), fetch\(\)\! supplies Value to its surrounding expression. For outer\(inner\(\)\!\)\!, check the inner success type before the outer call, within one source check. There is no package reload per operator.
+For a function fetch that returns \(Value, error\), fetch\(\)\! provides a Value to the surrounding expression. The checker verifies the error result and the enclosing function's return type. It also checks nested uses, such as outer\(inner\(\)\!\)\!, within the same source package check.
 
-Several success results stay separate; an error\-only call leaves no value. Check the final error result and the enclosing function's error interface. The original error must fit that return for \!; wrapped error must fit it for \!\!. Actual error checks and returns are emitted by [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>).
-
-### If values
-
-Check each completing branch against its contextual type. Without context, use branch types and Go constant rules. Nil alone supplies no type. In a generic call, other arguments can supply the type:
+An if expression gets its type from its use or from the values in its branches. For example, this assignment requires both branch values to fit int:
 
 ```
-pair(if ok { nil } else { nil }, pointer)
+var count int = if ready { 1 } else { 0 }
 ```
 
-For pair\[T any\]\(a, b T\) and pointer of type \*int, T is \*int. Branches that return or jump out supply no inference value. [Control flow](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) identifies reachable branch endings. Branch returns, defers, and jumps remain in their enclosing source function; frontend placeholders do not create a new one.
+A branch that returns from the function does not supply a value. The shared [control flow analysis](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) determines whether a branch can reach its end. Returns, defers, and jumps inside added expressions belong to the source function, even when the frontend uses temporary function syntax to represent them.
 
-### Packages and maintenance
+A comprehension declares the slice or map type that it builds. The checker uses that type to check each output value. Names from a range clause are available to later clauses and the output, but not outside the comprehension.
 
-Check source dependencies as needed and cache results by package ID. Test variants have separate IDs. Read external dependency export data with the matching private importer. Use the selected Go architecture's word sizes.
+### Use one compatible set of type information
 
-Keep private type objects separate from stock objects. Public Load retains its stock package and checks the same ordinary syntax separately for lowering. The [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) checks final output with stock Go after all source checks pass.
+The standard Go checker does not know TGo's expression rules. This package uses a patched copy of it and a matching reader for compiled dependency types. Both come from the same pinned Go version. Run make prepare to generate them; see [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) before changing that version or its patch.
 
-Run make prepare to generate the checker and importer from the same pinned Go version and tracked patch. See [preparation](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) for Go updates, [the decision](<https://github.com/lucasavila00/tgo/blob/main/docs/adr/source-checking.md>) for the tradeoff, and [measurements](<https://github.com/lucasavila00/tgo/blob/main/docs/performance.md>) for recorded performance.
+Types from this copy are separate from go/types objects. Keep them separate when checking ordinary Go for the public Load API. That API exposes the original Go package and its go/types objects to callers.
+
+A loader shares dependency types and completed checks between packages. It keeps each test variant separate and uses the target architecture's type sizes. Thus, all source checks use the same types and build settings.
 
 ## type Loader
 

@@ -1,16 +1,27 @@
-// Package controlflow finds which paths can reach an if branch's value.
+// Package controlflow determines whether execution can reach an if branch's value.
 //
-// An if value can contain statements before its final expression. A return,
-// break, continue, or goto can leave the branch before that value is reached.
-// The checker must know which paths supply a value to determine its type. The
-// lowerer needs the same answer before it emits a result assignment.
+// An if expression can contain statements before its final value. A return or
+// jump can leave the branch without producing that value. For example:
 //
-// Branch reports whether execution can reach the last statement and whether it
-// can reach the end of the branch. The analysis builds a graph of possible next
-// steps. Returns end paths. Loops, labels, and switch fallthrough have jump
-// targets. Real function literals have separate control flow.
+//	name := if ready {
+//	    if stopped { return }
+//	    "ready"
+//	} else {
+//	    "waiting"
+//	}
 //
-// The caller supplies functions that identify added if expressions, terminating
-// calls such as panic, and unevaluated operands. This package reads Go syntax;
-// it does not type check source or generate code.
+// The first branch supplies "ready" only when stopped is false. The checker
+// must check that value's type. Code generation must assign it to the result
+// only on paths that reach it. Both compiler steps use this package so they
+// agree on which paths need a value.
+//
+// Branch reports two facts. Tail says that execution can reach the last
+// statement. End says that execution can continue past the branch's end. These
+// facts differ for a branch whose last statement is return: that statement can
+// be reached, but execution cannot continue past it.
+//
+// The analysis follows possible paths through loops, switches, and labeled
+// jumps. It does not enter a separate function body. The caller supplies the
+// rules that syntax alone cannot show, such as which calls terminate execution
+// and which expressions contain TGo branch statements.
 package controlflow
