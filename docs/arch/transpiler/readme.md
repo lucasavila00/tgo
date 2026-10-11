@@ -70,6 +70,21 @@ After lowering, stock Go checking checks the emitted module.
 The function keeps its source result names. Failure returns use saved zero
 values for results before the error. Deferred calls still run.
 
+## Keep loop targets
+
+An initializer can contain an if value that breaks or continues its loop.
+Run that initializer on the loop's first visit. Later visits run the post
+statement before checking the condition. The generated loop therefore remains
+the target of both jumps.
+
+Go creates a separate variable for each iteration of a loop declared with
+`:=`. Keep those declarations in the generated Go loop header. Store the
+initializer result on the first visit. Rename these bindings by checked object
+identity: in `for i := if ok { break } else { i }; ...`, the final `i` in the
+initializer still refers to the outer variable. Closures in the body refer to
+the per-iteration variable. The rename copies emitted syntax and leaves the
+checked source unchanged.
+
 ## Source controls output
 
 Generated files can be stale, so they do not participate in source checking.

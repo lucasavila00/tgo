@@ -170,48 +170,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		copy.Init = nil
 		return []ast.Stmt{&ast.BlockStmt{List: append(append(setup, before...), &copy)}}
 	case *ast.ForStmt:
-		copy := *s
-		copy.Body = r.block(s.Body)
-		condition, refs := r.expression(s.Cond)
-		var post []ast.Stmt
-		if s.Post != nil {
-			post = r.header(s.Post)
-		}
-		var init []ast.Stmt
-		if s.Init != nil {
-			init = r.header(s.Init)
-		}
-		if len(condition) == 0 && len(post) <= 1 && len(init) <= 1 {
-			if len(refs) != 0 {
-				copy.Cond = refs[0]
-			}
-			if len(post) != 0 {
-				copy.Post = post[0]
-			}
-			if len(init) != 0 {
-				copy.Init = init[0]
-			}
-			return []ast.Stmt{&copy}
-		}
-		var outer []ast.Stmt
-		if len(init) != 0 {
-			outer = append(outer, init[:len(init)-1]...)
-			copy.Init = init[len(init)-1]
-		}
-		var body []ast.Stmt
-		if len(post) != 0 {
-			first := r.name()
-			outer = append(outer, variable(first, r.temporaryType(types.Typ[types.Bool], firstExpression(s)), boolean(true)))
-			body = append(body, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN, Rhs: []ast.Expr{boolean(false)}}}}, Else: &ast.BlockStmt{List: post}})
-		}
-		body = append(body, condition...)
-		if len(refs) != 0 {
-			body = append(body, &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: refs[0]}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{Tok: token.BREAK}}}})
-		}
-		body = append(body, copy.Body)
-		copy.Cond, copy.Post = nil, nil
-		copy.Body = &ast.BlockStmt{List: body}
-		return []ast.Stmt{&ast.BlockStmt{List: append(outer, &copy)}}
+		return r.forStatement(s)
 	case *ast.GoStmt:
 		copy := *s
 		before, refs := r.expression(s.Call)

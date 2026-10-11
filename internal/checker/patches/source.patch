@@ -673,15 +673,19 @@
  		var x operand
  		check.expr(nil, &x, s.Cond)
  		if x.isValid() && !allBoolean(x.typ()) {
-@@ -834,6 +853,7 @@
+@@ -833,7 +852,10 @@
+ 		check.openScope(s, "for")
  		defer check.closeScope()
  
- 		check.simpleStmt(s.Init)
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
 +		check.statementContext = inner
  		if s.Cond != nil {
  			var x operand
  			check.expr(nil, &x, s.Cond)
-@@ -841,7 +861,9 @@
+@@ -841,7 +863,9 @@
  				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
  			}
  		}

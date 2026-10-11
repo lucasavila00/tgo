@@ -170,7 +170,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.checked.Fset, copy); err != nil {
+		if err := format.Node(&buf, r.source.checked.Fset, r.renameBindings(copy)); err != nil {
 			return nil, err
 		}
 		output[r.source.checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()

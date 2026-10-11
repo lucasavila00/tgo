@@ -18,6 +18,7 @@ type rewrite struct {
 	next              int
 	inserted          bool
 	labels            map[string]string
+	bindings          map[types.Object]string
 	suppressedRoot    ast.Expr
 	propagations      map[ast.Expr]Propagation
 	conditionals      map[*ast.CallExpr]*ast.IfStmt

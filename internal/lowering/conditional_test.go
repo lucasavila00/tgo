@@ -23,7 +23,18 @@ func early(ok bool) int { return if ok {return 7} else {3} }
 func small(ok bool) int8 { return (if ok {127} else {0})+1 }
 func nested(ok bool) int { return if ok { if !ok {1} else {2} } else if !ok {3} else {4} }
 func deferred() int { return if true {defer fmt.Print("D"); 5} else {0} }
+func movedBinding(skip bool) {
+ i:=4
+ var values []func() int
+ loop: for i:=if skip {break loop} else {i}; i<6; i++ {
+  values=append(values,func()int{return i})
+ }
+ if i!=4 {panic("outer binding")}
+ if !skip && (len(values)!=2 || values[0]()!=4 || values[1]()!=5) {panic("iteration bindings")}
+}
 func main() {
+ movedBinding(false)
+ movedBinding(true)
  fmt.Print(choose(true), ";", choose(false), ";")
  consume(effect("L",1), if true {effect("B",2)} else {effect("X",0)}, effect("R",3))
  _=false && if true {fmt.Print("X"); true} else {false}
