@@ -1,6 +1,6 @@
 package main
 
-import tgo11 "fmt"
+import tgo10 "fmt"
 
 import (
 	"errors"
@@ -27,37 +27,36 @@ func consume[T any](f func(...T), channels chan (<-chan T), n int) {
 }
 
 func run[T any](f func(...T), channels chan (<-chan T), failAt int) (tgo3 error) {
-	type tgo7 = T
+	type tgo6 = T
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 
 	{
 		T := 1
 		_ = T
 		{
-			var tgo6 func(...tgo7) = f
-			var tgo8 chan (<-chan tgo7) = channels
+			var tgo5 func(...tgo6) = f
+			var tgo7 chan (<-chan tgo6) = channels
 			var tgo1 int
 			var tgo2 error
 			tgo1, tgo2 = next(failAt)
-			tgo4 = tgo2
-			if tgo4 != tgo5 {
+			if tgo2 != nil {
+				tgo4 = tgo2
 				return tgo4
 			}
-			consume(tgo6, tgo8, tgo1)
+			consume(tgo5, tgo7, tgo1)
 		}
 		{
-			var tgo12 func(...tgo7) = f
-			var tgo13 chan (<-chan tgo7) = channels
-			var tgo9 int
-			var tgo10 error
-			tgo9, tgo10 = next(failAt)
-			tgo4 = tgo10
-			if tgo4 != tgo5 {
-				tgo4 = tgo11.Errorf("%s: %w", "next", tgo4)
+			var tgo11 func(...tgo6) = f
+			var tgo12 chan (<-chan tgo6) = channels
+			var tgo8 int
+			var tgo9 error
+			tgo8, tgo9 = next(failAt)
+			if tgo9 != nil {
+				tgo4 = tgo9
+				tgo4 = tgo10.Errorf("%s: %w", "next", tgo4)
 				return tgo4
 			}
-			consume(tgo12, tgo13, tgo9)
+			consume(tgo11, tgo12, tgo8)
 		}
 	}
 	return nil
