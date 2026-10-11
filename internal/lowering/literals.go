@@ -182,5 +182,3 @@ func (r *rewrite) prepareSliceImport() {
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.sliceAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"slices"`}})
 	}
 }
-
-func isPointer(typ types.Type) bool { _, ok := typ.Underlying().(*types.Pointer); return ok }
