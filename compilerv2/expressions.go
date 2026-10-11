@@ -23,9 +23,14 @@ type rewrite struct {
 	extraImports      []*ast.ImportSpec
 	extraDeclarations []ast.Decl
 	zeroSequence      *ast.Ident
+	zeroPointer       *ast.Ident
 	iterAlias         *ast.Ident
 	mapAlias          *ast.Ident
 	sliceAlias        *ast.Ident
+	reflectAlias      *ast.Ident
+	parameterAliases  map[*types.TypeParam]*ast.Ident
+	aliasStatements   map[ast.Node][]ast.Stmt
+	deferredBases     map[ast.Expr]bool
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -216,6 +221,14 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		result = &copy
 	case *ast.IndexExpr:
 		copy := *e
+		if storageKinds(r.source.Package.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.Package.TypesInfo.Types[e.X].Addressable() {
+			before, copy.X = r.genericBase(e.X)
+			setup, index := r.capture(e.Index)
+			before = append(before, setup...)
+			copy.Index = index
+			result = &copy
+			break
+		}
 		if r.addressableArray(e.X) && contains(e.Index, r.target) {
 			var base ast.Expr
 			before, base = r.arrayBase(e.X)
@@ -251,6 +264,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		copy := *e
 		input := []ast.Expr{e.X}
 		array := r.addressableArray(e.X)
+		mixed := storageKinds(r.source.Package.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.Package.TypesInfo.Types[e.X].Addressable()
+		if mixed {
+			before, copy.X = r.genericBase(e.X)
+			input = nil
+		}
 		if array {
 			before, copy.X = r.arrayBase(e.X)
 			input = nil
@@ -263,8 +281,15 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		var values []ast.Expr
 		setup, values := r.operands(input)
 		before = append(before, setup...)
+		if mixed {
+			for i, value := range values {
+				saved, refs := r.save(value)
+				before = append(before, saved...)
+				values[i] = refs[0]
+			}
+		}
 		i := 0
-		if !array {
+		if !array && !mixed {
 			copy.X = values[0]
 			i = 1
 		}
@@ -356,7 +381,7 @@ func (r *rewrite) functionName(expr ast.Expr) bool {
 }
 
 func (r *rewrite) addressableArray(expr ast.Expr) bool {
-	_, array := r.source.Package.TypesInfo.TypeOf(expr).Underlying().(*types.Array)
+	array := storageKinds(r.source.Package.TypesInfo.TypeOf(expr)) == arrayStorage
 	return array && r.source.Package.TypesInfo.Types[expr].Addressable()
 }
 

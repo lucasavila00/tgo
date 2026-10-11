@@ -105,6 +105,23 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		setup, values := r.operands(s.Rhs)
 		before = append(before, setup...)
 		copy.Rhs = values
+		deferred := false
+		for _, place := range copy.Lhs {
+			deferred = deferred || r.deferredPlace(place)
+		}
+		if deferred {
+			var refs []ast.Expr
+			for _, value := range values {
+				if tv := r.source.Package.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+					refs = append(refs, value)
+					continue
+				}
+				setup, saved := r.save(value)
+				before = append(before, setup...)
+				refs = append(refs, saved...)
+			}
+			return append(before, r.orderedStores(copy.Lhs, refs, copy.Tok)...)
+		}
 		return append(before, &copy)
 	case *ast.IncDecStmt:
 		copy := *s

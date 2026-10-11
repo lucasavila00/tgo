@@ -37,8 +37,10 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &copy
 	case *ast.IndexExpr:
 		copy := *e
-		baseType := r.source.Package.TypesInfo.TypeOf(e.X).Underlying()
-		if _, array := baseType.(*types.Array); array {
+		kind := storageKinds(r.source.Package.TypesInfo.TypeOf(e.X))
+		if kind == arrayStorage|otherStorage && r.source.Package.TypesInfo.Types[e.X].Addressable() {
+			before, copy.X = r.genericBase(e.X)
+		} else if kind == arrayStorage {
 			before, copy.X = r.place(e.X)
 		} else {
 			before, copy.X = r.capture(e.X)

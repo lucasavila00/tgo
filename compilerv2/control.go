@@ -2,6 +2,7 @@ package compilerv2
 
 import (
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"strconv"
 )
@@ -10,10 +11,21 @@ func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: 
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	copy := *s
+	if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && contains(s, r.target) {
+		target := r.target
+		r.target = nil
+		copy.Body = r.block(s.Body)
+		r.target = target
+		r.inserted = true
+		return []ast.Stmt{&copy}
+	}
 	copy.Body = r.block(s.Body)
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (contains(s.Key, r.target) || contains(s.Value, r.target)) {
+		if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+			return r.integerRange(s, &copy, before)
+		}
 		var stores []ast.Stmt
 		var lhs, rhs []ast.Expr
 		for _, pair := range []struct {
@@ -31,7 +43,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 			rhs = append(rhs, value)
 		}
 		copy.Tok = token.DEFINE
-		stores = append(stores, &ast.AssignStmt{Lhs: lhs, Tok: token.ASSIGN, Rhs: rhs})
+		stores = append(stores, r.orderedStores(lhs, rhs, token.ASSIGN)...)
 		copy.Body = &ast.BlockStmt{List: append(stores, copy.Body)}
 	}
 	return append(before, &copy)

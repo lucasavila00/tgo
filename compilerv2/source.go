@@ -182,5 +182,5 @@ func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
 }
 
 func contains(parent, child ast.Node) bool {
-	return parent != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
+	return parent != nil && child != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
 }

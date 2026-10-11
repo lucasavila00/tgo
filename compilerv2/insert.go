@@ -30,13 +30,16 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	output := make(map[string][]byte)
 	for _, file := range s.Package.Syntax {
 		r.extraImports, r.extraDeclarations = nil, nil
-		r.zeroSequence, r.iterAlias, r.mapAlias, r.sliceAlias = nil, nil, nil, nil
+		r.zeroSequence, r.zeroPointer, r.iterAlias, r.mapAlias, r.sliceAlias, r.reflectAlias = nil, nil, nil, nil, nil, nil
 		copy := *file
 		copy.Decls = append([]ast.Decl(nil), file.Decls...)
 		for i, decl := range file.Decls {
 			if fn, ok := decl.(*ast.FuncDecl); ok && contains(fn.Body, target) {
 				function := *fn
 				function.Body = r.block(fn.Body)
+				if aliases := r.aliasStatements[fn]; len(aliases) != 0 {
+					function.Body.List = append(aliases, function.Body.List...)
+				}
 				copy.Decls[i] = &function
 			}
 		}
