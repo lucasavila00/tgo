@@ -26,7 +26,7 @@ func checked(wrap, fail bool) (int, error) {
 		var tgo3 error
 		tgo2, tgo3 = next(fail)
 		if tgo3 != nil {
-			return tgo4, fmt_tgo5.Errorf("%s: %w", "next", tgo3)
+			return tgo4, fmt_tgo5.Errorf("next: %w", tgo3)
 		}
 		tgo1 = tgo2
 	} else {

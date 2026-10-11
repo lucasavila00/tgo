@@ -45,7 +45,7 @@ func run() error {
 		var tgo2 error
 		tgo1, tgo2 = step("T")
 		if tgo2 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "step", tgo2)
+			return fmt_tgo3.Errorf("step: %w", tgo2)
 		}
 		var tgo4 int = tgo1
 		var tgo5 int = -1
@@ -54,7 +54,7 @@ func run() error {
 			var tgo7 error
 			tgo6, tgo7 = step("C")
 			if tgo7 != nil {
-				return fmt_tgo3.Errorf("%s: %w", "step", tgo7)
+				return fmt_tgo3.Errorf("step: %w", tgo7)
 			}
 			if tgo4 == tgo6 {
 				tgo5 = 0
