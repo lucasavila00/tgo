@@ -1,6 +1,6 @@
-# Expression lowering
+# Transpiler architecture
 
-This package implements [the expression-lowering plan](../docs/adr/expression-lowering/what.md)
+This package implements [the expression-lowering plan](../adr/expression-lowering/what.md)
 for [#248](https://github.com/lucasavila00/tgo/issues/248).
 It reads ordinary Go. The `!` and `!!` frontend uses this engine for
 [#247](https://github.com/lucasavila00/tgo/issues/247).
