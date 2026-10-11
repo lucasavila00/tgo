@@ -27,26 +27,16 @@ func run() error {
 	}()
 	a := []N{9, 9}
 	{
-		var tgo1 []N = a
-		var tgo2 int
-		var tgo3 error
-		tgo2, tgo3 = step("I")
-		if tgo3 != nil {
-			return tgo3
-		}
-		var tgo8 N = tgo4(&tgo1[tgo2])
-		var tgo9 bool = 0 == 0
-		for tgo8 = range 2 {
-			if tgo9 {
-				tgo9 = 0 != 0
-			} else {
-				tgo1 = a
-				tgo2, tgo3 = step("I")
-				if tgo3 != nil {
-					return tgo3
-				}
+		var tgo1 N
+		for tgo1 = range 2 {
+			var tgo2 []N = a
+			var tgo3 int
+			var tgo4 error
+			tgo3, tgo4 = step("I")
+			if tgo4 != nil {
+				return tgo4
 			}
-			tgo1[tgo2] = tgo8
+			tgo2[tgo3] = tgo1
 			{
 				fmt.Print(a[1])
 			}
@@ -68,9 +58,4 @@ func main() {
 			panic(err)
 		}
 	}
-}
-
-func tgo4[tgo5 interface {
-}](tgo6 *tgo5) (tgo7 tgo5) {
-	return
 }

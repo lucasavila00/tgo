@@ -12,20 +12,6 @@ func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: 
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	copy := *s
-	if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && r.contains(s) {
-		suppressed := r.suppressed
-		r.suppressed = true
-		copy.Body = r.block(s.Body)
-		r.suppressed = suppressed
-		// No iteration can execute the assignment operands or body.
-		for expression := range r.propagations {
-			if contains(s, expression) {
-				r.lowered[expression] = true
-			}
-		}
-		r.inserted = true
-		return []ast.Stmt{&copy}
-	}
 	copy.Body = r.block(s.Body)
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]

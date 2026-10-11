@@ -26,8 +26,21 @@ func run() error {
 		}
 	}()
 	a := []int{}
-	for a[tgoPropagation1(step("I"))] = range -1 {
+	{
+		var tgo1 int
+		for tgo1 = range -1 {
+			var tgo2 []int = a
+			var tgo3 int
+			var tgo4 error
+			tgo3, tgo4 = step("I")
+			if tgo4 != nil {
+				return tgo4
+			}
+			tgo2[tgo3] = tgo1
+			{
 
+			}
+		}
 	}
 	return nil
 }
@@ -45,9 +58,4 @@ func main() {
 			panic(err)
 		}
 	}
-}
-func tgoPropagation1[T0 interface {
-}, T1 interface {
-}](v0 T0, err T1) T0 {
-	return v0
 }

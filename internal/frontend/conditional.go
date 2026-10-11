@@ -54,7 +54,10 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	var scan scanner.Scanner
 	scan.Init(original, input, nil, scanner.ScanComments)
 	for {
-		_, tok, _ := scan.Scan()
+		_, tok, literal := scan.Scan()
+		if tok == token.IDENT {
+			used[literal] = true
+		}
 		if tok == token.EOF {
 			break
 		}

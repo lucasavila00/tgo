@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -79,5 +80,31 @@ func TestPropagationSourcePositionsAndComments(t *testing.T) {
 	}
 	if len(parsed.File.Comments) != 1 || parsed.File.Comments[0].List[0].Text != "// keep this comment" {
 		t.Fatalf("source comments: %v", parsed.File.Comments)
+	}
+}
+
+func TestPropagationRequiresCall(t *testing.T) {
+	for _, operator := range []string{"!", "!!"} {
+		t.Run(operator, func(t *testing.T) {
+			defer func() {
+				err := recover()
+				if err == nil || !strings.Contains(fmt.Sprint(err), "propagation requires a call") {
+					t.Fatalf("diagnostic: %v", err)
+				}
+			}()
+			input := "package p\nfunc f(err error) error { value := (err)" + operator + "; return value }"
+			ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+		})
+	}
+}
+
+func TestConditionalNamesKeepSourceBindings(t *testing.T) {
+	input := "package p\nfunc tgoConditional1() int {return 4}; func f() int { return if true { tgoConditional1() } else { 0 } }"
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, collision := parsed.Conditionals["tgoConditional1"]; collision {
+		t.Fatal("conditional marker replaced a source binding")
 	}
 }

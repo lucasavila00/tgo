@@ -198,6 +198,13 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 
 func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation TGoOperation) exprKind {
 	position := atPos(check.fset.File(call.Pos()).Pos(operation.Position.Offset))
+	if conditional, ok := ast.Unparen(call.Args[0]).(*ast.CallExpr); ok {
+		if op, found := check.tgoOperation(conditional); found && op.Conditional {
+			check.error(position, InvalidSyntaxTree, "propagation requires a call")
+			x.invalidate()
+			return expression
+		}
+	}
 	check.rawExpr(nil, x, call.Args[0], nil, false)
 	x.expr = call
 	if !x.isValid() {
