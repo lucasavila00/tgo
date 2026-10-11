@@ -1,0 +1,1 @@
+virtual.tgo:50:45: ! is not allowed inside unsafe.Sizeof operands

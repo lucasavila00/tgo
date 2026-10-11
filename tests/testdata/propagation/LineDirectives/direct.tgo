@@ -1,0 +1,17 @@
+//line virtual.tgo:1
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var failure = errors.New("bad")
+
+func fail() error { return failure }
+
+func direct() error {
+	fail()!!
+	fmt.Println("continued direct")
+	return nil
+}

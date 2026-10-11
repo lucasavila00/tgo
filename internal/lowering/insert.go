@@ -161,7 +161,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		if err := format.Node(&buf, r.source.Package.Fset, copy); err != nil {
 			return nil, err
 		}
-		output[r.source.Package.Fset.Position(file.Pos()).Filename] = buf.Bytes()
+		output[r.source.Package.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
 }
