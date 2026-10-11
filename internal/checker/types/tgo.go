@@ -50,6 +50,26 @@ func (check *Checker) expressionType(e ast.Expr, typ Type) {
 	}
 }
 
+// builtinArguments supplies the slice element type to append values.
+func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*operand {
+	if id != _Append || len(call.Args) < 2 || hasDots(call) {
+		return check.exprList(call.Args)
+	}
+	args := make([]*operand, len(call.Args))
+	for i, expression := range call.Args {
+		args[i] = new(operand)
+		check.expr(nil, args[i], expression)
+		if i == 0 && args[i].isValid() {
+			if element, err := sliceElem(args[i]); err == nil {
+				for _, value := range call.Args[1:] {
+					check.expressionType(value, element)
+				}
+			}
+		}
+	}
+	return args
+}
+
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
 	x.expr = call
 	x.typ_ = Typ[Invalid]

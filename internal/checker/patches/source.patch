@@ -77,15 +77,27 @@
  	// If we have a n:n mapping from lhs variable to rhs expression,
 --- a/types/builtins.go
 +++ b/types/builtins.go
-@@ -13,7 +13,7 @@
+@@ -10,10 +10,10 @@
+ package types
+ 
+ import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  )
  
  // builtin type-checks a call to the built-in specified by id and
+@@ -53,7 +53,7 @@
+ 	switch id {
+ 	default:
+ 		// check all arguments
+-		args = check.exprList(argList)
++		args = check.builtinArguments(call, id)
+ 		nargs = len(args)
+ 		for _, a := range args {
+ 			if !a.isValid() {
 --- a/types/call.go
 +++ b/types/call.go
 @@ -7,9 +7,9 @@
