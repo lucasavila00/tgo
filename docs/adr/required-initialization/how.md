@@ -1,8 +1,7 @@
 # HOW
 
-Implement this after approval in `compilerv2`. Do not restore the old compiler
-or specification. Apply checks to source objects before expression lowering;
-generated Go locals are not source declarations.
+Implement in `compilerv2`. Check source before expression lowering; generated
+locals are not source declarations.
 
 Use `go/types.Info` to identify declarations, literal types, field objects,
 constant indices, and assignments. Require values in each source `ValueSpec`.
@@ -26,9 +25,7 @@ assignable to unnamed TGo function types.
 
 For functions with results, require explicit return operands or the existing
 failure-return syntax. Keep `return` in result-free functions. Let Go check
-return arity, types, and missing returns. Do not build a control-flow graph or
-track assignment state for this rule. Local declarations must have initializers
-regardless of later assignments.
+return arity, types, and missing returns. No control-flow or assignment-state analysis is needed.
 
 Emit normal Go after checks. Preserve return-expression evaluation before
 normal deferred calls. Deferred closures can capture explicitly initialized
@@ -36,12 +33,8 @@ locals; no new capture restriction is needed. Keep generated typed zeros for
 failure returns and propagation. Do not add runtime state, constructors,
 collection wrappers, or interop guards.
 
-The [Go specification][go] defines the retained behavior. Prior decisions on
-[checked fields][checked] and [failure returns][returns] provide context; their
-removed implementation is not a dependency.
+The [Go specification][go] defines allocation, returns, and defer timing.
 
 [WHAT](what.md) sets scope. [PROOF](proof.md) defines tests.
 
 [go]: https://go.dev/ref/spec
-[checked]: https://github.com/lucasavila00/tgo/issues/196
-[returns]: https://github.com/lucasavila00/tgo/issues/81

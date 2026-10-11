@@ -1,6 +1,6 @@
 # PROOF
 
-After approval, create positive and negative fixtures under
+Create positive and negative fixtures under
 `compilerv2/testdata/initialization/`. Each negative fixture records the source
 position and expected rule. Compile positive output with Go and run cases
 where output text cannot prove behavior.
@@ -45,9 +45,7 @@ Planned focused command:
 go -C compilerv2 test ./... -run '^TestInitialization' -count=1
 ```
 
-Run full validation in hosted CI. This checkout has no compiler or CI; this
-ADR adds no test runner. Implementation must add these tests, update README
-examples and language documentation, and record compatibility changes before
-completion. Approval of this proposal is not proof of implementation.
+Run full validation in hosted CI. Update README examples and language
+documentation with the implementation.
 
 [WHAT](what.md) states the rules. [HOW](how.md) states the algorithm.
