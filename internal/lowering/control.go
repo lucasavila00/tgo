@@ -17,7 +17,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+		if value := r.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
 			return r.withBreakExit(s, &copy, r.integerRange(s, &copy, before), exit)
 		}
 		var stores []ast.Stmt
@@ -70,12 +70,12 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 				changedCases = true
 			}
 		}
-		c := *clause
-		c.Body = nil
+		caseClause := *clause
+		caseClause.Body = nil
 		for _, body := range clause.Body {
-			c.Body = append(c.Body, r.statement(body)...)
+			caseClause.Body = append(caseClause.Body, r.statement(body)...)
 		}
-		cases = append(cases, &c)
+		cases = append(cases, &caseClause)
 	}
 	copy.Body = &ast.BlockStmt{}
 	if !changedCases {
@@ -98,7 +98,7 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	var tagValue ast.Expr
 	if len(tag) != 0 {
 		tagValue = tag[0]
-		if tv := r.source.checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
+		if tv := r.source.inventory.Checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
 			saved, values := r.save(tagValue)
 			setup = append(setup, saved...)
 			tagValue = values[0]
@@ -147,17 +147,17 @@ func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
 	}
 	setup, values := r.expression(assertion.X)
 	before = append(before, setup...)
-	a := *assertion
-	a.X = values[0]
+	typeAssertion := *assertion
+	typeAssertion.X = values[0]
 	switch assign := s.Assign.(type) {
 	case *ast.ExprStmt:
-		c := *assign
-		c.X = &a
-		copy.Assign = &c
+		expressionStatement := *assign
+		expressionStatement.X = &typeAssertion
+		copy.Assign = &expressionStatement
 	case *ast.AssignStmt:
-		c := *assign
-		c.Rhs = []ast.Expr{&a}
-		copy.Assign = &c
+		assignmentStatement := *assign
+		assignmentStatement.Rhs = []ast.Expr{&typeAssertion}
+		copy.Assign = &assignmentStatement
 	}
 	copy.Body = &ast.BlockStmt{}
 	for _, statement := range s.Body.List {

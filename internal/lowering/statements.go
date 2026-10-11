@@ -114,7 +114,7 @@ func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
-			call, _ := r.source.parents[n].(*ast.CallExpr)
+			call, _ := r.source.inventory.Parents[n].(*ast.CallExpr)
 			if r.conditionals[call] == nil && r.comprehensions[call] == nil {
 				return false
 			}
@@ -156,7 +156,7 @@ func (r *rewrite) header(statement ast.Stmt) []ast.Stmt {
 func (r *rewrite) hasGoto(label *ast.LabeledStmt) bool {
 	var node ast.Node = label
 	for {
-		parent := r.source.parents[node]
+		parent := r.source.inventory.Parents[node]
 		if parent == nil {
 			break
 		}
