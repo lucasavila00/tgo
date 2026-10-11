@@ -1,16 +1,19 @@
-# HOW
+# Lower checked syntax into Go statements
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-- Use Go's existing parser. The [source-checking decision](../source-checking/what.md)
-  replaces the original requirement to use only Go's stock type checker.
-- Use [`go/packages`][packages] for package selection and dependency metadata.
-- Read the original AST (abstract syntax tree); build a new `go/ast` output.
-- Adapt [Go's ordering pass][order] to that public AST.
-- Format output with `go/format`; compile it with the Go toolchain.
-- Pin Go and `golang.org/x/tools` versions in `go.mod`.
+Use Go's standard parser through the frontend and `go/packages` for build
+selection. The [source-checking decision](../source-checking/what.md) supplies
+private checked types for TGo expressions.
 
-[WHAT](what.md) defines the transformation. [PROOF](proof.md) checks it.
+Read the checked AST, or abstract syntax tree. Build output nodes without
+changing the input tree. Use saved values to preserve evaluation order, branch
+selection, assignment storage, and function return targets. These follow the
+same ordering requirements as Go's compiler, implemented on public `go/ast`
+nodes.
 
-[packages]: https://pkg.go.dev/golang.org/x/tools/go/packages
-[order]: https://go.dev/src/cmd/compile/internal/walk/order.go
+Format output with `go/format`. The driver writes final generated files and
+checks them with stock Go. Pin Go and `golang.org/x/tools` versions.
+
+See [the lowering explanation](../../arch/transpiler/correctness.md) for examples
+and source files. [WHAT](what.md) states the behavior; [PROOF](proof.md) checks it.

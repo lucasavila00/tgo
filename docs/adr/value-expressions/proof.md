@@ -1,29 +1,33 @@
-# PROOF
+# Check if-value behavior
 
-Use TGo inputs, Go snapshots, handwritten Go references, and expected results
-in `tests/testdata/value-expressions/`.
+Use TGo inputs, generated snapshots, handwritten Go references, and expected
+outputs in `tests/testdata/value-expressions/`.
 
 Cover:
 
-- Both branches, nested `else if`, initializer scope, ordinary `if` statements.
-- Calls, operators, literals, assignment targets, skipped `&&` and `||` operands.
-- Branch locals, outer names before `:=`, final calls, nested expressions.
-- Package dependencies, declaration order, selected effects, compiled imports.
-- Named types, interfaces, constants, nil, generics, contextual types, shifts.
-- Return, panic, all branches terminating, continue, break, labels, goto.
-- `!` identity, `!!` error text, skipped propagation, deferred calls.
-- Comments, newlines, nested literals, adjacent statements, generated-name collisions.
-- Generic calls with several conditional arguments; public `Load` stock-package identity.
-- Runtime `int8` overflow (-128 when `ok=true`) in int8 context: `(if ok {127} else {0})+1`, without false constant-overflow errors.
+- Selected branches, nested else-if, header initializers, and ordinary if statements.
+- Calls, operators, literals, assignment targets, and skipped Boolean operands.
+- Branch locals, outer names before declarations, final calls, and nested values.
+- Named types, interfaces, constants, nil, generics, surrounding types, and shifts.
+- Returns, panic, all branches terminating, continue, break, labels, and goto.
+- Propagation identity and wrapping, skipped calls, and deferred execution.
+- Package dependencies, initialization order, and compiled imports.
+- Comments, newlines, source positions, and generated-name conflicts.
 
-`TestValueExpressions` compiles inputs and compares snapshots. Run generated Go
-and references. Compare values, effects, panic, and defers.
-Assert sentinel identity. Exercise both branches and skipped paths. Compare
-repeated compilation bytes.
+Generic cases must include several conditional arguments and inference from
+other arguments. Contextual integer cases must preserve runtime overflow:
+`(if ok {127} else {0}) + 1` in an `int8` context is a runtime value, not a
+constant-overflow rejection.
 
-Check diagnostic positions and text:
-missing else/value, mixed types, tuples, constant-only contexts, escaped locals,
-unknown types, and types that generated declarations cannot name. Reject
-`continue` to a range inside its collection; keep outer-loop and body jumps.
+Run compiled fixtures and separate Go references. Compare values, traces,
+panics, defers, and sentinel error identity. Check stable repeated output.
 
-Review snapshots. Never update them on failure.
+Rejection tests check missing else or value, incompatible branch types, tuples,
+constant-only uses, escaped locals, unknown types, and inaccessible generated
+types. Check exact source positions where specified. Reject continue to a range
+inside its collection while retaining valid body and outer-loop jumps.
+
+Tagged if-expression fuzz tests provide additional bounded behavior checks.
+Review snapshot changes; never update expected results just to accept a failure.
+
+[WHAT](what.md) defines the rules. [HOW](how.md) describes the implementation.

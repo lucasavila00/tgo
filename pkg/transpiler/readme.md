@@ -8,13 +8,13 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/pkg/transpiler"
 ```
 
-Package transpiler exposes TGo compilation and expression rewriting.
+Package transpiler exposes module compilation and expression insertion.
 
-Compile writes and checks generated Go in the source module. Commands and other tools use the same compiler.
+Compile takes a directory inside a Go module. It writes generated Go beside owned TGo inputs and checks the final module. It returns nothing. Invalid source and compiler failures panic. Original TGo and ordinary Go source remain on disk.
 
-Load and InsertAfter support tools that need statements at an expression's evaluation point. The callback receives evaluated results, not source text that could run the expression again. Source keeps its original checked syntax so callers can apply another rewrite.
+Load and InsertAfter are a separate API for tools that add statements after an ordinary Go expression. Load reads one package and records expression sites. InsertAfter supplies saved expression results to the caller's callback and returns formatted Go file contents without writing them.
 
-Go package types remain visible through Source.Package. Keep this API small; module policy and lowering details belong to internal packages.
+Source.Package retains stock Go package and type objects. Private checking provides the lowerer's types separately. The checked tree stays unchanged, so one load can support several independent rewrites.
 
 ## func Compile
 

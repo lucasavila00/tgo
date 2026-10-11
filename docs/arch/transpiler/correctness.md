@@ -1,119 +1,131 @@
 # How lowering preserves execution
 
-Lowering replaces `call()!` and `call()!!` with ordinary Go statements: call
-once, test its error, return on failure, then use its success results. The rules
-below keep these statements at the point where the source call runs.
+The checker decides whether TGo source is valid. The lowerer decides which Go
+statements implement that source. Go can accept output that calls something
+too early or returns from the wrong function, so type checking alone is not
+enough.
 
-## Calls and propagation
+The examples below show essential behavior. Actual output uses fresh names,
+explicit types, and extra storage where the surrounding code needs it.
 
-For `use(first(), target()!, last())`, assume each success result is `int` and
-the call's final result is `error`. The essential generated code is:
+## Call once, then check
+
+For `use(first(), target()!, last())`, assume `target` returns `(int, error)`
+and the enclosing function returns `error`:
 
 ```go
-var tgo1 int = first()
-var tgo2 int
-var tgo3 error
-tgo2, tgo3 = target()
-if tgo3 != nil {
-    return tgo3
+var firstValue int = first()
+var value int
+var err error
+value, err = target()
+if err != nil {
+    return err
 }
-use(tgo1, tgo2, last())
+use(firstValue, value, last())
 ```
 
-`first()` runs before `target()`. The tuple assignment calls `target()` once.
-If it fails, neither `last()` nor `use()` runs. Otherwise, the parent receives
-the saved success result. [Operand lowering](../../../internal/lowering/expressions.go)
-saves earlier operands when a later operand needs statements. This preserves
-Go's specified call order; it does not promise an order that Go leaves unspecified.
+`first` runs before `target`. `target` runs once. Failure returns before `last`
+or `use` runs. On success, `use` receives the saved value.
 
-[Propagation](../../../internal/lowering/propagation.go) checks the call's final
-result before conversion to the caller's return type. A nil `*E` would become a
-non-nil `error` interface after conversion, so checking the converted value
-would give the wrong answer. An interface that already contains a nil pointer
-is failure. Generic results follow their instantiated types; reflection is
-used when a direct nil comparison is not available. `!` returns the original
-error. `!!` wraps it once, inside the failure branch.
+[Expression lowering](../../../internal/lowering/expressions.go) saves earlier
+operands when a later operand needs statements. It preserves the order Go
+specifies. It does not impose an order on operations that Go leaves unspecified.
 
-The first type check uses helpers that expose only success results. It cannot
-check a return statement that lowering has not inserted yet. The compiler
-therefore also uses Go's assignability rule to check the propagated error
-against the caller's final result. Wrapped propagation checks the wrapped
-`error` type.
+## Check the original error type
 
-## Conditional execution and function boundaries
+[Propagation](../../../internal/lowering/propagation.go) checks the call's last
+result before converting it to the enclosing function's return type.
 
-The expression transform keeps a short-circuit right operand inside its branch.
-For `left() && right()!`, `right()` and its error check run only if `left()` is
-true. A single unconditional prefix would be wrong.
+For example, a nil `*E` that implements `error` is success as a pointer result.
+Converting it to an `error` interface first would make the interface non-nil.
+An error interface that already contains a nil pointer is non-nil and is failure.
+Generic and unusual concrete error types need checks suited to their types;
+reflection is used when a direct nil comparison is not available.
 
-[Statement lowering](../../../internal/lowering/statements.go) places repeated loop
-conditions inside the loop. When the post statement needs several statements,
-a generated Boolean skips the post on the first visit and runs it before each
-later condition. Thus `continue` still leads through the post and condition.
-[Select lowering](../../../internal/lowering/select.go) evaluates send and receive
-operands before selection, but performs receive-target work only in the chosen case.
+`!` returns the same error value. `!!` wraps it in the failure branch with
+call-name context and `%w`. The private source checker verifies that the
+propagated result fits the enclosing function's final error interface. Failure
+returns typed zero values for results before the error. Result names and source
+deferred calls retain their meaning.
 
-Named functions and function expressions each get their own return target.
-An inner error returns from the inner function. Generated returns remain
-ordinary Go returns, so source deferred calls still run. Package initializers
-keep their function expressions and surrounding evaluation order.
+## Run work only on the selected path
 
-## Assignment, types, and scope
+For `left() && right()!`, the right call and its check must remain inside the
+true path of `left`. For an if value, only the selected branch runs:
 
-[Storage lowering](../../../internal/lowering/places.go) captures left-hand operands,
-then evaluates right-hand values, then performs stores. Capturing a destination
-must not read it. An array store keeps the original array; a slice or map store
-keeps the evaluated container value. Explicit address evaluation completes its
-checks before an inserted statement. Store checks remain at the store, so an
-early return does not cause a later bounds or map-key panic.
+```text
+name := if ok { log("yes"); "yes" } else { "no" }
+```
 
-Every saved expression uses an explicit checked type. This preserves contextual
-shifts and named types. [Type printing](../../../internal/lowering/temporary_types.go)
-uses type identity: two types called `T` are not necessarily the same type.
-Fresh names avoid source bindings. Return variables use function-entry scope,
-where parameters and result names are visible. Labelled declarations keep their
-original scope.
+The essential Go implementation is:
 
-[File handling](../../../internal/driver) uses physical paths and positions for
-selection. Line directives change diagnostic locations, not source identity.
-The pass checks that every accepted marker was processed; a skipped function
-cannot silently retain a helper that discards its error.
+```go
+var chosen string
+if ok {
+    log("yes")
+    chosen = "yes"
+} else {
+    chosen = "no"
+}
+name := chosen
+```
 
-## Checks of these rules
+A branch that returns or jumps out does not assign a value. The
+[control-flow analysis](../../../internal/controlflow/readme.md) tells the
+checker and lowerer which paths can reach a branch's last expression.
 
-[The proof matrix](../../../tests/proof_test.go) inserts neutral statements and early
-returns at expressions in the committed inventory. Handwritten traces check
-unchanged effects and the exact first or later visit that exits. Every generated
-variant must compile. Storage, panic, defer, and jump cases check where simple
-Go type checking cannot detect a change in behavior.
+Returns, defers, and jumps inside an if value stay in the source function.
+Frontend placeholders do not introduce a new function boundary. Real function
+literals do have their own return targets.
 
-[Propagation tests](../../../tests/propagation_test.go) check snapshots and handwritten
-output. [Separate Go references](../../../tests/temporary_types_test.go) check the
-corresponding fixtures. Rejection tests cover incompatible returns, inaccessible
-temporary types, and propagation in unsafe size or offset operands.
+## Keep loop and select behavior
 
-[The fuzzer](../../../tests/lowering_fuzz_test.go) compares bounded programs with
-independent references. It excludes source `recover`, goroutines, and nested propagating functions.
+[Loop lowering](../../../internal/lowering/loops.go) keeps conditions at each
+loop visit. When a post statement needs several statements, generated state
+skips it on the first visit and runs it before later conditions. `continue`
+still reaches the post and condition.
 
-[If-expression fixtures](../../../tests/value_expressions_test.go) run generated
-Go and handwritten Go references with the same expected output. They check
-branch selection, statement order, types, scope, jumps, defer, and early returns.
-Builtin cases check typed `min`, `max`, and `complex` arguments and branches
-that return before the builtin can run. Checker tests reject branch overflow.
+An if value in a loop initializer can break or continue that loop. The
+initializer runs on the first visit; the generated loop remains the jump target.
+Variables declared with `:=` keep Go's per-iteration behavior. Renaming uses
+checked bindings, so closures refer to the correct iteration variable and an
+initializer can still refer to an outer name.
 
-## Frontend parsing cost
+[Select lowering](../../../internal/lowering/select.go) evaluates channel and
+send operands before selection. Receive-assignment destinations are evaluated
+only in the selected case.
 
-`BenchmarkConditionalParsing` uses independent statements and explicitly
-parenthesized nested values. Go 1.27.1 on an AMD EPYC-Turin measured:
+## Keep assignment destinations and types
 
-| Input | Previous preparation | Batched preparation |
-| --- | --- | --- |
-| 32 independent values | 2.54 ms; 2.56 MB | 0.337 ms; 0.241 MB |
-| 512 independent values | 574 ms; 577 MB | 5.14 ms; 4.06 MB |
-| 512 nested values | 804 ms; 545 MB | 888 ms; 621 MB |
+[Assignment lowering](../../../internal/lowering/places.go) records destinations,
+evaluates right-hand values, then performs stores. Recording a destination must
+not read its value. Array assignments retain the original array; slice and map
+assignments retain the evaluated container. A later store panic must not happen
+before an earlier propagation can return.
 
-Independent operands share one preparation edit and one complete-file parse.
-Nested operands still require repeated preparation and subtree parsing; their
-worst-case cost remains quadratic. Tests cover mixed ordinary statements,
-function-literal headers, initializers, else-if branches, labels, map values,
-slice bounds, nested operands, and original source positions.
+Saved values use explicit checked types. For example, `var saved uint64 = 1 << n`
+preserves a conversion supplied by the source context. An inferred `int` could
+change the result. [Type printing](../../../internal/lowering/temporary_types.go)
+uses the actual type object, because unrelated types can have the same name.
+Required types must be accessible in the generated scope.
+
+Fresh local names and import aliases avoid source declarations. Physical file
+paths determine build selection; line directives affect diagnostics.
+
+## Check behavior independently
+
+The [test guide](../../guide/testing.md) explains the evidence:
+
+- Snapshots show the exact generated Go.
+- Handwritten outputs and Go references check values, traces, storage, errors,
+  panics, jumps, and deferred calls.
+- The expression proof corpus checks neutral insertion and early returns at
+  recorded expression sites, including skipped paths and later loop visits.
+- Rejection fixtures check invalid source and types that generated declarations
+  cannot name.
+- Tagged fuzz tests compare propagation and if-value programs with separate Go
+  references.
+
+Final Go checking catches invalid output. These behavior checks catch valid
+output with incorrect execution. See [source checking](source-checking.md) for
+checker and parser costs.

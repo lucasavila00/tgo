@@ -1,21 +1,23 @@
-# WHAT
+# Compile in the original module
 
-Compile directly in the original module. Keep the private source checker,
-lowerer, and `Compile(dir)`. Compilation returns no file contents.
+## Decision
 
-Each `name.tgo` in the selected module owns its `name_tgo.go` output.
-Nested modules, vendor dependencies, and Go data directories remain assets.
-First write original TGo at that path so Go can select packages, imports,
-build constraints, and test variants.
-Check the TGo source. Then replace selected files with generated Go and remove
-generated paths for excluded inputs. Stock Go checks these final files.
+Compile at the original module paths. Write original TGo at each final
+`_tgo.go` path for source checking, then replace selected files with ordinary
+Go. Remove generated paths for excluded inputs. Stock Go checks the final files.
 
-Compilation updates generated files on disk. Go can update `go.mod` and
-`go.sum` through its normal module commands. Original TGo, ordinary Go, assets,
-headers, and dependencies stay at their existing paths.
+`Compile(dir)` returns nothing. There is no module copy, temporary source file,
+or output-directory option.
 
-Keep output names and relative local replacement paths. A failed compilation
-can leave source-checking versions at generated paths. The next compilation
-replaces them from TGo inputs.
+## Why and consequences
 
-[HOW](how.md) defines the stages. [PROOF](proof.md) defines the checks.
+Assets, cgo headers, vendor files, and local dependencies stay where Go expects
+them. The driver reads owned source, without loading unrelated asset contents.
+Nested modules and data directories are not compiler outputs.
+
+TGo inputs control generated files. Ordinary Go and original TGo remain
+unchanged. Normal Go commands can update module metadata. A failed compilation
+can leave a source-checking version or completed output at generated paths;
+the next compilation replaces those paths from the inputs.
+
+[HOW](how.md) describes the disk stages. [PROOF](proof.md) defines their checks.

@@ -1,18 +1,25 @@
-// Package checker checks TGo source before lowering.
+// Package checker validates TGo source before Go statements are generated.
 //
-// A propagation expression has the call's success types. The checker must know
-// those types while it checks outer calls, assignments, and returns. This avoids
-// rewriting files and loading packages for each operator.
+// The driver supplies selected package metadata and generated paths containing
+// original TGo. Loader reads those files through the frontend and checks their
+// syntax with a private copy of Go's type checker.
 //
-// The loader checks module dependencies first and caches each package identity.
-// Test variants keep separate identities. External dependencies use compiled
-// exports read with the same private Go types as the source checker.
+// A propagation expression has the call's success types. If a call returns a
+// value and an error, propagation supplies the value to its surrounding
+// expression. The checker can therefore check inner propagation before an outer
+// call in the same source check. It also checks error returns, if branch types,
+// scopes, and jumps.
 //
-// Stock Go objects remain in the public Load API. Private checking uses separate
-// objects with the same ordinary syntax. Lowering uses only the private objects.
-// Go checks the emitted module after all source packages have passed checking.
+// Source dependencies are checked as needed. Results are cached by package ID;
+// test variants have separate IDs. External dependency types come from compiled
+// export data, read by the matching private importer.
 //
-// Run make prepare to generate the pinned Go sources from the tracked patch.
+// Private type objects stay separate from stock Go objects. Public Load retains
+// its stock package and checks ordinary syntax separately for lowering. The
+// driver checks the final generated module with stock Go after lowering.
+//
+// Run make prepare to generate the private checker from the pinned Go source
+// and tracked patch. The checker and export reader must use the same version.
 package checker
 
 import (
@@ -44,8 +51,8 @@ type Package struct {
 	Conditionals map[*ast.CallExpr]*ast.IfStmt
 }
 
-// Loader checks module packages and imports compiled dependencies.
-// Every package uses the same private type universe.
+// Loader checks source packages and reads compiled dependency types.
+// It shares private type objects across those checks and imports.
 type Loader struct {
 	Root     string
 	TGoFiles map[string]string
@@ -85,7 +92,8 @@ func newInfo() *types.Info {
 	}
 }
 
-// Check checks a selected source package and its module dependencies.
+// Check parses and checks one selected source package and its dependencies.
+// A successful result is cached by package ID; test variants have separate IDs.
 func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	if pkg := loader.packages[metadata.ID]; pkg != nil {
 		return pkg, nil

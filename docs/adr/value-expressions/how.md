@@ -1,35 +1,42 @@
-# HOW
+# Check branch values, then emit statements
 
-Build private `go/types` and compiled-package-reader packages from one pinned
-Go version. A build script applies checked-in patches. Extend the frontend
-wrapper: Go's parser reads headers and statements; marker calls retain branch
-syntax and source positions.
+The frontend prepares if syntax for Go's standard parser. Markers carry branch
+statements and source positions to the private checker. Their placeholder
+functions do not create source return, defer, or jump boundaries.
 
-The private checker visits branches in the source function's scope. Keep branch
-constants until context resolves their types, including through operators and
-shifts. The complete `if` value is nonconstant. Generic inference uses every
-completing branch across conditional arguments, then checks each branch against
-the parameter type. Check scopes, jumps, termination, and dependencies. Reject `continue` to a
-range while computing its collection.
+The checker visits branches in the source function's scope. It keeps constants
+until the surrounding type is known and uses completing branches for generic
+inference. It checks each branch against the resolved type, along with scope,
+jumps, and paths that terminate.
 
-The driver supplies private checked packages to the lowerer. Public `Load`
-retains stock `packages.Package` and checks its ordinary Go syntax separately.
-Keep each check's type objects separate.
+The driver supplies checked source to the lowerer. For a simple value:
 
-Emit typed storage and ordinary `if`:
-
-```go
-var tgo1 string
-if ok {
-    tgo1 = "yes"
-} else {
-    tgo1 = "no"
-}
-name := tgo1
+```text
+name := if ok { "yes" } else { "no" }
 ```
 
-Returns, defers, and propagation keep the source function. Preserve evaluation
-order and package dependencies. Keep unsafe operands in constant-false blocks
-to retain bindings and labels without execution; supply the builtin an expression
-of the same type. Reject unnameable result types. Check emitted Go with stock Go
-checking.
+emit the behavior of:
+
+```go
+var chosen string
+if ok {
+    chosen = "yes"
+} else {
+    chosen = "no"
+}
+name := chosen
+```
+
+Returns, defers, propagation, and jumps keep their enclosing source function.
+Preserve order relative to surrounding operands and package initializers.
+Required result types must be nameable in generated Go.
+
+For an unevaluated unsafe operand, retain bindings and labels in a constant-false
+block and give the builtin an expression of the same type. Do not execute branch
+work that the source operand does not execute.
+
+The driver writes output and checks it with stock Go. See
+[source checking](../../arch/transpiler/source-checking.md) and
+[lowering](../../arch/transpiler/correctness.md) for the implementation.
+
+[WHAT](what.md) states the language rules. [PROOF](proof.md) defines checks.

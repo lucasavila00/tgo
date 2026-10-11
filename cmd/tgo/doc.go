@@ -1,11 +1,11 @@
 // Package main provides the TGo command.
 //
-// The command passes a source directory to the compiler. The compiler writes
-// and checks generated Go beside its TGo source.
+// The command takes one directory inside a Go module and calls the compiler.
+// The driver finds the module root, writes generated Go beside TGo inputs, and
+// checks the result. There is no output-directory option.
 //
-// Matching file names preserve Go's test and platform selection rules.
-// Ordinary Go, TGo inputs, assets, and dependencies stay at their existing paths.
-//
-// Language rules belong to the compiler. The command chooses the source
-// directory; it does not change the meaning of a program.
+// Use Go's normal build, test, and run commands after compilation. Test and
+// platform suffixes stay at the end of generated filenames so Go selects the
+// same files. Ordinary source, assets, and dependencies remain at their paths.
+// Language rules and file writes belong to the compiler.
 package main

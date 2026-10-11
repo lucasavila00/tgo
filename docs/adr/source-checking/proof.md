@@ -1,46 +1,37 @@
-# PROOF
+# Check the source-checking decision
 
-These checks are required for the implementation. This ADR does not report
-test or benchmark results.
+These are required checks, not a report of measured results.
 
-## Source behavior
+## Types and behavior
 
-Retain existing propagation, module-selection, and expression-lowering tests.
-Check:
+Keep propagation, if-value, module-selection, and lowering tests. Cover:
 
-- Independent and nested calls, multiple success results, and error-only calls.
-- Direct error identity, wrapped errors, concrete error types, richer error
-  interfaces, type parameters, and incompatible function returns.
-- Evaluation order, skipped operands, loops, assignment targets, returns,
-  deferred calls, closures, labels, and jumps.
-- Ordinary Go files mixed with TGo, imports, build constraints, platform and
-  test suffixes, test package variants, and relative module replacements.
-- Stale generated files, unchanged original source, source-position diagnostics,
-  and deterministic output across repeated compilations.
-- Public `Load` package and type-object identity, with private objects kept
-  separate.
+- Independent and nested calls, several success results, and error-only calls.
+- Original error identity, wrapping, concrete errors, richer error interfaces,
+  type parameters, and incompatible returns.
+- If branch types, constants, nil, generic inference, scope, and jumps.
+- Evaluation order, skipped operands, loops, assignments, returns, defers,
+  closures, and labels.
+- Mixed Go and TGo, imports, build constraints, platform and test suffixes,
+  local replacements, and stale snapshots.
+- Original diagnostic positions and stable repeated output.
+- Stock package and type-object identity in public `Load`.
 
-Use handwritten Go references to compare results, effects, error identity,
-panics, and defer order. Follow the
-[value-expression proof](../value-expressions/proof.md) for branch types,
-context, generic inference, scope, and control flow. Generated Go must pass stock
-Go checking. That check does not prove source behavior by itself.
+Use handwritten Go references to compare effects, values, errors, panics, and
+defer order. Final Go checking must pass, but it cannot prove equivalent
+execution by itself. See the [test guide](../../guide/testing.md).
 
-## Checking cost
+## Checking cost and Go updates
 
-Measure the old and new paths on the same source and toolchain. Include one
-file with increasing counts of independent propagation calls, nested calls,
-and calls spread across packages. Record module loads, source package checks,
-elapsed time, and allocations. State the dependency-cache conditions.
+Require no package reload per operator and no repeated source check for the
+same package ID in one compilation. Test variants remain separate IDs.
 
-Require no module reload for each propagation operator and no repeated source
-package check for the same package identity in one compilation. Test variants
-remain separate packages. Do not set an unmeasured speed target.
+Compare independent calls, nested calls, and several packages on the same
+source and toolchain. Record loads, source checks, time, allocations, and cache
+conditions. Do not set an unmeasured speed target.
 
-## Go updates and validation
+After a Go update, regenerate private source from the pinned version and patch.
+Check ordinary Go acceptance and rejection as well as TGo cases. Use hosted CI
+for the full compiler suite.
 
-Rebuild private upstream source from the pinned version and patches. Check
-ordinary Go acceptance and rejection cases as well as TGo feature cases after
-a version update.
-
-[WHAT](what.md) records the decision. [HOW](how.md) defines its implementation.
+[WHAT](what.md) records the decision. [HOW](how.md) describes its implementation.

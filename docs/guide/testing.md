@@ -1,56 +1,87 @@
-# Integration tests
+# How compiler tests work
 
-These tests use the public `pkg/transpiler` API. Compiler unit tests stay
-beside their implementation in `internal/`; the public API boundary test stays
-in `pkg/transpiler`.
+The compiler must produce valid Go and preserve TGo execution. These are
+separate requirements. A snapshot can show the emitted code, but a handwritten
+reference is needed to check its behavior independently.
 
-## Propagation fixtures
+## Unit tests and integration tests
 
-`TestPropagationFixtures` loops over `tests/testdata/propagation/`. Each directory has:
+Tests beside `internal/` code check parsing, type rules, control flow, lowering,
+and the driver. Tests in `pkg/transpiler` check the public API. Tests in `tests/`
+use that API to compile complete modules and run the results.
 
-- `.tgo` sources, a `go.mod`, and any Go dependencies or assets.
-- Generated `_tgo.go` snapshots beside each selected source.
-  Test and target suffixes follow `_tgo`, as in `name_tgo_linux_amd64_test.go`.
-- `stdout.txt`: the expected program output.
+The driver tests also check original disk paths: embedded assets, cgo headers,
+vendor files, workspace dependencies, relative replacements, excluded files,
+and retry after a source-checking failure.
 
-The sources drive compilation; existing generated files are ignored.
-The runner compares generated file bytes with the committed snapshots. It
-then runs the generated program and checks its output. Generated test files
-also run with `go test`. Cases cover both propagation operators, evaluation
-order, conditional execution, storage, generic types and private-type diagnostics, error
-identity, build selection, assets, and test packages.
+## Fixture inputs, snapshots, and expected output
 
-Run one case from the repository root:
+Propagation fixtures live in `tests/testdata/propagation/`. If-value fixtures
+live in `tests/testdata/value-expressions/`. A fixture contains:
+
+- `.tgo` inputs and a `go.mod`, with any ordinary Go source or assets.
+- `_tgo.go` snapshots beside selected inputs, with test and platform suffixes
+  at the end.
+- `stdout.txt`, written by hand to state the expected program output.
+- A separate Go reference where that fixture needs an independent implementation.
+
+The runner reads committed snapshots before compilation, then copies the
+fixture into a test directory. The compiler writes in that directory. The runner
+reads generated files from disk, compares them with snapshots, and runs the
+program. Generated test files also run with `go test`.
+
+The compiler itself creates no temporary module. Fixture copies protect the
+committed snapshots from its in-place writes. Existing snapshots never supply
+source input.
+
+For a focused fixture check:
 
 ```sh
 go test ./tests -run '^TestPropagationFixtures/Calls$' -count=1
 ```
 
-After an intended output change, regenerate the affected snapshot and inspect
+After an intended output change, update only the affected snapshots and inspect
 the diff:
 
 ```sh
 go test ./tests -run '^TestPropagationFixtures/Calls$' -update-snapshots -count=1
 ```
 
-The update flag changes snapshots only. Expected runtime output stays handwritten.
+The flag updates generated Go snapshots. It does not change handwritten expected
+output. Do not accept a behavior change by updating snapshots alone.
 
-## Expression insertion
+## Expression insertion proof
 
-Insertion tests check effects, control flow, storage, and return boundaries.
-The proof corpus in `tests/testdata/proof/` tests insertion after each expression,
-including skipped paths and later loop visits. Its handwritten reference traces
-and errors check behavior independently of generated-code snapshots.
+`tests/testdata/proof/` records expression sites in `manifest.json`. For eligible
+sites, the tests insert either a neutral trace marker or an early return. They
+check reached paths, skipped paths, and later visits inside loops.
 
-Run focused checks locally. GitHub Actions runs the full suite with
-`go test ./...`. See the [proof plan](../adr/expression-lowering/proof.md)
-for the expression inventory and behavior checks.
+Handwritten `reference.go` and `expect.json` define expected traces and results.
+Checks include assignment storage, error identity, panics, jumps, and defers.
+`rejections.json` records sites where a required saved type cannot be named in
+generated Go. Those sites remain in the inventory and must report their specified
+error. See [the proof plan](../adr/expression-lowering/proof.md).
 
-GitHub Actions has a fixture-build step that compiles these inputs and checks
-their snapshots before the full suite. It does not update committed files.
+`tests/testdata/typed-temporaries-rejected/` has TGo examples with exact diagnostics
+for inaccessible types and hidden names. Other checker and rejection tests cover
+invalid propagation returns and invalid if-value types and control flow.
 
-`tests/testdata/proof/rejections.json` lists the exact expression sites that require
-an inaccessible type in a generated typed temporary. Proof tests require the
-specified error at those sites and retain all sites in `manifest.json`.
-`tests/testdata/typed-temporaries-rejected/` contains TGo inputs and exact diagnostics
-for private types and hidden names.
+## Fuzz campaigns
+
+The separate `loweringfuzz` tag enables propagation and if-value fuzzers. Each
+compares generated programs with independent Go references. Normal CI does not
+run these campaigns. See [the fuzz guide](../../tests/fuzzing.md) for commands,
+coverage, and how to investigate a failure.
+
+## CI validation
+
+The pull request workflow runs these steps in order:
+
+1. `make lint`: source-size limits, Go lint checks, and formatting.
+2. `make docs-check`: compare generated package READMEs with Go comments.
+3. A fixture step: compile propagation inputs and compare their snapshots.
+4. `go test ./...`: run the full normal test suite.
+
+Build preparation generates the private checker before these checks. Use CI for
+the full suite. A successful final Go check is one part of correctness; the
+runtime references and tests check the source behavior it cannot prove.

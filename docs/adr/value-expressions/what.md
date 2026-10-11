@@ -1,35 +1,41 @@
-# WHAT
+# If expressions produce one value
 
-An `if` expression produces one value:
+An if value runs one branch and uses its final expression:
 
 ```text
 label := if account.Active {
     log(account)
-    name := account.Name
-    name
+    account.Name
 } else {
-    log("inactive")
     "inactive"
 }
 ```
 
-Branches can contain statements. The final expression supplies the value. Require `else`. Use Go headers, including initializers. Execute only the
-selected branch. Ordinary `if` retains Go behavior.
+Require `else`. Use Go headers, including initializers. Branches can contain
+statements. Ordinary if statements keep their Go behavior.
 
-`return`, `defer`, `!`, and `!!` act in the enclosing function. Labels, `break`,
-and `continue` retain their targets. While computing a range collection, reject
-`continue` to that range for now. Paths that cannot complete need no value
-and contribute no type. Array `len`, `cap`, and `range` evaluate an `if` value.
-Unsafe size and offset builtins keep their unevaluated operands.
+## Function and jump behavior
 
-Assignments, returns, arguments, and conversions can supply the type. Branches
-must satisfy Go assignment rules. Otherwise, typed results must share
-one type, and untyped constants must fit it. Use Go constant-kind rules and default types. `nil` cannot supply a type. Do not
-infer interfaces or convert unrelated named types. Require explicit conversion
-if the type remains unknown. If every branch terminates, require a contextual
-type or conversion.
+Returns, defers, propagation, and jumps act in the enclosing source function.
+A path that cannot complete supplies no value or type. A `continue` cannot
+target a range while its collection is still being computed.
 
-Reject multiple results and constant-only contexts, including `const` and array
-lengths.
+Array `len`, `cap`, and `range` evaluate an if value. Unsafe size and offset
+builtins keep their operand evaluation rules.
 
-Follow [Kotlin](https://kotlinlang.org/docs/control-flow.html): conditional expressions produce values. Ordinary blocks are not expressions.
+## Types
+
+An assignment, return, argument, or conversion can supply the type. Branches
+must fit that type under Go assignment rules. Without such context, typed
+branches must have the same type. Untyped constants follow Go's constant-kind
+and default-type rules. `nil` alone supplies no type.
+
+Do not infer a new interface or convert unrelated named types automatically.
+Use an explicit type or conversion when the result type remains unknown. If
+all branches terminate, a surrounding type or conversion is required.
+
+An if value supplies one result and is not a constant. Reject multiple results
+and constant-only uses, including `const` declarations and array lengths.
+Ordinary blocks are not expressions.
+
+[HOW](how.md) describes checking and lowering. [PROOF](proof.md) defines checks.

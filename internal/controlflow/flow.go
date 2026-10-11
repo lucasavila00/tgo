@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-// Syntax identifies added conditional calls and calls that cannot return.
+// Syntax supplies callbacks for added if expressions, terminating calls, and unevaluated operands.
 type Syntax struct {
 	Conditional func(*ast.CallExpr) *ast.IfStmt
 	Terminates  func(*ast.CallExpr) bool

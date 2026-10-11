@@ -1,126 +1,208 @@
-# Transpiler architecture
+# How compilation works
 
-TGo programs become ordinary Go programs. The compiler must preserve their
-execution while adding error propagation. Go supplies package selection and
-ordinary type rules. The compiler owns the meaning of TGo operators and the
-statements needed to implement them.
+TGo turns `.tgo` source into ordinary Go. The driver runs the steps; the
+frontend reads added syntax; the checker validates the source; the lowerer
+builds the Go statements that implement it.
 
-## Keep responsibilities separate
+Compilation runs in the original Go module. It uses each final `_tgo.go` path
+twice: first for a source-checking version, then for the final implementation.
+It creates no temporary module or separate temporary source file.
 
-| Package | Responsibility | Reason |
-| --- | --- | --- |
-| `cmd/tgo` | Choose the source directory and call the compiler | The driver writes generated files in that module. |
-| `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
-| `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
-| `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
-| `internal/checker` | Check TGo source types and scope | Added expressions need source rules before Go statements are generated. |
-| `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
+## Start with one file
 
-The driver selects packages and asks the private checker to check their source.
-The checker reads frontend markers. Lowering uses the checked types and markers.
-The public API retains stock Go package objects.
-
-## Preserve execution
-
-Consider:
+Suppose `service.tgo` contains this function. `fetch` returns `(Value, error)`:
 
 ```text
-consume(first(), target()!, last())
+func run() error {
+    consume(fetch()!)
+    return nil
+}
 ```
 
-`first()` must run before `target()`. If `target()` fails, return its error
-before `last()` or `consume()` runs. The lowerer saves earlier values and puts
-the error check immediately after the call.
+After compilation, `service.tgo` still contains that source. A new
+`service_tgo.go` contains ordinary Go. Its essential behavior is:
 
-For `left() && right()!`, the right call and its check run only when `left()`
-is true. Loop conditions keep their repeated execution. A receive assignment
-keeps its destination evaluation inside the selected case. Assignment targets
-keep their original storage.
+```go
+func run() error {
+    value, err := fetch()
+    if err != nil {
+        return err
+    }
+    consume(value)
+    return nil
+}
+```
 
-These rules require expression-aware lowering. Moving checks into one prefix
-would change execution. A function wrapper would change returns and defers.
-Each source function therefore keeps its own return target.
+The actual output uses fresh names and explicit checked types. The compiler
+must call `fetch` once, return its error on failure, and call `consume` only on
+success.
 
-## Keep types and names
+## The complete process
 
-Temporary variables use checked source types. In a `uint64` context,
-`var saved uint64 = 1 << n` preserves the required conversion; an inferred
-`int` temporary would change the program. Fresh names prevent collisions with
-source bindings. Added import aliases include the package name, such as
-`fmt_tgo3`; source import names stay unchanged. Required types must be nameable
-in the generated scope.
+[`driver.Compile`](../../../internal/driver/compile.go) calls these steps:
 
-The error check uses the call's result before conversion to the caller's return
-type. A nil pointer can become a non-nil interface during that conversion.
-Checking afterward would turn success into failure. `!` returns the original
-error; `!!` adds call-name context with `%w`.
+```text
+findModule → readModule → prepareModule → selectSources
+    → checkSources → lowerModule → checkGenerated
+```
 
-The private source checker handles propagation and `if` values together.
-For `outer(inner()!)!`, it checks the inner success type before the outer call.
-Each source package is checked once; operators need no package reload.
-It checks branch values against the surrounding type and keeps branch
-statements in the source function. The frontend's call markers identify added
-syntax; they do not create source functions. This keeps returns and defers in
-their original function.
+### 1. Find the module
 
-In a generic call, another argument can supply the if value's type.
-For `pair(if ok { nil } else { nil }, pointer)`, a pointer of type `*int`
-determines `T` as `*int`. Infer from every branch that produces a value and
-from the other arguments together. Then check each branch against the resolved
-parameter type. This supplies nil's type and checks branch constants for
-overflow. A branch that returns or jumps supplies no inference operand.
+`findModule` runs `go env GOMOD` from the supplied directory. The selected
+`go.mod` gives the module root. You can supply a subdirectory, but the driver
+compiles from that root. A directory outside a Go module is an error.
 
-`make prepare` builds the checker and its compiled-package reader from one
-pinned Go source version and checked-in patches. Generated upstream source
-stays out of Git. See [the patch instructions](../../../internal/checker/upstream.md).
-Their type objects stay separate from stock `go/types` objects. Public `Load`
-keeps its stock package and checks the same syntax separately for lowering.
-After lowering, stock Go checking checks the emitted module.
+### 2. Read the source
 
-The function keeps its source result names. Failure returns use saved zero
-values for results before the error. Deferred calls still run.
+`readModule` lists module paths, then reads owned `.go` and `.tgo` source. It
+does not read unrelated asset contents. It skips `.git` and `.worktrees` while
+walking the tree.
 
-## Keep loop targets
+A `.tgo` input controls its generated output. If `service_tgo.go` already
+exists, the driver excludes it from the source set. Its old contents must not
+affect the new compilation.
 
-An initializer can contain an if value that breaks or continues its loop.
-Run that initializer on the loop's first visit. Later visits run the post
-statement before checking the condition. The generated loop therefore remains
-the target of both jumps.
+The driver does not own inputs in nested modules, `vendor`, `testdata`, or
+directories whose names start with `.` or `_`. Their TGo files and snapshots
+stay on disk. A nested `go.mod` marks a separate module.
 
-Go creates a separate variable for each iteration of a loop declared with
-`:=`. Keep those declarations in the generated Go loop header. Store the
-initializer result on the first visit. Rename these bindings by checked object
-identity: in `for i := if ok { break } else { i }; ...`, the final `i` in the
-initializer still refers to the outer variable. Closures in the body refer to
-the per-iteration variable. The rename copies emitted syntax and leaves the
-checked source unchanged.
+### 3. Write the source-checking version
 
-## Source controls output
+`prepareModule` writes the original TGo bytes to each owned generated Go path.
+At this point, `service_tgo.go` contains TGo syntax, including `!` and `if`
+values. It is not yet the final Go implementation.
 
-Generated files can be stale, so they do not participate in source checking.
-Compilation writes each TGo input at its generated Go path in the module.
-The private checker checks this source version. Lowering replaces selected
-files with ordinary Go and removes excluded generated files. Stock Go checking
-then reads the final files. Compilation returns no file contents. Ordinary Go,
-assets, and dependencies stay at their paths.
+Go selects files with `.go` names. These paths let its package tools apply
+normal file-selection rules. Filename conversion keeps test and platform
+suffixes at the end:
 
-`name.tgo` produces `name_tgo.go`. Test and platform suffixes stay last:
-`name_linux_test.tgo` produces `name_tgo_linux_test.go`. Physical paths decide
-file selection; line directives decide diagnostic locations.
+| Input | Generated path |
+| --- | --- |
+| `service.tgo` | `service_tgo.go` |
+| `service_test.tgo` | `service_tgo_test.go` |
+| `service_linux.tgo` | `service_tgo_linux.go` |
+| `service_linux_amd64_test.tgo` | `service_tgo_linux_amd64_test.go` |
 
-See the [correctness report](correctness.md) for behavior checks and the
-[user guide](../../guide/transpiler.md) for commands and API use.
+Preparation also reserves source names and records each generated path's
+original TGo path. Later steps use this record to identify TGo source and report
+its original diagnostic locations.
 
-## Prepare conditional syntax
+### 4. Let Go select packages and files
 
-Go's parser owns headers and statement grammar. The frontend first finds clear
-expression operands, such as `return if` and `use(if ...)`. It checks each
-conditional's bounded syntax fragment, then wraps independent operands together
-in one buffer edit. The complete file is parsed after preparation. Token nesting
-keeps inner operands ahead of their containing expressions.
+`selectSources` calls `go/packages` for `./...`, with tests enabled. It requests
+build metadata, not source type checking.
 
-A colon can introduce a label, map value, case body, or slice bound. For these
-ambiguous positions, the frontend uses the parsed AST to identify an expression
-operand. Nested expressions can need several preparation rounds. This preserves
-Go's grammar and source positions; deeply nested syntax still costs more than
-independent expressions.
+Go supplies file lists, build constraints, platform selection, imports, test
+package variants, and locations of compiled dependency information. The driver
+does not implement those build rules itself.
+
+Ownership and selection are different. A Windows-specific TGo input belongs to
+the module, but Go excludes it from a Linux build. A vendored TGo input belongs
+to a dependency, so the driver does not stage it at all.
+
+### 5. Check the source
+
+`checkSources` creates a private checker loader. It reads selected staged files
+through the frontend and ordinary Go files through Go's parser.
+
+The frontend represents TGo expressions with marker calls in the syntax tree.
+A marker identifies a compiler operation; it is not a runtime helper. The
+private checker understands what the marker means.
+
+If `fetch` returns `(Value, error)`, the checker gives `fetch()!` the type
+`Value`. It can then check `consume(fetch()!)` directly. For:
+
+```text
+outer(inner()!)!
+```
+
+it checks the inner call, obtains its success type, and uses that type to check
+the outer call. No package reload is needed for each operator.
+
+The checker also checks `if` branch values, scopes, jumps, and the surrounding
+type. Returns and defers inside a branch belong to the source function.
+
+The loader checks source dependencies as needed and caches each package ID.
+Test variants have separate IDs. External dependencies use compiled export
+data. All source packages pass this check before final implementations are
+written. See [source checking](source-checking.md) for these rules.
+
+### 6. Build and write ordinary Go
+
+`lowerModule` gives the checked syntax, types, bindings, and operation records
+to the lowerer. Lowering means replacing TGo expressions with Go statements
+that have the same behavior.
+
+The lowerer decides where calls, saved values, branches, and error returns
+must execute. The driver writes the resulting bytes only to paths owned by TGo
+inputs. Ordinary `.go` source is not overwritten.
+
+A staged input with no TGo operations already contains ordinary Go and needs
+no rewrite. After lowering, the driver removes owned generated paths that Go
+did not select, such as Windows-specific outputs in a Linux build.
+
+See [how lowering preserves execution](correctness.md) for calls, assignments,
+loops, types, and returns.
+
+### 7. Check the final Go
+
+`checkGenerated` loads the final module with stock Go type checking. This checks
+generated files, ordinary Go, imports, and test variants together.
+
+The source check proves that the input satisfies TGo's type rules. The final
+Go check catches invalid emitted Go. Behavior tests are also needed: valid Go
+can still have the wrong evaluation order.
+
+`Compile` returns no file contents. The generated files are already on disk.
+Invalid source and compiler failures panic.
+
+## Files on disk
+
+| File | During source checking | After success |
+| --- | --- | --- |
+| `service.tgo` | Original TGo | Original TGo |
+| `service_tgo.go` | Original TGo at a Go path | Final ordinary Go |
+| Excluded owned generated file | Staged source | Removed |
+| Ordinary Go and assets | At original paths | At original paths |
+
+Embedded assets, cgo headers, vendor files, and local dependencies remain
+available at their original paths. Go commands can update `go.mod` and
+`go.sum` through normal module loading. Relative replacements stay relative.
+
+Compilation is not an atomic disk update. A failed check can leave TGo text or
+some completed output at generated paths. The next compilation replaces owned
+outputs from their `.tgo` inputs.
+
+## Where to read the code
+
+| Package | Job |
+| --- | --- |
+| [`cmd/tgo`](../../../cmd/tgo/readme.md) | Read the source-directory argument and call `Compile`. |
+| [`pkg/transpiler`](../../../pkg/transpiler/readme.md) | Expose compilation and the separate expression-insertion API. |
+| [`internal/driver`](../../../internal/driver/readme.md) | Run the module steps and write generated files. |
+| [`internal/frontend`](../../../internal/frontend/readme.md) | Prepare added syntax for Go parsing and record source positions. |
+| [`internal/checker`](../../../internal/checker/readme.md) | Check source types and import dependency types. |
+| [`internal/controlflow`](../../../internal/controlflow/readme.md) | Determine whether an if branch can reach its value or end. |
+| [`internal/lowering`](../../../internal/lowering/readme.md) | Emit Go with the same evaluation, scope, and control flow. |
+
+Within the driver, start with `compile.go`. `module.go` handles source ownership
+and disk stages. `propagation.go` coordinates selection, checking, and lowering
+for both propagation and if values. `filename.go` preserves filename suffixes.
+`unsafe_propagation.go` rejects propagation inside unsafe size and offset
+operands. Package comments and the README contain no runtime logic.
+
+## Terms used in these docs
+
+| Term | Meaning |
+| --- | --- |
+| AST or syntax tree | Go nodes that represent expressions, statements, and declarations. |
+| Marker | A node that records a TGo operation for the checker and lowerer. |
+| Private checker | The compiler's patched copy of Go's type checker. |
+| Stock Go checker | The unmodified Go type checker used for final output. |
+| Export data | Compiled information about a dependency's types and declarations. |
+| Package ID | Go's identity for one package, including a particular test variant. |
+| Binding | The specific declaration to which a name refers. |
+| Contextual type | A type supplied by an assignment, return, argument, or conversion. |
+| Temporary variable | A generated local that saves a value; not a temporary file. |
+
+For commands and syntax, read the [user guide](../../guide/transpiler.md).

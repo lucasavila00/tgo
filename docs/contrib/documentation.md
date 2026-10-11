@@ -1,35 +1,41 @@
-# Generate Go documentation
+# Keep code explanations and API docs in sync
 
-Edit Go source comments to change the generated package README. Describe
-what each exported function does, its inputs, and its result. Package comments
-explain the package's role. Use examples when they help callers.
+Use architecture docs to explain the complete process. Use package comments to
+state each package's job, inputs, and outputs. Function comments explain caller
+behavior: what is read or written, what is returned, and how failure is reported.
+Define a compiler term before using it and show a small example when it helps.
 
-From the repository root, run:
+## Generated package READMEs
+
+Edit Go comments to change a package README. Then generate and check the result:
 
 ```sh
 make docs
 make docs-check
 ```
 
-`make docs` runs gomarkdoc v1.1.0 and writes
-each package's `readme.md` in its source directory. The configuration is
-[.gomarkdoc.yml](../../.gomarkdoc.yml). The package list is in `Makefile`. It
-includes the command, public API, and internal packages. Add each new production
-package to that list.
+`make docs` prepares the private checker and runs gomarkdoc v1.1.0 for each
+package in `DOC_PACKAGES` in `Makefile`. `.gomarkdoc.yml` selects the templates
+in `docs/contrib/gomarkdoc/`. The output is each package's `readme.md`.
 
-Commit the generated file with the source change. `make docs-check` exits with
-an error when the file differs from the source. Each package is checked in a
-separate tool call. The pull request job runs this check with the test suite.
+Commit source comments and generated READMEs together. Do not add independent
+explanations to a generated README; generation would remove them. The pull
+request workflow checks that each README matches its source comments.
 
-Templates in `docs/contrib/gomarkdoc/` produce plain headings, signatures,
-comments, and examples. Each package has its own file. Unrelated source edits
-do not change line links or a repeated symbol list. This keeps review diffs
-small and reduces merge conflicts.
+The templates show package introductions, signatures, comments, and examples.
+They omit changing line links and repeated symbol indexes, so unrelated code
+edits do not change generated docs. The pinned tool runs with `go run` and is
+not a compiler dependency.
 
-Edit package comments for the README introduction and source comments for
-API descriptions. Keep guides, architecture documents, and the language vision
-as hand-written explanations. The `tests` package has only test files, so its
-README explains the test suite.
+## Handwritten docs
 
-The pinned tool runs with `go run`. It does not add a compiler dependency to
-`go.mod`. See [gomarkdoc](https://github.com/princjef/gomarkdoc) for its options.
+The [architecture guide](../arch/transpiler/readme.md) explains compilation from
+start to finish. The user guide explains syntax and commands. Test docs explain
+inputs, snapshots, independent references, and CI. Design records explain a
+specific decision and its required checks; link to architecture details instead
+of repeating the whole process.
+
+The `tests` package has only test files, so its README is handwritten. The
+language vision includes intended features and must not be presented as a list
+of features already implemented. When behavior changes, update every current-code
+explanation that depends on it.
