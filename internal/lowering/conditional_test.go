@@ -32,7 +32,12 @@ func movedBinding(skip bool) {
  if i!=4 {panic("outer binding")}
  if !skip && (len(values)!=2 || values[0]()!=4 || values[1]()!=5) {panic("iteration bindings")}
 }
+func sharedExit(ok bool) int {
+ var ignored int = if ok {return 7} else {return 3}
+ _=ignored
+}
 func main() {
+ if sharedExit(true)!=7 || sharedExit(false)!=3 {panic("shared exit")}
  movedBinding(false)
  movedBinding(true)
  fmt.Print(choose(true), ";", choose(false), ";")

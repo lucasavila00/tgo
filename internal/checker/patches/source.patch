@@ -22,12 +22,15 @@
  	// Context is the context used for resolving global identifiers. If nil, the
  	// type checker will initialize this field with a newly created context.
  	Context *Context
-@@ -200,6 +203,9 @@
+@@ -200,6 +203,12 @@
  // If the package has type errors, the collected information may
  // be incomplete.
  type Info struct {
 +	// TGoBranches records whether each conditional branch can reach its end.
 +	TGoBranches map[*ast.BlockStmt]bool
++
++	// TGoReturnBlocks marks function bodies that need one final generated return.
++	TGoReturnBlocks map[*ast.BlockStmt]bool
 +
  	// Types maps expressions to their types, and for constant
  	// expressions, also their values. Invalid expressions are
@@ -664,6 +667,15 @@
 -	. "internal/types/errors"
  	"slices"
  )
+ 
+@@ -45,7 +45,7 @@
+ 		check.labels(body)
+ 	}
+ 
+-	if sig.results.Len() > 0 && !check.isTerminating(body, "") {
++	if sig.results.Len() > 0 && !check.isTerminating(body, "") && !check.conditionalFunctionExit(body) {
+ 		check.error(atPos(body.Rbrace), MissingReturn, "missing return")
+ 	}
  
 @@ -409,6 +409,10 @@
  

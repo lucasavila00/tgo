@@ -497,3 +497,28 @@ func (check *Checker) assignConditionalArgument(arg *operand, typ Type, context 
 	}
 	return true
 }
+
+// conditionalFunctionExit checks exits that Go's statement grammar cannot see.
+func (check *Checker) conditionalFunctionExit(body *ast.BlockStmt) bool {
+	found := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if operation, exists := check.tgoOperation(call); exists && operation.Conditional {
+				found = true
+				return false
+			}
+		}
+		_, function := node.(*ast.FuncLit)
+		return !function
+	})
+	if !found || check.branchFlow(body).End {
+		return false
+	}
+	if check.Info != nil {
+		if check.TGoReturnBlocks == nil {
+			check.TGoReturnBlocks = make(map[*ast.BlockStmt]bool)
+		}
+		check.TGoReturnBlocks[body] = true
+	}
+	return true
+}

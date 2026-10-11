@@ -118,6 +118,168 @@ func innerBreak(flag bool) int {
 
 }
 
+func allReturn(flag bool) int {
+	var tgo11 int
+	{
+		var tgo9 int
+		if flag {
+			{
+				tgo11 = 7
+				goto tgo10
+			}
+		} else {
+			{
+				tgo11 = 9
+				goto tgo10
+			}
+		}
+		var ignored int = tgo9
+
+		_ = ignored
+	}
+tgo10:
+	return tgo11
+}
+
+func namedReturn(flag bool) (out int) {
+	var tgo14 int
+	{
+		defer func() { out += 10 }()
+		var tgo12 int
+		if flag {
+			out = 7
+			{
+				tgo14 = out
+				goto tgo13
+			}
+
+		} else {
+			out = 9
+			{
+				tgo14 = out
+				goto tgo13
+			}
+
+		}
+		var ignored int = tgo12
+
+		_ = ignored
+	}
+tgo13:
+	return tgo14
+}
+
+func pairReturn(flag bool) (int, string) {
+	var tgo17 int
+	var tgo18 string
+	{
+		var tgo15 int
+		if flag {
+			{
+				tgo17, tgo18 = 7, "a"
+				goto tgo16
+			}
+		} else {
+			{
+				tgo17, tgo18 = 9, "b"
+				goto tgo16
+			}
+		}
+		var ignored int = tgo15
+
+		_ = ignored
+	}
+tgo16:
+	return tgo17, tgo18
+}
+
+func genericReturn[T ~int](flag bool) T {
+	var tgo21 T
+	{
+		var tgo19 int
+		if flag {
+			{
+				tgo21 = T(7)
+				goto tgo20
+			}
+		} else {
+			{
+				tgo21 = T(9)
+				goto tgo20
+			}
+		}
+		var ignored int = tgo19
+
+		_ = ignored
+	}
+tgo20:
+	return tgo21
+}
+
+func loopReturn(flag bool) int {
+	var tgo29 int
+	{
+		i := 100
+		_ = i
+		{
+			var tgo25 int
+			var tgo26 bool = 0 == 0
+			for i_tgo24 := tgo25; ; {
+				if tgo26 {
+					tgo26 = 0 != 0
+					var tgo23 int
+					if flag {
+						continue
+					} else {
+						tgo23 = 0
+					}
+					i_tgo24 = tgo23
+				} else {
+					i_tgo24++
+				}
+				if !(i_tgo24 < 2) {
+					break
+				}
+				{
+					capture := func() int { return i_tgo24 }
+					var tgo22 int
+					if flag {
+						{
+							tgo29 = capture() + 7
+							goto tgo28
+						}
+					} else {
+						{
+							tgo29 = capture() + 7
+							goto tgo28
+						}
+					}
+					var ignored int = tgo22
+
+					_ = ignored
+				}
+			}
+		}
+		var tgo27 int
+		if flag {
+			{
+				tgo29 = 9
+				goto tgo28
+			}
+		} else {
+			{
+				tgo29 = 9
+				goto tgo28
+			}
+		}
+		var ignored int = tgo27
+
+		_ = ignored
+	}
+tgo28:
+	return tgo29
+}
+
 func main() {
 	for _, flag := range []bool{true, false} {
 		expect, nestedExpect, jumpExpect, breakExpect := 9, 9, int8(1), 9
@@ -128,6 +290,24 @@ func main() {
 		}
 		if early(flag) != expect || wide(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
 			panic("branch result")
+		}
+		if allReturn(flag) != expect || namedReturn(flag) != expect+10 || genericReturn[int](flag) != expect {
+			panic("function return")
+		}
+		loopExpect := 7
+		if flag {
+			loopExpect = 8
+		}
+		if loopReturn(flag) != loopExpect {
+			panic("loop return binding")
+		}
+		number, text := pairReturn(flag)
+		textExpect := "b"
+		if flag {
+			textExpect = "a"
+		}
+		if number != expect || text != textExpect {
+			panic("multiple returns")
 		}
 		if deferred(flag, &trace) != expect || trace != traceExpect {
 			panic("branch defer")
