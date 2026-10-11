@@ -13,7 +13,7 @@ func Compile(dir string) map[string][]byte {
 	root := findModule(dir)
 	work, err := os.MkdirTemp("", "tgo-transpiler-")
 	must(err)
-	defer os.RemoveAll(work)
+	defer func() { _ = os.RemoveAll(work) }()
 
 	source := readModule(root)
 	prepared := prepareModule(source, work)
