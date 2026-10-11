@@ -55,10 +55,6 @@ calls, and public APIs. Use `!` only when the existing error wrapper matches
 its behavior. Code that needs a design choice must receive a clear diagnostic
 instead of an automatic change.
 
-The previous compiler's `tgolint` rules are available in Git history before
-commit `2fb3077`. Use their error-propagation modernization checks as a design
-reference. This section defines requirements for the new tooling.
-
 ## Approaches of interest
 
 - Elixir's approach with DSLs is great.
