@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/lucasavila00/tgo/internal/frontend"
@@ -61,6 +62,17 @@ func Compile(dir string) map[string][]byte {
 		files[name] = content
 		return nil
 	}))
+	// Source files control compilation; matching generated files can be stale.
+	for name := range files {
+		if strings.HasSuffix(name, ".tgo") {
+			delete(files, generatedName(name))
+		}
+	}
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	slices.Sort(names)
 	// Reserve source identifiers before the compiler adds names.
 	for _, content := range files {
 		for _, word := range strings.FieldsFunc(string(content), func(r rune) bool {
@@ -70,12 +82,10 @@ func Compile(dir string) map[string][]byte {
 		}
 	}
 	tgoFiles := make(map[string]bool)
-	for name, content := range files {
+	for _, name := range names {
+		content := files[name]
 		if strings.HasSuffix(name, ".tgo") {
-			goName := strings.TrimSuffix(name, ".tgo") + ".go"
-			if _, ok := files[goName]; ok {
-				panic("TGo and Go files cannot share a source name")
-			}
+			goName := generatedName(name)
 			content = frontend.MarkPostfix(name, content, used, operations)
 			name = goName
 			tgoFiles[name] = true
@@ -141,7 +151,7 @@ func Compile(dir string) map[string][]byte {
 					if typ == nil || typ == types.Typ[types.Invalid] {
 						continue
 					}
-					if selected == nil || expression.End()-expression.Pos() < selected.End()-selected.Pos() {
+					if selected == nil || expression.End()-expression.Pos() < selected.End()-selected.Pos() || expression.End()-expression.Pos() == selected.End()-selected.Pos() && expression.Pos() < selected.Pos() {
 						selected = expression
 						operation = op
 					}
@@ -201,9 +211,9 @@ func Compile(dir string) map[string][]byte {
 	output := make(map[string][]byte)
 	for name, content := range files {
 		if strings.HasSuffix(name, ".tgo") {
-			goName := strings.TrimSuffix(name, ".tgo") + ".go"
+			goName := generatedName(name)
+			output[name] = content
 			if !activeFiles[goName] {
-				output[name] = content
 				continue
 			}
 			content, err = os.ReadFile(filepath.Join(work, goName))

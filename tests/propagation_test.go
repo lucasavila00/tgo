@@ -29,26 +29,33 @@ func TestPropagationFixtures(t *testing.T) {
 		}
 		t.Run(fixture.Name(), func(t *testing.T) {
 			dir := filepath.Join("testdata/propagation", fixture.Name())
-			input, err := filepath.Abs(filepath.Join(dir, "input"))
+			input, err := filepath.Abs(dir)
 			if err != nil {
 				t.Fatal(err)
 			}
 			files := transpiler.Compile(input)
-			snapshot := filepath.Join(dir, "output")
-			if *updateSnapshots {
-				if err := os.RemoveAll(snapshot); err != nil {
-					t.Fatal(err)
+			source := readFiles(t, input)
+			inputs := 0
+			for name := range source {
+				if strings.HasSuffix(name, ".tgo") {
+					inputs++
 				}
-				writeFiles(t, snapshot, files)
 			}
-			expected := readFiles(t, snapshot)
-			if len(files) != len(expected) {
-				t.Fatalf("generated %d files, snapshot has %d", len(files), len(expected))
+			if inputs == 0 {
+				t.Fatal("fixture has no TGo input")
 			}
 			for name, content := range files {
-				saved, exists := expected[name]
-				if !exists || !bytes.Equal(content, saved) {
-					t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots", name)
+				if !strings.HasSuffix(name, ".go") {
+					continue
+				}
+				if *updateSnapshots {
+					if !bytes.Equal(source[name], content) {
+						writeFiles(t, input, map[string][]byte{name: content})
+					}
+					continue
+				}
+				if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
+					t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots\nSAVED:\n%s\nGENERATED:\n%s", name, saved, content)
 				}
 			}
 			output := t.TempDir()
@@ -119,4 +126,24 @@ func readFiles(t *testing.T, dir string) map[string][]byte {
 		t.Fatal(err)
 	}
 	return files
+}
+
+func TestPropagationSnapshotDeterminism(t *testing.T) {
+	for _, name := range []string{"Contexts--short_circuit--direct", "Contexts--short_circuit--wrapped"} {
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join("testdata/propagation", name)
+			first := transpiler.Compile(dir)
+			for i := 0; i < 3; i++ {
+				next := transpiler.Compile(dir)
+				if len(next) != len(first) {
+					t.Fatal("generated file set changed")
+				}
+				for name, content := range first {
+					if !bytes.Equal(next[name], content) {
+						t.Fatalf("compilation %d changed %s", i+2, name)
+					}
+				}
+			}
+		})
+	}
 }

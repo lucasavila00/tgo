@@ -14,5 +14,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
+      - name: Build fixture outputs and check snapshots
+        run: go test ./tests -run ^TestPropagationFixtures$ -count=1
       - name: Test transpiler
         run: go test ./...

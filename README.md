@@ -25,5 +25,4 @@ See [transpiler use and API](docs/transpiler.md) for commands and examples.
 - `docs`: language vision, architecture, and design decisions.
 
 The repository uses one Go module at its root. See the
-[architecture](docs/arch/transpiler.md) for package dependencies and the
-[documentation index](docs/README.md) for design plans and project goals.
+[architecture](docs/arch/transpiler.md) for package dependencies.

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
-	"go/parser"
 	"go/scanner"
 	"go/token"
 	"strings"
@@ -140,44 +139,24 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 
 // MarkerDeclaration gives the marker its success result types.
 func MarkerDeclaration(operation Marker, count int) ast.Decl {
-	var text strings.Builder
-	fmt.Fprintf(&text, "package marker\nfunc %s", operation.Name)
-	if count >= 0 {
-		text.WriteString("[")
-		for i := 0; i <= count; i++ {
-			if i > 0 {
-				text.WriteString(",")
-			}
-			fmt.Fprintf(&text, "T%d interface{}", i)
+	parameters := &ast.FieldList{}
+	arguments := &ast.FieldList{}
+	results := &ast.FieldList{}
+	values := []ast.Expr{}
+	for i := 0; i <= count; i++ {
+		typ := ast.NewIdent(fmt.Sprintf("T%d", i))
+		parameters.List = append(parameters.List, &ast.Field{Names: []*ast.Ident{typ}, Type: &ast.InterfaceType{Methods: &ast.FieldList{}}})
+		name := ast.NewIdent("err")
+		if i < count {
+			name = ast.NewIdent(fmt.Sprintf("v%d", i))
+			results.List = append(results.List, &ast.Field{Type: typ})
+			values = append(values, name)
 		}
-		text.WriteString("]")
+		arguments.List = append(arguments.List, &ast.Field{Names: []*ast.Ident{name}, Type: typ})
 	}
-	text.WriteString("(")
-	for i := 0; i < count; i++ {
-		fmt.Fprintf(&text, "v%d T%d,", i, i)
-	}
-	fmt.Fprintf(&text, "err T%d)", count)
+	signature := &ast.FuncType{TypeParams: parameters, Params: arguments}
 	if count > 0 {
-		text.WriteString("(")
-		for i := 0; i < count; i++ {
-			if i > 0 {
-				text.WriteString(",")
-			}
-			fmt.Fprintf(&text, "T%d", i)
-		}
-		text.WriteString(")")
+		signature.Results = results
 	}
-	text.WriteString("{return ")
-	for i := 0; i < count; i++ {
-		if i > 0 {
-			text.WriteString(",")
-		}
-		fmt.Fprintf(&text, "v%d", i)
-	}
-	text.WriteString("}")
-	file, err := parser.ParseFile(token.NewFileSet(), "marker.go", text.String(), 0)
-	if err != nil {
-		panic(err)
-	}
-	return file.Decls[0]
+	return &ast.FuncDecl{Name: ast.NewIdent(operation.Name), Type: signature, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: values}}}}
 }

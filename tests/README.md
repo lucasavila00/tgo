@@ -8,11 +8,13 @@ in `pkg/transpiler`.
 
 `TestPropagationFixtures` loops over `testdata/propagation/`. Each directory has:
 
-- `input/`: a Go module with TGo sources and any Go dependencies or assets.
-- `output/`: committed snapshots of every emitted file, including generated Go.
+- `.tgo` sources, a `go.mod`, and any Go dependencies or assets.
+- Generated `_tgo.go` snapshots beside each selected source.
+  Test and target suffixes follow `_tgo`, as in `name_tgo_linux_amd64_test.go`.
 - `stdout.txt`: the expected program output.
 
-The runner compares the emitted file names and bytes with the snapshots. It
+The sources drive compilation; existing generated files are ignored.
+The runner compares generated file bytes with the committed snapshots. It
 then runs the generated program and checks its output. Generated test files
 also run with `go test`. Cases cover both propagation operators, evaluation
 order, conditional execution, storage, generic and private types, error
@@ -43,3 +45,6 @@ and errors check behavior independently of generated-code snapshots.
 Run focused checks locally. GitHub Actions runs the full suite with
 `go test ./...`. See the [proof plan](../docs/adr/expression-lowering/proof.md)
 for the expression inventory and behavior checks.
+
+GitHub Actions has a fixture-build step that compiles these inputs and checks
+their snapshots before the full suite. It does not update committed files.

@@ -32,12 +32,19 @@ loops, switches, ranges, selects, and arguments to `defer` and `go`.
 Run from the repository root:
 
 ```sh
-go run ./cmd/tgo -o /tmp/generated /path/to/source
-go -C /tmp/generated build ./...
-go -C /tmp/generated test ./...
+go run ./cmd/tgo /path/to/source
+go -C /path/to/source build ./...
+go -C /path/to/source test ./...
 ```
 
-The source directory must contain `go.mod`. Output includes module files,
+The source directory must be inside a Go module. The command writes generated
+Go beside its `.tgo` source. `name.tgo` produces `name_tgo.go`;
+`name_test.tgo` produces `name_tgo_test.go`. Target suffixes stay at the end:
+`name_linux_amd64_test.tgo` produces `name_tgo_linux_amd64_test.go`.
+Source files stay unchanged. Existing generated files do not affect compilation.
+
+Use `-o /tmp/generated` to emit the module into another directory instead.
+Output includes module files,
 ordinary Go source, generated Go, and assets. Go build constraints select which
 TGo files to compile, including test packages. Excluded files retain their
 `.tgo` source. Relative module replacements keep their dependency paths.

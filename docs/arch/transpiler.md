@@ -129,8 +129,9 @@ without executing the source expression. A generic function can remain in that
 expression for type checking. Its call cannot run. Other unused generated
 functions are removed.
 
-The module loader uses Go's build selection, including test packages. Files
-outside that selection keep their `.tgo` source. Relative module replacements
+The module loader uses Go's build selection, including test packages. All `.tgo` sources remain in the output. Only selected sources receive paired
+`_tgo.go` files; test and target suffixes follow `_tgo`. Matching generated
+files are excluded before source compilation. Relative module replacements
 keep their original dependency paths in the emitted module.
 
 Focused propagation checks:
