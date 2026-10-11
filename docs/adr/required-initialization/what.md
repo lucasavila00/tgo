@@ -1,47 +1,56 @@
 # WHAT
 
-Every operation must supply an initialized value before TGo code can use it.
-Explicit `0`, `false`, and nullable `nil` are values. Default-filled storage is
-not an initialized source value.
+Build a whole-program abstract interpreter: it tracks possible values without
+running the program. Report every possible zero, including explicit `0`,
+`false`, empty strings, and `nil`. Unknown values remain possibly zero.
+
+Every variable declaration must include an initializer. Forbid named results
+in TGo function declarations, literals, and types.
+
+No operation may read or use a value supplied only by default initialization.
+Explicit `0`, `false`, and nullable `nil` are initialized values.
 
 ```text
 var count int          // Invalid.
 var count int = 0      // Valid.
-p := new(int)          // Invalid.
-p := new(0)            // Valid.
+p := new(int)
+*p = 0                 // Valid: assign before reading the allocation.
 ```
 
-Require initializers on variable declarations. Forbid named results in TGo
-function declarations, literals, and types. Functions with results must return
-values; result-free functions can use bare `return`.
-
 Struct literals must supply every direct field. Array and slice literals must
-supply every index below their length. Apply this recursively, including
-aliases and type parameters. Empty collections remain valid.
+supply every index below their length. Apply this recursively, including aliases
+and generics. Empty collections remain valid.
 
-Reject `new(T)` and nonzero-length slice `make`; use initialized allocation,
-complete literals, `append`, or comprehensions. Permit length-zero slice
-allocation, map/channel allocation, and `clear(map)`. Reject `clear(slice)`;
-assign explicit values instead. Reslicing can expose only elements proven
-initialized, including previously initialized elements beyond the current
-length. Capacity alone is not proof.
+Allocation can reserve uninitialized storage. Accept `new(T)`, slice `make`,
+and slice `clear` only when every later read follows proven initialization.
+Addresses and slice headers can identify that storage; they do not initialize
+its contents. Accept loop fills, initialized allocation, `append`, `copy`, and
+comprehensions when their effects establish initialization. Reslicing may expose
+only proven initialized elements; capacity alone is not proof.
 
-Map misses, channel receives, and comma-ok assertions require a success check
-before value use, for every type. A channel range supplies only received values.
-A one-result assertion either supplies a value or panics.
+Map reads, channel receives, and comma-ok assertions supply values only on
+success. Error results also require success before use. Accept every guard and
+call pattern the analysis can prove, including forwarding and delayed closure
+execution. A one-result assertion supplies a value or panics.
 
-Results paired with `error` remain unavailable until success. Failure commas
-and propagation keep the Go error ABI: generated failure slots are storage,
-not usable source values. Forwarding preserves the link to the error;
-a failed slot cannot become a usable value.
+Failure returns and propagation retain the Go ABI. Failed result slots are
+unavailable storage; forwarding them preserves their failure status.
 
-Generic functions must satisfy these rules for every admitted type. Type
-arguments do not permit default construction.
+Analyze the whole program, including reachable Go dependency source, indirect
+calls, and generic instantiations. Go returns are not automatically trusted.
+Report dependency failures at the selected TGo package's call or use, with the
+dependency origin. Reject that use if a forbidden zero remains possible; do not
+require dependency changes or ban its whole package.
+`unsafe` and cgo are outside the guarantee.
 
-Imported calls require an initialization contract. The contract promises
-initialized successful results and describes collection writes and growth.
-Go can violate that promise; there is no runtime validation. Raw imported
-storage without a contract is unavailable. Imported result names do not create
-TGo named results.
+Zero reports and language errors are separate. Explicit zero is permitted;
+using unavailable or default-filled values is an error. Static analysis can
+report false positives; refine feasible proofs instead of adding source
+restrictions. Keep Go types and execution order.
+
+Write a deterministic report for every source operation with its possible-zero
+components, source position, type, cause, path condition, and generic condition.
+Include an inventory entry when zero is proved impossible, so omissions are
+visible. Record the unsafe/cgo boundary.
 
 [HOW](how.md) gives the analysis. [PROOF](proof.md) gives acceptance.

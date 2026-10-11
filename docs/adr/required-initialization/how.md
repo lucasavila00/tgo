@@ -1,45 +1,55 @@
 # HOW
 
-Analyze source with `go/ast`, `go/types.Info`, and source object identity before
-lowering. Inspect declarations, literals, builtin calls, reads, assignments,
-conversions, and function signatures. Keep generated ABI storage outside source
-initialization checks.
+Load the build target and reachable dependencies with [`go/packages`][packages],
+including syntax and `go/types.Info`. Preserve source object identities and
+positions. Check TGo declaration initializers, result names, and literal
+completeness before lowering. Dependency Go source has no TGo spelling rules,
+but its default-filled values remain uninitialized in the analysis.
 
-Represent facts for initialized values, pending result pairs, and initialized
-collection intervals. Struct and array facts include their fields/elements;
-resolve aliases and recursively follow underlying types. Pointer facts refer
-to allocation objects. Slice facts share backing-storage objects and track
-bounds, length, and capacity. Copying a header does not copy storage facts.
+Build [`go/ssa`][ssa] for the lowered program and dependency bodies. Map generated
+operations back to source; mark failure-return storage explicitly. Use
+[`vta`][vta] to refine a conservative call graph. Add allocation-site points-to
+sets for pointers, interfaces, closures, and slice backing storage. Include all
+possible indirect targets; unavailable ordinary bodies retain unknown effects.
 
-Build function control-flow graphs with edges for loops, switches, selects,
-labels, and jumps. Merge facts true on every incoming path; iterate loops to
-stability. Transfer facts after RHS evaluation and ordered stores. Invalidate
-facts affected by an unknown write or escape. Keep initialized intervals after
-slice shortening. Translate slice-relative indices to backing-storage offsets.
-Recognize constant ranges, same-slice `len` bounds, and guarded symbolic bounds.
-An existing initialized interval can justify reslicing beyond current length;
-otherwise require assignments that establish the interval.
+For each value, track zero/nonzero possibilities, nil/non-nil possibilities,
+initialization, and conditional availability. Unknown includes every possibility.
+Track aggregate components, intervals, and success relations.
+A store establishes facts after
+its RHS and destination checks. Loads require facts. Header copies retain
+backing-storage identity; shortening retains initialized intervals. `clear`
+removes initialization facts for affected elements. `copy` transfers only the
+source's initialized interval. Follow aliases and recursive type dependencies.
 
-Track the relation between each conditional value and its success status.
-Conditions establish availability; stopping failure branches permit later use.
-Follow copies, aliases, captured objects, and forwarded results without requiring
-a particular guard spelling. Analyze closures at their execution point or
-export their preconditions. Keep a value unavailable if the relation is lost.
-Generate failure storage only at ABI returns; it never establishes source
-availability. Preserve defer timing and propagation error identity.
+Interpret SSA instructions over those facts. Union possible values at joins;
+intersect guaranteed initialization. Retain path predicates for refinement.
+Solve loop induction
+variables and bounds to prove complete fills, including early exits. Translate
+slice-relative bounds to backing-storage offsets. Accept reslicing when the
+exposed interval is initialized. Widen recursive intervals to ensure termination;
+refine the failing path when a coarse result loses a usable proof.
 
-Analyze generic bodies over normalized constraint type sets. Record summary
-effects for zero construction, initialization, mutation, returned aliases, and
-pending pairs. Instantiate effects at both inferred and explicit calls; carry
-them through wrappers, methods, and returned function values. Mixed constraints
-must satisfy every admitted case; an unknown type never implies a valid zero.
+Compute function summaries for required initialized inputs, writes, returned
+aliases, conditional results, and closure effects. Iterate recursive call groups
+to a fixed point; specialize summaries by argument facts where needed. Apply
+summaries across Go and TGo calls, defers, callbacks, and channel transfers.
+Concurrent writes establish facts only with proved synchronization.
 
-Infer imported summaries from available Go source using the same analysis.
-Export summaries with package facts. For unavailable or unprovable foreign
-bodies, require a supplied contract with the same facts; reject calls and
-storage reads without one. Check function values and interface dispatch against
-all possible targets or their declared contract. Contracts are the explicit
-foreign trust boundary, not a proof of foreign execution.
+Instantiate reachable generics and retain constraint-safe summaries for exported
+generic bodies. Check every admitted type case, including nested containers;
+inferred and explicit type arguments use the same analysis. Analyze exported
+entry points with required input facts.
 
-Use one analysis for direct and generic operations. Report the operation that
-lacks an initialization fact; do not add runtime guards or change Go types.
+Propagate dependency zero origins through summaries. Diagnose the selected TGo
+call/use, with its dependency path and instantiation; refine safe arguments and
+status paths instead of reporting errors in dependency files.
+
+Emit `zero-report.json` sorted by source file and position. Inventory each
+operation, including generated ABI storage separately; record causes, types,
+paths, generic conditions, and boundary assumptions. Unknown is never silently
+nonzero or initialized. Refine feasible proofs without losing possibilities.
+No runtime checks.
+
+[packages]: https://pkg.go.dev/golang.org/x/tools/go/packages
+[ssa]: https://pkg.go.dev/golang.org/x/tools/go/ssa
+[vta]: https://pkg.go.dev/golang.org/x/tools/go/callgraph/vta
