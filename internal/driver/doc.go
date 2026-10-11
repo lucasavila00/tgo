@@ -9,6 +9,11 @@
 // must not affect source checking. Compiler work uses a separate directory so
 // compilation does not edit the caller's files.
 //
+// Compilation passes data through these steps: read module files, prepare a
+// separate work directory, select source with Go's build rules, check calls,
+// lower expressions, and collect output. Each step keeps the data required by
+// the next step. Source files stay separate from the files used for checking.
+//
 // The driver returns the emitted module as file contents. Writing those files
 // belongs to the caller. Expression evaluation rules belong to the lowerer.
 package driver
