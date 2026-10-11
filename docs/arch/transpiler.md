@@ -111,8 +111,10 @@ supplied by their call, assignment, return, or field.
 The compiler rejects a required temporary when Go cannot name its type.
 This includes private imported types and type names hidden by source bindings.
 The error identifies the source position and type. Expose an accessible type
-at that boundary. There is no inferred temporary fallback. Return temporaries check type names
-after parameter and result names become visible.
+at that boundary. There is no inferred temporary fallback.
+
+Return temporaries check type names at function entry. Parameter and result
+names are visible there.
 
 The Boolean lowerer uses a typed local and assigns each operand only when
 the source evaluates it. Comparisons keep their untyped Boolean behavior
