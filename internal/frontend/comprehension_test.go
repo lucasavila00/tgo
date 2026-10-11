@@ -8,6 +8,8 @@ import (
 func TestParseComprehensions(t *testing.T) {
 	for _, expression := range []string{
 		`[]int{x for _, x := range xs}`,
+		"[]string{`a\r\nb` for range 1}",
+		"[]int{x /* output\r\ncomment */ for _,x := range xs /* source\r\ncomment */}",
 		`map[int]string{x: f(x) for _, x := range xs if x > 0}`,
 		`Named[int]{x+y for _, x := range xs for _, y := range ys}`,
 		`[]int{x for _, x := range []int{y for _, y := range ys}}`,

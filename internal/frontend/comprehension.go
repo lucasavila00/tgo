@@ -127,7 +127,11 @@ func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, firs
 			}
 			if kind == token.COMMENT {
 				begin := from + file.Offset(position)
-				retain(begin, begin+len(literal))
+				length := len(literal)
+				if strings.HasPrefix(s.text[begin:to], "/*") {
+					length = strings.Index(s.text[begin:to], "*/") + 2
+				}
+				retain(begin, begin+length)
 				insert("\n", begin)
 			}
 		}

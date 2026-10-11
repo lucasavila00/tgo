@@ -30,7 +30,11 @@ func sourceTokens(source string) []sourceToken {
 		if width == 0 {
 			width = len(kind.String())
 		}
-		tokens = append(tokens, sourceToken{offset: file.Offset(position), end: file.Offset(position) + width, kind: kind, depth: depth})
+		offset := file.Offset(position)
+		if kind == token.STRING && source[offset] == '`' {
+			width = strings.IndexByte(source[offset+1:], '`') + 2
+		}
+		tokens = append(tokens, sourceToken{offset: offset, end: offset + width, kind: kind, depth: depth})
 		switch kind {
 		case token.LPAREN, token.LBRACK, token.LBRACE:
 			depth++
