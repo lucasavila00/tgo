@@ -108,5 +108,5 @@ files. Line directives affect diagnostic locations; physical paths control
 file selection and output.
 
 The [correctness report](correctness.md) explains the implementation checks and
-independent behavior tests. The [test guide](../../../tests/README.md) describes
+independent behavior tests. The [test guide](../../../tests/readme.md) describes
 fixtures, snapshots, and expression-insertion tests.

@@ -6,7 +6,7 @@ in `pkg/transpiler`.
 
 ## Propagation fixtures
 
-`TestPropagationFixtures` loops over `testdata/propagation/`. Each directory has:
+`TestPropagationFixtures` loops over `tests/testdata/propagation/`. Each directory has:
 
 - `.tgo` sources, a `go.mod`, and any Go dependencies or assets.
 - Generated `_tgo.go` snapshots beside each selected source.
@@ -38,19 +38,19 @@ The update flag changes snapshots only. Expected runtime output stays handwritte
 ## Expression insertion
 
 Insertion tests check effects, control flow, storage, and return boundaries.
-The proof corpus in `testdata/proof/` tests insertion after each expression,
+The proof corpus in `tests/testdata/proof/` tests insertion after each expression,
 including skipped paths and later loop visits. Its handwritten reference traces
 and errors check behavior independently of generated-code snapshots.
 
 Run focused checks locally. GitHub Actions runs the full suite with
-`go test ./...`. See the [proof plan](../docs/adr/expression-lowering/proof.md)
+`go test ./...`. See the [proof plan](../adr/expression-lowering/proof.md)
 for the expression inventory and behavior checks.
 
 GitHub Actions has a fixture-build step that compiles these inputs and checks
 their snapshots before the full suite. It does not update committed files.
 
-`testdata/proof/rejections.json` lists the exact expression sites that require
+`tests/testdata/proof/rejections.json` lists the exact expression sites that require
 an inaccessible type in a generated typed temporary. Proof tests require the
 specified error at those sites and retain all sites in `manifest.json`.
-`testdata/typed-temporaries-rejected/` contains TGo inputs and exact diagnostics
+`tests/testdata/typed-temporaries-rejected/` contains TGo inputs and exact diagnostics
 for private types and hidden names.

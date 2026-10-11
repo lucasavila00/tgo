@@ -94,7 +94,7 @@ stays unchanged, so callers can generate independent variants from one load.
 An unknown site or a site without a current-function evaluation returns an error.
 
 See the [architecture](../arch/transpiler/readme.md) for lowering and package dependencies,
-and the [test guide](../../tests/README.md) for behavior checks and snapshots.
+and the [test guide](../../tests/readme.md) for behavior checks and snapshots.
 
 Generated temporaries have explicit types. A source operation is rejected if
 saving its value requires a private imported type or a hidden type name that
