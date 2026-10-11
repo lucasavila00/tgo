@@ -1,6 +1,7 @@
 // Package frontend reads TGo source for the type checker.
 //
-// Go's parser cannot read TGo operators such as fetch()! or an if expression.
+// Go's parser cannot read TGo operators such as fetch()! or conditional
+// expressions such as if and switch.
 // The frontend temporarily replaces added syntax with forms that Go's standard
 // parser can read. It returns a syntax tree: a structure that describes the
 // expressions, statements, and declarations in the file.
@@ -18,7 +19,7 @@
 //
 // Some replacement forms contain function literals to hold branch statements.
 // These forms do not introduce a function in the source program. For example,
-// a return inside an if expression still exits the enclosing source function.
+// a return inside a conditional expression still exits the enclosing source function.
 // The checker and [lowering] must preserve that rule.
 //
 // A comprehension builds a slice or map from range loops and optional filters.
