@@ -92,7 +92,8 @@ Named functions and function expressions have separate return targets, including
 functions in package initializers. A label on a declaration stays on the first
 added statement; later declarations remain in the source scope.
 
-Generated variables have explicit checked types and fresh names. For a shift
+Added imports use fresh aliases such as `fmt_tgo1`. Source import names stay
+the same. Generated variables have explicit checked types and fresh names. For a shift
 used as `uint64`, `var saved uint64 = 1 << n` keeps that type; `saved := 1 << n`
 would use `int`. Type printing uses type identity, not spelling. The compiler reports an error if Go cannot
 name a required type in that scope. It does not fall back to an inferred type.

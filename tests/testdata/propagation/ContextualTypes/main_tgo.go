@@ -1,6 +1,6 @@
 package main
 
-import tgo8 "fmt"
+import fmt_tgo8 "fmt"
 
 import (
 	"errors"
@@ -50,7 +50,7 @@ func calls(fail bool) (tgo3 error) {
 		tgo6, tgo7 = next(fail)
 		if tgo7 != nil {
 			tgo4 = tgo7
-			tgo4 = tgo8.Errorf("%s: %w", "next", tgo4)
+			tgo4 = fmt_tgo8.Errorf("%s: %w", "next", tgo4)
 			return tgo4
 		}
 		use(tgo9, tgo6)
@@ -99,7 +99,7 @@ func assign(fail bool) (tgo21 error) {
 	tgo24, tgo25 = next(fail)
 	if tgo25 != nil {
 		tgo22 = tgo25
-		tgo22 = tgo8.Errorf("%s: %w", "next", tgo22)
+		tgo22 = fmt_tgo8.Errorf("%s: %w", "next", tgo22)
 		return tgo22
 	}
 	pair := Pair{First: tgo26, Second: tgo24}

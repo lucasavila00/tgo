@@ -1,6 +1,6 @@
 package main
 
-import tgo8 "fmt"
+import fmt_tgo8 "fmt"
 
 import (
 	"errors"
@@ -32,7 +32,7 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 				tgo1, tgo2 = next(fail)
 				if tgo2 != nil {
 					tgo7 = tgo2
-					tgo7 = tgo8.Errorf("%s: %w", "next", tgo7)
+					tgo7 = fmt_tgo8.Errorf("%s: %w", "next", tgo7)
 					return tgo4, tgo7
 				}
 				_ = tgo1
@@ -71,7 +71,7 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 				tgo15, tgo16 = next(fail)
 				if tgo16 != nil {
 					tgo19 = tgo16
-					tgo19 = tgo8.Errorf("%s: %w", "next", tgo19)
+					tgo19 = fmt_tgo8.Errorf("%s: %w", "next", tgo19)
 					return tgo17, tgo19
 				}
 				_ = tgo15
@@ -108,7 +108,7 @@ func annotated(Result int, fail, wrap bool) (tgo26 Visible, tgo28 Failure) {
 			tgo24, tgo25 = next(fail)
 			if tgo25 != nil {
 				tgo29 = tgo25
-				tgo29 = tgo8.Errorf("%s: %w", "next", tgo29)
+				tgo29 = fmt_tgo8.Errorf("%s: %w", "next", tgo29)
 				return tgo27, tgo29
 			}
 			_ = tgo24
@@ -139,7 +139,7 @@ func local(fail, wrap bool) (tgo34 int, tgo36 error) {
 			tgo32, tgo33 = next(fail)
 			if tgo33 != nil {
 				tgo37 = tgo33
-				tgo37 = tgo8.Errorf("%s: %w", "next", tgo37)
+				tgo37 = fmt_tgo8.Errorf("%s: %w", "next", tgo37)
 				return tgo35, tgo37
 			}
 			_ = tgo32

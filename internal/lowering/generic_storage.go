@@ -71,7 +71,7 @@ func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	parameter := types.Unalias(r.source.Package.TypesInfo.TypeOf(expr)).(*types.TypeParam)
 	typ := r.parameterAlias(parameter)
 	if r.reflectAlias == nil {
-		r.reflectAlias = r.name()
+		r.reflectAlias = r.nameFor("reflect")
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
 	}
 	before, place := r.place(expr)

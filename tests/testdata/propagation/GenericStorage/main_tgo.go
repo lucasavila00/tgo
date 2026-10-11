@@ -1,6 +1,6 @@
 package main
 
-import tgo2 "reflect"
+import reflect_tgo2 "reflect"
 
 import (
 	"errors"
@@ -31,7 +31,7 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 		T := 3
 		_ = T
 		{
-			var tgo3 bool = tgo2.TypeFor[tgo1]().Kind() == tgo2.Array
+			var tgo3 bool = reflect_tgo2.TypeFor[tgo1]().Kind() == reflect_tgo2.Array
 			var tgo4 tgo1
 			if !tgo3 {
 				tgo4 = a
@@ -103,7 +103,7 @@ func (b *Box[T]) Set() (tgo24 error) {
 	}()
 	{
 		var tgo19 *Box[T] = b
-		var tgo20 bool = tgo2.TypeFor[tgo18]().Kind() == tgo2.Array
+		var tgo20 bool = reflect_tgo2.TypeFor[tgo18]().Kind() == reflect_tgo2.Array
 		var tgo21 tgo18
 		if !tgo20 {
 			tgo21 = tgo19.Value
