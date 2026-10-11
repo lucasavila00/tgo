@@ -43,7 +43,10 @@ func Load(dir, pattern string) (*Source, error) {
 	if len(pkgs) != 1 {
 		return nil, fmt.Errorf("expected one package, got %d", len(pkgs))
 	}
-	p := pkgs[0]
+	return sourceFromPackage(pkgs[0], dir)
+}
+
+func sourceFromPackage(p *packages.Package, dir string) (*Source, error) {
 	if len(p.Errors) != 0 {
 		return nil, fmt.Errorf("load source: %s", p.Errors[0])
 	}
@@ -182,5 +185,5 @@ func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
 }
 
 func contains(parent, child ast.Node) bool {
-	return parent != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
+	return parent != nil && child != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
 }

@@ -94,17 +94,39 @@ func Compile(dir string) map[string][]byte {
 	moduleData, err = mod.Format()
 	must(err)
 	must(os.WriteFile(filepath.Join(work, "go.mod"), moduleData, 0600))
+	initial := loadProject(work)
+	activeFiles := make(map[string]bool)
+	activeOperations := make(map[string]propagation)
+	for _, pkg := range initial {
+		for _, file := range pkg.Syntax {
+			name, err := filepath.Rel(work, pkg.Fset.Position(file.Pos()).Filename)
+			must(err)
+			if !tgoFiles[name] {
+				continue
+			}
+			activeFiles[name] = true
+			for _, operation := range markerExpressions(pkg.Fset, file, operations) {
+				activeOperations[operation.name] = operation
+			}
+		}
+	}
+	operations = activeOperations
 	remaining := len(operations)
 	for remaining > 0 {
-		pkgs, err := packages.Load(&packages.Config{Dir: work, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps}, "./...")
-		must(err)
+		pkgs := loadProject(work)
 		progress := false
+		written := make(map[string]bool)
 		for _, pkg := range pkgs {
 			for _, file := range pkg.Syntax {
+				filename := pkg.Fset.Position(file.Pos()).Filename
+				if written[filename] {
+					continue
+				}
 				candidates := markerExpressions(pkg.Fset, file, operations)
 				var selected ast.Expr
 				var operation propagation
 				for expression, op := range candidates {
+					operations[op.name] = op
 					typ := pkg.TypesInfo.TypeOf(unparen(expression))
 					if typ == nil || typ == types.Typ[types.Invalid] {
 						continue
@@ -133,6 +155,7 @@ func Compile(dir string) map[string][]byte {
 				wrapMarker(file, selected, operation)
 				file.Decls = append(file.Decls, markerDeclaration(operation, count-1))
 				writeSyntax(pkg.Fset, file)
+				written[filename] = true
 				operations[operation.name] = operation
 				remaining--
 				progress = true
@@ -142,65 +165,40 @@ func Compile(dir string) map[string][]byte {
 			panic("cannot type check propagation source")
 		}
 	}
-	// Type-check each changed package, then lower one call at a time.
-	directories := make(map[string]bool)
-	for name := range tgoFiles {
-		directories[filepath.Dir(name)] = true
-	}
-	for directory := range directories {
-		packageDir := filepath.Join(work, directory)
-		for {
-			source, err := Load(packageDir, ".")
+	for _, pkg := range loadProject(work) {
+		changed := false
+		for _, file := range pkg.Syntax {
+			name, err := filepath.Rel(work, pkg.Fset.Position(file.Pos()).Filename)
 			must(err)
-			var selected *ast.CallExpr
-			var operation propagation
-			for _, file := range source.Package.Syntax {
-				ast.Inspect(file, func(node ast.Node) bool {
-					call, ok := node.(*ast.CallExpr)
-					if !ok {
-						return true
-					}
-					id, ok := call.Fun.(*ast.Ident)
-					if !ok {
-						return true
-					}
-					op, ok := operations[id.Name]
-					if !ok || source.unreachable(call) {
-						return true
-					}
-					if selected == nil || call.End()-call.Pos() < selected.End()-selected.Pos() {
-						selected = call
-						operation = op
-					}
-					return true
-				})
-			}
-			if selected == nil {
-				removeUnusedMarkers(source, operations)
-				break
-			}
-			var site Site
-			for candidate, expr := range source.expressions {
-				if expr == selected {
-					site = candidate
-					break
-				}
-			}
-			output, err := source.lowerPropagation(site, operation)
-			must(err)
-			for name, content := range output {
-				must(os.WriteFile(name, content, 0600))
-			}
+			changed = changed || activeFiles[name]
+		}
+		if !changed {
+			continue
+		}
+		source, err := sourceFromPackage(pkg, work)
+		must(err)
+		output, err := source.lowerPropagations(operations)
+		must(err)
+		for name, content := range output {
+			must(os.WriteFile(name, content, 0600))
 		}
 	}
+
 	output := make(map[string][]byte)
 	for name, content := range files {
 		if strings.HasSuffix(name, ".tgo") {
 			goName := strings.TrimSuffix(name, ".tgo") + ".go"
+			if !activeFiles[goName] {
+				output[name] = content
+				continue
+			}
 			content, err = os.ReadFile(filepath.Join(work, goName))
 			must(err)
 			output[goName] = content
 		} else {
+			if name == "go.mod" {
+				content = moduleData
+			}
 			output[name] = content
 		}
 	}
@@ -217,4 +215,12 @@ func must(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("TGo: %v", err))
 	}
+}
+
+func loadProject(dir string) []*packages.Package {
+	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps}, "./...")
+	must(err)
+	var result []*packages.Package
+	packages.Visit(roots, nil, func(pkg *packages.Package) { result = append(result, pkg) })
+	return result
 }

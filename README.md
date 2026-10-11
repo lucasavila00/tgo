@@ -4,9 +4,9 @@
 
 We are developing version 2 of the TGo compiler, `compilerv2`, through
 [#248](https://github.com/lucasavila00/tgo/issues/248) and
-[#247](https://github.com/lucasavila00/tgo/issues/247). Only the README syntax
-examples and project documentation remain. The code, tests, build tools, CI, and architecture
-documents have been removed. Git history retains them.
+[#247](https://github.com/lucasavila00/tgo/issues/247). Compiler source, tests, and usage notes are in
+[`compilerv2/`](compilerv2/README.md). The old compiler and architecture
+documents were removed. Git history retains them.
 
 The [compilerv2 plan](docs/adr/expression-lowering/what.md) defines the new
 compiler work. We will not restore the old code for now.
@@ -14,8 +14,8 @@ compiler work. We will not restore the old code for now.
 TGo is Go with extra compile-time checks and shorter error handling. Its
 `.tgo` syntax uses normal Go packages, imports, types, and calls.
 
-The examples below describe the language syntax. This checkout has no compiler
-or installation procedure.
+The examples below describe the language syntax, including features outside
+the current propagation work.
 
 ## Return success or failure
 

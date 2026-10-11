@@ -11,18 +11,30 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source         *Source
-	target         ast.Expr
-	after          After
-	names          map[string]bool
-	next           int
-	inserted       bool
-	labels         map[string]string
-	suppressedRoot ast.Expr
-	propagation    *propagation
-	returnFunction ast.Node
-	returnValues   []ast.Expr
-	formatAlias    *ast.Ident
+	source            *Source
+	target            ast.Expr
+	after             After
+	names             map[string]bool
+	next              int
+	inserted          bool
+	labels            map[string]string
+	suppressedRoot    ast.Expr
+	propagations      map[ast.Expr]propagation
+	frame             *returnFrame
+	formatAlias       *ast.Ident
+	suppressed        bool
+	extraImports      []*ast.ImportSpec
+	extraDeclarations []ast.Decl
+	zeroSequence      *ast.Ident
+	zeroPointer       *ast.Ident
+	iterAlias         *ast.Ident
+	mapAlias          *ast.Ident
+	sliceAlias        *ast.Ident
+	origins           map[ast.Expr]ast.Expr
+	parameterAliases  map[*types.TypeParam]*ast.Ident
+	aliasStatements   map[ast.Node][]ast.Stmt
+	reflectAlias      *ast.Ident
+	deferredBases     map[ast.Expr]bool
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -37,7 +49,17 @@ func (r *rewrite) name() *ast.Ident {
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	count := r.resultCount(expr)
+	original := expr
+	if origin := r.origins[expr]; origin != nil {
+		original = origin
+	}
+	count := r.resultCount(original)
+	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil {
+		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
+			return r.snapshotLiteral(expr.(*ast.CompositeLit), original)
+		}
+	}
+	expr = r.contextLiteral(expr, original)
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
 	}
@@ -111,11 +133,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if expr == nil {
 		return nil, nil
 	}
-	if !contains(expr, r.target) {
+	if !r.contains(expr) {
 		return nil, []ast.Expr{expr}
 	}
-	if expr == r.target && r.propagation != nil {
-		return r.propagatedCall(expr.(*ast.CallExpr))
+	if operation, ok := r.propagations[expr]; ok && !r.suppressed {
+		return r.propagatedCall(expr.(*ast.CallExpr), operation)
 	}
 	var before []ast.Stmt
 	var result ast.Expr = expr
@@ -124,12 +146,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		copy := *e
 		labels := r.labels
 		r.labels = nil
-		var prefix []ast.Stmt
-		if e == r.returnFunction {
-			copy.Type, prefix = r.prepareReturns(e.Type)
-		}
-		copy.Body = r.block(e.Body)
-		copy.Body.List = append(prefix, copy.Body.List...)
+		copy.Type, copy.Body = r.function(e, e.Type, e.Body)
 		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:
@@ -209,7 +226,15 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		result = &copy
 	case *ast.IndexExpr:
 		copy := *e
-		if r.addressableArray(e.X) && contains(e.Index, r.target) {
+		if storageKinds(r.source.Package.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.Package.TypesInfo.Types[e.X].Addressable() {
+			before, copy.X = r.genericBase(e.X)
+			setup, index := r.capture(e.Index)
+			before = append(before, setup...)
+			copy.Index = index
+			result = &copy
+			break
+		}
+		if r.addressableArray(e.X) && r.contains(e.Index) {
 			var base ast.Expr
 			before, base = r.arrayBase(e.X)
 			setup, index := r.expression(e.Index)
@@ -244,6 +269,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		copy := *e
 		input := []ast.Expr{e.X}
 		array := r.addressableArray(e.X)
+		mixed := storageKinds(r.source.Package.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.Package.TypesInfo.Types[e.X].Addressable()
+		if mixed {
+			before, copy.X = r.genericBase(e.X)
+			input = nil
+		}
 		if array {
 			before, copy.X = r.arrayBase(e.X)
 			input = nil
@@ -256,8 +286,15 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		var values []ast.Expr
 		setup, values := r.operands(input)
 		before = append(before, setup...)
+		if mixed {
+			for i, value := range values {
+				saved, refs := r.save(value)
+				before = append(before, saved...)
+				values[i] = refs[0]
+			}
+		}
 		i := 0
-		if !array {
+		if !array && !mixed {
 			copy.X = values[0]
 			i = 1
 		}
@@ -302,6 +339,12 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 		result = &copy
 	}
+	if result != expr {
+		if r.origins == nil {
+			r.origins = make(map[ast.Expr]ast.Expr)
+		}
+		r.origins[result] = expr
+	}
 	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true
 		if r.functionName(expr) {
@@ -319,7 +362,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		if count == 0 {
 			before = append(before, &ast.ExprStmt{X: result})
 		} else {
-			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{result}})
+			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{r.contextLiteral(result, expr)}})
 		}
 		before = append(before, r.after(refs)...)
 		if count == 1 && r.untypedBoolean(expr) {
@@ -350,13 +393,12 @@ func (r *rewrite) functionName(expr ast.Expr) bool {
 }
 
 func (r *rewrite) addressableArray(expr ast.Expr) bool {
-	_, array := r.source.Package.TypesInfo.TypeOf(expr).Underlying().(*types.Array)
+	array := storageKinds(r.source.Package.TypesInfo.TypeOf(expr)) == arrayStorage
 	return array && r.source.Package.TypesInfo.Types[expr].Addressable()
 }
 
 func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	before, pointer := r.address(expr)
-	return before, &ast.ParenExpr{X: &ast.StarExpr{X: pointer}}
+	return r.place(expr)
 }
 
 func (r *rewrite) untypedBoolean(expr ast.Expr) bool {

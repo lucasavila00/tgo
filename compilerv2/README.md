@@ -86,16 +86,29 @@ The scanner marks suffixes. The Go parser supplies the syntax tree. The Go
 type checker resolves each call. Generated generic functions let the checker
 see each call without its error result. The existing lowering engine then
 saves the call results, checks the error, and emits the return at that point.
-It lowers nested calls before their consumers.
+It lowers all marked calls in one pass over the typed source AST.
 
 Generated result variables supply typed zero values. This keeps private and
 generic result types and avoids type names that local bindings can hide.
 Source named results keep their bindings and values on success.
 
+For generic indexed variables, keep array storage and save slice or map headers.
+If the type set permits both, a generated type test selects the storage form.
+Type aliases at the start of the function keep type parameters available when
+local variables hide their source names.
+
+A literal with an omitted type keeps the type of its original container. This
+lets Go infer private element types. Map key operands are saved without moving
+the map's key checks before later source work.
+
 The Boolean lowerer uses a constant-false expression to infer the result type
 without executing the source expression. A generic function can remain in that
 expression for type checking. Its call cannot run. Other unused generated
 functions are removed.
+
+The module loader uses Go's build selection, including test packages. Files
+outside that selection keep their `.tgo` source. Relative module replacements
+keep their original dependency paths in the emitted module.
 
 Focused propagation checks:
 

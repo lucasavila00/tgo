@@ -103,7 +103,9 @@ func markerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 			if err := format.Node(&callName, fset, call.Fun); err != nil {
 				panic(err)
 			}
-			operation.callName = callName.String()
+			if operation.callName == "" {
+				operation.callName = callName.String()
+			}
 			result[selected] = operation
 		}
 	}
@@ -146,13 +148,13 @@ func wrapMarker(file *ast.File, expression ast.Expr, operation propagation) {
 func markerDeclaration(operation propagation, count int) ast.Decl {
 	var text strings.Builder
 	fmt.Fprintf(&text, "package marker\nfunc %s", operation.name)
-	if count > 0 {
+	if count >= 0 {
 		text.WriteString("[")
-		for i := 0; i < count; i++ {
+		for i := 0; i <= count; i++ {
 			if i > 0 {
 				text.WriteString(",")
 			}
-			fmt.Fprintf(&text, "T%d any", i)
+			fmt.Fprintf(&text, "T%d interface{}", i)
 		}
 		text.WriteString("]")
 	}
@@ -160,7 +162,7 @@ func markerDeclaration(operation propagation, count int) ast.Decl {
 	for i := 0; i < count; i++ {
 		fmt.Fprintf(&text, "v%d T%d,", i, i)
 	}
-	text.WriteString("err error)")
+	fmt.Fprintf(&text, "err T%d)", count)
 	if count > 0 {
 		text.WriteString("(")
 		for i := 0; i < count; i++ {

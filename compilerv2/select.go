@@ -11,7 +11,7 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	var before []ast.Stmt
 	commChanged := false
 	for _, statement := range s.Body.List {
-		if contains(statement.(*ast.CommClause).Comm, r.target) {
+		if r.contains(statement.(*ast.CommClause).Comm) {
 			commChanged = true
 		}
 	}
@@ -69,7 +69,15 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 						store.Lhs[i] = place
 					}
 				}
-				body = append(body, &store)
+				deferred := false
+				for _, place := range store.Lhs {
+					deferred = deferred || r.deferredPlace(place)
+				}
+				if deferred {
+					body = append(body, r.orderedStores(store.Lhs, store.Rhs, store.Tok)...)
+				} else {
+					body = append(body, &store)
+				}
 			}
 		}
 		for _, statement := range original.Body {
