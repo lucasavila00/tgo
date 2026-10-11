@@ -19,7 +19,6 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-
 	type S struct{ v int }
 	var tgo1 int
 	var tgo2 error

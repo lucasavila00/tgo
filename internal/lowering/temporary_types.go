@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"reflect"
 	"strconv"
 )
 
@@ -31,7 +32,7 @@ func (r *rewrite) typeOf(expr ast.Expr) types.Type {
 func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 	var problem string
 	unsafePointer := false
-	localNames := make(map[string]string)
+	parameterNames := make(map[*types.TypeParam]string)
 	var check func(types.Type)
 	var checkName func(*types.TypeName)
 	check = func(typ types.Type) {
@@ -46,7 +47,7 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 			scope := r.source.Package.Types.Scope().Innermost(original.Pos())
 			_, resolved := scope.LookupParent(t.Obj().Name(), original.Pos())
 			if resolved != t.Obj() {
-				localNames[t.Obj().Name()] = r.parameterAlias(t).Name
+				parameterNames[t] = r.parameterAlias(t).Name
 			}
 		case *types.Named:
 			checkName(t.Obj())
@@ -159,54 +160,98 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 	if err != nil {
 		panic(err)
 	}
-	var rename func(ast.Expr)
-	fields := func(list *ast.FieldList) {
-		if list != nil {
-			for _, field := range list.List {
-				rename(field.Type)
+	// Parsed type positions do not refer to the source file set.
+	ast.Inspect(result, func(node ast.Node) bool {
+		if node == nil {
+			return true
+		}
+		value := reflect.ValueOf(node).Elem()
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			if field.Type() == reflect.TypeFor[token.Pos]() {
+				field.SetInt(0)
+			}
+		}
+		return true
+	})
+	// Follow checked types so equal spellings do not merge different bindings.
+	var rename func(types.Type, ast.Expr)
+	fields := func(tuple *types.Tuple, list *ast.FieldList) {
+		if list == nil {
+			return
+		}
+		for i, field := range list.List {
+			expr := field.Type
+			typ := tuple.At(i).Type()
+			if ellipsis, ok := expr.(*ast.Ellipsis); ok {
+				expr = ellipsis.Elt
+				typ = typ.(*types.Slice).Elem()
+			}
+			rename(typ, expr)
+		}
+	}
+	rename = func(typ types.Type, expr ast.Expr) {
+		for {
+			parenthesized, ok := expr.(*ast.ParenExpr)
+			if !ok {
+				break
+			}
+			expr = parenthesized.X
+		}
+		switch t := typ.(type) {
+		case *types.TypeParam:
+			if name := parameterNames[t]; name != "" {
+				expr.(*ast.Ident).Name = name
+			}
+		case *types.Basic:
+			if t.Kind() == types.UnsafePointer {
+				expr.(*ast.SelectorExpr).X = unsafeAlias
+			}
+		case *types.Named, *types.Alias:
+			var args *types.TypeList
+			if named, ok := t.(*types.Named); ok {
+				args = named.TypeArgs()
+			} else {
+				args = t.(*types.Alias).TypeArgs()
+			}
+			switch e := expr.(type) {
+			case *ast.IndexExpr:
+				rename(args.At(0), e.Index)
+			case *ast.IndexListExpr:
+				for i, index := range e.Indices {
+					rename(args.At(i), index)
+				}
+			}
+		case *types.Pointer:
+			rename(t.Elem(), expr.(*ast.StarExpr).X)
+		case *types.Array:
+			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+		case *types.Slice:
+			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+		case *types.Map:
+			e := expr.(*ast.MapType)
+			rename(t.Key(), e.Key)
+			rename(t.Elem(), e.Value)
+		case *types.Chan:
+			rename(t.Elem(), expr.(*ast.ChanType).Value)
+		case *types.Struct:
+			for i, field := range expr.(*ast.StructType).Fields.List {
+				rename(t.Field(i).Type(), field.Type)
+			}
+		case *types.Signature:
+			e := expr.(*ast.FuncType)
+			fields(t.Params(), e.Params)
+			fields(t.Results(), e.Results)
+		case *types.Interface:
+			list := expr.(*ast.InterfaceType).Methods.List
+			for i := 0; i < t.NumExplicitMethods(); i++ {
+				rename(t.ExplicitMethod(i).Type(), list[i].Type)
+			}
+			for i := 0; i < t.NumEmbeddeds(); i++ {
+				rename(t.EmbeddedType(i), list[t.NumExplicitMethods()+i].Type)
 			}
 		}
 	}
-	rename = func(expr ast.Expr) {
-		switch e := expr.(type) {
-		case *ast.SelectorExpr:
-			if id, ok := e.X.(*ast.Ident); ok && id.Name == "unsafe" && unsafeAlias != nil {
-				id.Name = unsafeAlias.Name
-			}
-		case *ast.Ident:
-			if name := localNames[e.Name]; name != "" {
-				e.Name = name
-			}
-		case *ast.StarExpr:
-			rename(e.X)
-		case *ast.ParenExpr:
-			rename(e.X)
-		case *ast.ArrayType:
-			rename(e.Elt)
-		case *ast.Ellipsis:
-			rename(e.Elt)
-		case *ast.MapType:
-			rename(e.Key)
-			rename(e.Value)
-		case *ast.ChanType:
-			rename(e.Value)
-		case *ast.StructType:
-			fields(e.Fields)
-		case *ast.InterfaceType:
-			fields(e.Methods)
-		case *ast.FuncType:
-			fields(e.Params)
-			fields(e.Results)
-		case *ast.IndexExpr:
-			rename(e.X)
-			rename(e.Index)
-		case *ast.IndexListExpr:
-			rename(e.X)
-			for _, index := range e.Indices {
-				rename(index)
-			}
-		}
-	}
-	rename(result)
+	rename(types.Default(typ), result)
 	return result
 }

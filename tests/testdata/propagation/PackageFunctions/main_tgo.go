@@ -21,7 +21,6 @@ func next(fail bool) (int, error) {
 
 var direct = func(fail bool) (tgo3 error) {
 	var tgo4 error = tgo3
-
 	defer func() { trace = append(trace, "defer") }()
 	var tgo1 int
 	var tgo2 error
@@ -37,7 +36,6 @@ var direct = func(fail bool) (tgo3 error) {
 
 var wrapped = func(fail bool) (tgo7 error) {
 	var tgo8 error = tgo7
-
 	defer func() { trace = append(trace, "defer") }()
 	var tgo5 int
 	var tgo6 error
@@ -56,7 +54,6 @@ var collection = map[string][]func(bool) error{
 	"run": {
 		func(fail bool) (tgo12 error) {
 			var tgo13 error = tgo12
-
 			defer func() { trace = append(trace, "defer") }()
 			var tgo10 int
 			var tgo11 error
@@ -75,7 +72,6 @@ var collection = map[string][]func(bool) error{
 var nested = func() func(bool) error {
 	return func(fail bool) (tgo16 error) {
 		var tgo17 error = tgo16
-
 		defer func() { trace = append(trace, "defer") }()
 		var tgo14 int
 		var tgo15 error
@@ -92,7 +88,6 @@ var nested = func() func(bool) error {
 
 var initialized = func() (tgo20 error) {
 	var tgo21 error = tgo20
-
 	defer func() { trace = append(trace, "init-defer") }()
 	{
 		var tgo18 int

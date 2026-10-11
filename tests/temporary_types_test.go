@@ -39,8 +39,22 @@ func TestTypedTemporaryRejected(t *testing.T) {
 }
 
 func TestTypedTemporaryReference(t *testing.T) {
-	for _, name := range []string{"ContextualTypes", "VariadicGeneric"} {
+	for _, name := range []string{"ContextualTypes", "VariadicGeneric", "TypeNameIdentity"} {
 		t.Run(name, func(t *testing.T) { checkTypedTemporaryReference(t, name) })
+	}
+}
+
+func TestTypeNameIdentityOutputStable(t *testing.T) {
+	fixture := "testdata/propagation/TypeNameIdentity"
+	want, err := os.ReadFile(filepath.Join(fixture, "main_tgo.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		actual := transpiler.Compile(fixture)["main_tgo.go"]
+		if !bytes.Equal(actual, want) {
+			t.Fatalf("compilation %d differs from the snapshot", i+1)
+		}
 	}
 }
 

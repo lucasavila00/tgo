@@ -41,7 +41,6 @@ func run() (tgo3 error) {
 	var tgo4 error = tgo3
 	{
 		var tgo5 bool = 0 == 0
-
 		for i := 0; ; {
 			if tgo5 {
 				tgo5 = 0 != 0

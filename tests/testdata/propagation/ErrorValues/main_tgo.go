@@ -51,7 +51,6 @@ func wrapped() (tgo5 error) {
 
 func shadow(nil, true, false int) (tgo9 error) {
 	var tgo10 error = tgo9
-
 	fmt.Print(nil, true, false)
 	{
 		var tgo8 error = target(0 != 0)
@@ -61,7 +60,6 @@ func shadow(nil, true, false int) (tgo9 error) {
 			return tgo10
 		}
 	}
-
 	var success error
 	return success
 }

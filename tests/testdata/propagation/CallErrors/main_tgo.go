@@ -42,7 +42,6 @@ func done()                        { trace += "D" }
 func pointerDirect(err *PointerError) (tgo3 int, tgo5 error) {
 	var tgo4 int = tgo3
 	var tgo6 error = tgo5
-
 	defer done()
 	var tgo1 int
 	var tgo2 *PointerError
@@ -58,7 +57,6 @@ func pointerDirect(err *PointerError) (tgo3 int, tgo5 error) {
 func pointerWrapped(err *PointerError) (tgo9 int, tgo11 error) {
 	var tgo10 int = tgo9
 	var tgo12 error = tgo11
-
 	defer done()
 	var tgo7 int
 	var tgo8 *PointerError
@@ -75,7 +73,6 @@ func pointerWrapped(err *PointerError) (tgo9 int, tgo11 error) {
 func ifaceDirect(err error) (tgo16 int, tgo18 error) {
 	var tgo17 int = tgo16
 	var tgo19 error = tgo18
-
 	defer done()
 	var tgo14 int
 	var tgo15 error
@@ -91,7 +88,6 @@ func ifaceDirect(err error) (tgo16 int, tgo18 error) {
 func ifaceWrapped(err error) (tgo22 int, tgo24 error) {
 	var tgo23 int = tgo22
 	var tgo25 error = tgo24
-
 	defer done()
 	var tgo20 int
 	var tgo21 error
@@ -108,7 +104,6 @@ func ifaceWrapped(err error) (tgo22 int, tgo24 error) {
 func numberDirect(err NumberError) (tgo28 int, tgo30 error) {
 	var tgo29 int = tgo28
 	var tgo31 error = tgo30
-
 	defer done()
 	var tgo26 int
 	var tgo27 NumberError
@@ -124,7 +119,6 @@ func numberDirect(err NumberError) (tgo28 int, tgo30 error) {
 func numberWrapped(err NumberError) (tgo34 int, tgo36 error) {
 	var tgo35 int = tgo34
 	var tgo37 error = tgo36
-
 	defer done()
 	var tgo32 int
 	var tgo33 NumberError
@@ -141,7 +135,6 @@ func numberWrapped(err NumberError) (tgo34 int, tgo36 error) {
 func sliceDirect(err SliceError) (tgo40 int, tgo42 error) {
 	var tgo41 int = tgo40
 	var tgo43 error = tgo42
-
 	defer done()
 	var tgo38 int
 	var tgo39 SliceError
@@ -157,7 +150,6 @@ func sliceDirect(err SliceError) (tgo40 int, tgo42 error) {
 func sliceWrapped(err SliceError) (tgo46 int, tgo48 error) {
 	var tgo47 int = tgo46
 	var tgo49 error = tgo48
-
 	defer done()
 	var tgo44 int
 	var tgo45 SliceError
@@ -174,7 +166,6 @@ func sliceWrapped(err SliceError) (tgo46 int, tgo48 error) {
 func mappedDirect(err MapError) (tgo52 int, tgo54 error) {
 	var tgo53 int = tgo52
 	var tgo55 error = tgo54
-
 	defer done()
 	var tgo50 int
 	var tgo51 MapError
@@ -190,7 +181,6 @@ func mappedDirect(err MapError) (tgo52 int, tgo54 error) {
 func mappedWrapped(err MapError) (tgo58 int, tgo60 error) {
 	var tgo59 int = tgo58
 	var tgo61 error = tgo60
-
 	defer done()
 	var tgo56 int
 	var tgo57 MapError
@@ -207,7 +197,6 @@ func mappedWrapped(err MapError) (tgo58 int, tgo60 error) {
 func channelDirect(err ChanError) (tgo64 int, tgo66 error) {
 	var tgo65 int = tgo64
 	var tgo67 error = tgo66
-
 	defer done()
 	var tgo62 int
 	var tgo63 ChanError
@@ -223,7 +212,6 @@ func channelDirect(err ChanError) (tgo64 int, tgo66 error) {
 func channelWrapped(err ChanError) (tgo70 int, tgo72 error) {
 	var tgo71 int = tgo70
 	var tgo73 error = tgo72
-
 	defer done()
 	var tgo68 int
 	var tgo69 ChanError
@@ -240,7 +228,6 @@ func channelWrapped(err ChanError) (tgo70 int, tgo72 error) {
 func functionDirect(err FuncError) (tgo76 int, tgo78 error) {
 	var tgo77 int = tgo76
 	var tgo79 error = tgo78
-
 	defer done()
 	var tgo74 int
 	var tgo75 FuncError
@@ -256,7 +243,6 @@ func functionDirect(err FuncError) (tgo76 int, tgo78 error) {
 func functionWrapped(err FuncError) (tgo82 int, tgo84 error) {
 	var tgo83 int = tgo82
 	var tgo85 error = tgo84
-
 	defer done()
 	var tgo80 int
 	var tgo81 FuncError
@@ -273,7 +259,6 @@ func functionWrapped(err FuncError) (tgo82 int, tgo84 error) {
 func structureDirect(err StructError) (tgo88 int, tgo90 error) {
 	var tgo89 int = tgo88
 	var tgo91 error = tgo90
-
 	defer done()
 	var tgo86 int
 	var tgo87 StructError
@@ -289,7 +274,6 @@ func structureDirect(err StructError) (tgo88 int, tgo90 error) {
 func structureWrapped(err StructError) (tgo94 int, tgo96 error) {
 	var tgo95 int = tgo94
 	var tgo97 error = tgo96
-
 	defer done()
 	var tgo92 int
 	var tgo93 StructError
@@ -306,7 +290,6 @@ func structureWrapped(err StructError) (tgo94 int, tgo96 error) {
 func genericDirect[E error](err E) (tgo100 int, tgo102 error) {
 	var tgo101 int = tgo100
 	var tgo103 error = tgo102
-
 	defer done()
 	var tgo98 int
 	var tgo99 E
@@ -321,7 +304,6 @@ func genericDirect[E error](err E) (tgo100 int, tgo102 error) {
 		tgo103 = tgo99
 		return tgo101, tgo103
 	}
-
 	value := use(tgo98)
 	return value, nil
 }
@@ -329,7 +311,6 @@ func genericDirect[E error](err E) (tgo100 int, tgo102 error) {
 func genericWrapped[E error](err E) (tgo109 int, tgo111 error) {
 	var tgo110 int = tgo109
 	var tgo112 error = tgo111
-
 	defer done()
 	var tgo107 int
 	var tgo108 E
@@ -345,7 +326,6 @@ func genericWrapped[E error](err E) (tgo109 int, tgo111 error) {
 		tgo112 = tgo13.Errorf("%s: %w", "next", tgo112)
 		return tgo110, tgo112
 	}
-
 	value := use(tgo107)
 	return value, nil
 }
@@ -356,7 +336,6 @@ func comparableResult[E interface {
 }](err E) (tgo117 int, tgo119 E) {
 	var tgo118 int = tgo117
 	var tgo120 E = tgo119
-
 	defer done()
 	var tgo115 int
 	var tgo116 E
@@ -371,7 +350,6 @@ func comparableResult[E interface {
 		tgo120 = tgo116
 		return tgo118, tgo120
 	}
-
 	value := use(tgo115)
 	var success E
 	return value, success
@@ -379,7 +357,6 @@ func comparableResult[E interface {
 func shadow(nil int, err SliceError) (tgo125 int, tgo127 error) {
 	var tgo126 int = tgo125
 	var tgo128 error = tgo127
-
 	defer done()
 	var tgo123 int
 	var tgo124 SliceError
@@ -394,7 +371,6 @@ func shadow(nil int, err SliceError) (tgo125 int, tgo127 error) {
 		tgo128 = tgo124
 		return tgo126, tgo128
 	}
-
 	value := use(tgo123)
 	var success error
 	return value + nil, success
@@ -402,7 +378,6 @@ func shadow(nil int, err SliceError) (tgo125 int, tgo127 error) {
 func genericReturn[E error](err E) (tgo133 int, tgo135 E) {
 	var tgo134 int = tgo133
 	var tgo136 E = tgo135
-
 	defer done()
 	var tgo131 int
 	var tgo132 E
@@ -417,7 +392,6 @@ func genericReturn[E error](err E) (tgo133 int, tgo135 E) {
 		tgo136 = tgo132
 		return tgo134, tgo136
 	}
-
 	value := use(tgo131)
 	var success E
 	return value, success
@@ -425,7 +399,6 @@ func genericReturn[E error](err E) (tgo133 int, tgo135 E) {
 func contextassignDirect(err *PointerError) (tgo141 int, tgo143 error) {
 	var tgo142 int = tgo141
 	var tgo144 error = tgo143
-
 	defer done()
 	value := 0
 	{
@@ -444,7 +417,6 @@ func contextassignDirect(err *PointerError) (tgo141 int, tgo143 error) {
 func contextassignWrapped(err *PointerError) (tgo147 int, tgo149 error) {
 	var tgo148 int = tgo147
 	var tgo150 error = tgo149
-
 	defer done()
 	value := 0
 	{
@@ -464,7 +436,6 @@ func contextassignWrapped(err *PointerError) (tgo147 int, tgo149 error) {
 func contextreturnDirect(err *PointerError) (tgo153 int, tgo155 error) {
 	var tgo154 int = tgo153
 	var tgo156 error = tgo155
-
 	defer done()
 	{
 		var tgo151 int
@@ -480,7 +451,6 @@ func contextreturnDirect(err *PointerError) (tgo153 int, tgo155 error) {
 func contextreturnWrapped(err *PointerError) (tgo159 int, tgo161 error) {
 	var tgo160 int = tgo159
 	var tgo162 error = tgo161
-
 	defer done()
 	{
 		var tgo157 int
@@ -497,7 +467,6 @@ func contextreturnWrapped(err *PointerError) (tgo159 int, tgo161 error) {
 func contextloopInitDirect(err *PointerError) (tgo165 int, tgo167 error) {
 	var tgo166 int = tgo165
 	var tgo168 error = tgo167
-
 	defer done()
 	{
 		var tgo163 int
@@ -508,7 +477,6 @@ func contextloopInitDirect(err *PointerError) (tgo165 int, tgo167 error) {
 			return tgo166, tgo168
 		}
 		var tgo169 bool = 0 == 0
-
 		for value := tgo163; ; {
 			if tgo169 {
 				tgo169 = 0 != 0
@@ -528,7 +496,6 @@ func contextloopInitDirect(err *PointerError) (tgo165 int, tgo167 error) {
 func contextloopInitWrapped(err *PointerError) (tgo172 int, tgo174 error) {
 	var tgo173 int = tgo172
 	var tgo175 error = tgo174
-
 	defer done()
 	{
 		var tgo170 int
@@ -540,7 +507,6 @@ func contextloopInitWrapped(err *PointerError) (tgo172 int, tgo174 error) {
 			return tgo173, tgo175
 		}
 		var tgo176 bool = 0 == 0
-
 		for value := tgo170; ; {
 			if tgo176 {
 				tgo176 = 0 != 0
@@ -560,11 +526,9 @@ func contextloopInitWrapped(err *PointerError) (tgo172 int, tgo174 error) {
 func contextloopPostDirect(err *PointerError) (tgo179 int, tgo181 error) {
 	var tgo180 int = tgo179
 	var tgo182 error = tgo181
-
 	defer done()
 	{
 		var tgo183 bool = 0 == 0
-
 		for value := 0; ; {
 			if tgo183 {
 				tgo183 = 0 != 0
@@ -591,11 +555,9 @@ func contextloopPostDirect(err *PointerError) (tgo179 int, tgo181 error) {
 func contextloopPostWrapped(err *PointerError) (tgo186 int, tgo188 error) {
 	var tgo187 int = tgo186
 	var tgo189 error = tgo188
-
 	defer done()
 	{
 		var tgo190 bool = 0 == 0
-
 		for value := 0; ; {
 			if tgo190 {
 				tgo190 = 0 != 0
@@ -623,7 +585,6 @@ func contextloopPostWrapped(err *PointerError) (tgo186 int, tgo188 error) {
 func contextswitchDirect(err *PointerError) (tgo193 int, tgo195 error) {
 	var tgo194 int = tgo193
 	var tgo196 error = tgo195
-
 	defer done()
 	{
 		var tgo191 int
@@ -644,7 +605,6 @@ func contextswitchDirect(err *PointerError) (tgo193 int, tgo195 error) {
 func contextswitchWrapped(err *PointerError) (tgo199 int, tgo201 error) {
 	var tgo200 int = tgo199
 	var tgo202 error = tgo201
-
 	defer done()
 	{
 		var tgo197 int
@@ -666,7 +626,6 @@ func contextswitchWrapped(err *PointerError) (tgo199 int, tgo201 error) {
 func contextcaseExprDirect(err *PointerError) (tgo206 int, tgo208 error) {
 	var tgo207 int = tgo206
 	var tgo209 error = tgo208
-
 	defer done()
 	{
 		var tgo203 int = -1
@@ -693,7 +652,6 @@ func contextcaseExprDirect(err *PointerError) (tgo206 int, tgo208 error) {
 func contextcaseExprWrapped(err *PointerError) (tgo213 int, tgo215 error) {
 	var tgo214 int = tgo213
 	var tgo216 error = tgo215
-
 	defer done()
 	{
 		var tgo210 int = -1
@@ -721,7 +679,6 @@ func contextcaseExprWrapped(err *PointerError) (tgo213 int, tgo215 error) {
 func contextshortCircuitDirect(err *PointerError) (tgo219 int, tgo221 error) {
 	var tgo220 int = tgo219
 	var tgo222 error = tgo221
-
 	defer done()
 	{
 		var tgo223 bool
@@ -746,7 +703,6 @@ func contextshortCircuitDirect(err *PointerError) (tgo219 int, tgo221 error) {
 func contextshortCircuitWrapped(err *PointerError) (tgo226 int, tgo228 error) {
 	var tgo227 int = tgo226
 	var tgo229 error = tgo228
-
 	defer done()
 	{
 		var tgo230 bool
@@ -812,7 +768,6 @@ func constrainedPointerDirect[E interface {
 }](err E) (tgo241 int, tgo243 error) {
 	var tgo242 int = tgo241
 	var tgo244 error = tgo243
-
 	defer done()
 	var tgo239 int
 	var tgo240 E
@@ -830,7 +785,6 @@ func constrainedPointerWrapped[E interface {
 }](err E) (tgo247 int, tgo249 error) {
 	var tgo248 int = tgo247
 	var tgo250 error = tgo249
-
 	defer done()
 	var tgo245 int
 	var tgo246 E
@@ -849,7 +803,6 @@ func constrainedNilableDirect[E interface {
 }](err E) (tgo253 int, tgo255 error) {
 	var tgo254 int = tgo253
 	var tgo256 error = tgo255
-
 	defer done()
 	var tgo251 int
 	var tgo252 E
@@ -867,7 +820,6 @@ func constrainedNilableWrapped[E interface {
 }](err E) (tgo259 int, tgo261 error) {
 	var tgo260 int = tgo259
 	var tgo262 error = tgo261
-
 	defer done()
 	var tgo257 int
 	var tgo258 E
@@ -886,7 +838,6 @@ func constrainedMixedDirect[E interface {
 }](err E) (tgo265 int, tgo267 error) {
 	var tgo266 int = tgo265
 	var tgo268 error = tgo267
-
 	defer done()
 	var tgo263 int
 	var tgo264 E
@@ -901,7 +852,6 @@ func constrainedMixedDirect[E interface {
 		tgo268 = tgo264
 		return tgo266, tgo268
 	}
-
 	value := use(tgo263)
 	return value, nil
 }
@@ -911,7 +861,6 @@ func constrainedMixedWrapped[E interface {
 }](err E) (tgo273 int, tgo275 error) {
 	var tgo274 int = tgo273
 	var tgo276 error = tgo275
-
 	defer done()
 	var tgo271 int
 	var tgo272 E
@@ -927,14 +876,12 @@ func constrainedMixedWrapped[E interface {
 		tgo276 = tgo13.Errorf("%s: %w", "next", tgo276)
 		return tgo274, tgo276
 	}
-
 	value := use(tgo271)
 	return value, nil
 }
 func shadowPointer(nil int, err *PointerError) (tgo281 int, tgo283 error) {
 	var tgo282 int = tgo281
 	var tgo284 error = tgo283
-
 	defer done()
 	var tgo279 int
 	var tgo280 *PointerError
@@ -944,7 +891,6 @@ func shadowPointer(nil int, err *PointerError) (tgo281 int, tgo283 error) {
 		tgo284 = tgo280
 		return tgo282, tgo284
 	}
-
 	value := use(tgo279)
 	var success error
 	return value + nil, success

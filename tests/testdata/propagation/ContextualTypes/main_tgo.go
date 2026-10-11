@@ -62,7 +62,6 @@ func returns(fail bool) (tgo12 uint64, tgo14 int, tgo16 error) {
 	var tgo13 uint64 = tgo12
 	var tgo15 int = tgo14
 	var tgo17 error = tgo16
-
 	n := uint(40)
 	{
 		var tgo18 uint64 = 1 << n
@@ -79,7 +78,6 @@ func returns(fail bool) (tgo12 uint64, tgo14 int, tgo16 error) {
 
 func assign(fail bool) (tgo21 error) {
 	var tgo22 error = tgo21
-
 	n := uint(40)
 	var first uint64
 	var second int
@@ -113,7 +111,6 @@ func useNumber(value Number, next int) { fmt.Printf("%d %d ", value, next) }
 
 func named(fail bool) (tgo29 error) {
 	var tgo30 error = tgo29
-
 	n := uint(40)
 	var value Number = 1 << n
 	{
@@ -132,7 +129,6 @@ func named(fail bool) (tgo29 error) {
 
 func generic[T ~uint64](value T, fail bool) (tgo34 error) {
 	var tgo35 error = tgo34
-
 	consume := func(first T, second int) { fmt.Printf("%d %d ", first, second) }
 	{
 		var tgo36 func(first T, second int) = consume

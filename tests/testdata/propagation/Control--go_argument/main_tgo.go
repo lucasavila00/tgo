@@ -19,7 +19,6 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-
 	done := make(chan struct{})
 	{
 		var tgo5 func(v int) = func(v int) {

@@ -66,7 +66,6 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 
 func arrays[T interface{ ~[2]int | ~[3]int }](a, b T) (tgo14 error) {
 	var tgo15 error = tgo14
-
 	index := func() (int, error) {
 		a = b
 		return step("I")
@@ -97,7 +96,6 @@ type Box[T interface{ ~[2]int | ~[]int }] struct{ Value T }
 func (b *Box[T]) Set() (tgo24 error) {
 	type tgo18 = T
 	var tgo25 error = tgo24
-
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
@@ -108,8 +106,7 @@ func (b *Box[T]) Set() (tgo24 error) {
 		var tgo20 bool = tgo2.TypeFor[tgo18]().Kind() == tgo2.Array
 		var tgo21 tgo18
 		if !tgo20 {
-			tgo21 = tgo19.
-				Value
+			tgo21 = tgo19.Value
 		}
 		var tgo22 int
 		var tgo23 error
@@ -128,8 +125,7 @@ func (b *Box[T]) Set() (tgo24 error) {
 		var tgo28 int = tgo26
 		(*func() *tgo18 {
 			if tgo20 {
-				return &tgo19.
-					Value
+				return &tgo19.Value
 			}
 			return &tgo21
 		}())[tgo22] = tgo28

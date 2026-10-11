@@ -48,7 +48,6 @@ func run() (tgo3 error) {
 			return tgo4
 		}
 		var tgo8 bool = 0 == 0
-
 		for i := tgo6; ; {
 			if tgo8 {
 				tgo8 = 0 != 0

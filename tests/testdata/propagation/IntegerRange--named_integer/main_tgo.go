@@ -21,7 +21,6 @@ func step(name string) (int, error) {
 
 func run() (tgo4 error) {
 	var tgo5 error = tgo4
-
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
@@ -39,7 +38,6 @@ func run() (tgo4 error) {
 		}
 		var tgo10 N = tgo6(&tgo1[tgo2])
 		var tgo11 bool = 0 == 0
-
 		for tgo10 = range 2 {
 			if tgo11 {
 				tgo11 = 0 != 0
