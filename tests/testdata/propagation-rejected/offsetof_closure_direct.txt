@@ -1,0 +1,1 @@
+offsetof_closure_direct.tgo:10:59: !! is not allowed inside unsafe.Offsetof operands

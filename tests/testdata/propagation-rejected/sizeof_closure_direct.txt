@@ -1,0 +1,1 @@
+sizeof_closure_direct.tgo:10:41: !! is not allowed inside unsafe.Sizeof operands

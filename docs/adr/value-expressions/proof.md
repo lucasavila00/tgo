@@ -1,48 +1,34 @@
 # PROOF
 
-Add table-driven integration fixtures under
-`tests/testdata/value-expressions/`. Each directory contains `input.tgo`,
-`input_tgo.go` (the reviewed generated-code snapshot), handwritten `reference.go`,
-and `expect.json` (results, ordered effects, and expected errors).
+Add fixtures under `tests/testdata/value-expressions/`. Each contains TGo input,
+a generated Go snapshot, handwritten Go reference, and expected results.
+These are implementation checks to add.
 
-| Directory | Required cases |
-| --- | --- |
-| `if` | Both branches, nested `else if`, initializer scope |
-| `ordering` | Calls, operators, literals, assignment targets, skipped `&&`/`||` |
-| `branches` | Local bindings, outer names read before `:=` binds, final calls, nested expressions |
-| `initialization` | Package dependencies, declaration order, selected effects |
-| `types` | Named types, interfaces, constants, nil, generics, contextual types |
-| `control` | Return, panic, all branches terminate, loop continue, labels, goto, enclosing break |
-| `errors` | `!` wrapping, `!!` identity, skipped branches, deferred calls |
-| `invalid` | Missing else/value, mixed types, tuple result, constant-only context |
-| `statements` | Unchanged ordinary Go if behavior |
+Cover:
 
-`TestValueExpressions` loops over every directory. It compiles the TGo source,
-formats the result, and compares it with `input_tgo.go`. Compile and run the
-result and the handwritten Go reference in separate test modules. Require the
-same output, side-effect trace, panic, and defer order. For error identity,
-assert equality with the source sentinel inside each program.
+- Both branches, nested `else if`, initializer scope, ordinary `if` statements.
+- Calls, operators, literals, assignment targets, skipped `&&` and `||` operands.
+- Branch locals, outer names before `:=`, final calls, nested expressions.
+- Package dependencies, declaration order, selected branch effects.
+- Named types, interfaces, constants, nil, generics, contextual types.
+- Return, panic, all branches terminating, continue, break, labels, goto.
+- `!` error text, `!!` error identity, skipped propagation, deferred calls.
+- Comments, newlines, nested literals, adjacent statements, generated-name collisions.
 
-Use multiple inputs per fixture to reach every branch and skipped path. Put
-observable effects in headers, earlier operands, branch
-statements, and later operands. A snapshot alone cannot prove evaluation order.
+`TestValueExpressions` compiles each input and compares its snapshot. Compile
+and run generated Go and the reference separately. Compare results, ordered
+effects, panic, and defer order. Assert sentinel identity inside each program.
+Use inputs that reach both branches and skipped paths. Repeat compilation and
+compare bytes.
 
-`TestValueExpressionDiagnostics` checks each invalid source against expected
-file, line, column, and diagnostic text. Add parser cases with comments,
-newlines, nested literals, and adjacent ordinary statements. Check branch-local
-names cannot escape and generated names cannot capture source names.
+`TestValueExpressionDiagnostics` checks file, line, column, and text for missing
+else/value, mixed types, tuple results, constant-only contexts, escaped branch
+locals, unknown result types, and types that generated declarations cannot name.
 
-Compile every valid generated snapshot with the pinned Go version. Run each
-compilation twice and compare bytes for deterministic output. Fixture changes
-require explicit snapshot review; tests must not update snapshots on failure.
-
-Test command:
+Run:
 
 ```sh
 go test ./tests -run '^TestValueExpression' -count=1
 ```
 
-These tests are required for the implementation. This ADR defines the checks
-to add; it does not claim they already exist.
-
-[WHAT](what.md) defines behavior. [HOW](how.md) defines implementation.
+Review snapshots explicitly; tests must not update them on failure.

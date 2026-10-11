@@ -1,0 +1,1 @@
+TGo: main.tgo:8:37: cannot name type example.com/contextualtypes/library.private in a generated typed temporary: the type is private to example.com/contextualtypes/library; expose the type with an accessible name

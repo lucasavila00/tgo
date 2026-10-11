@@ -1,0 +1,7 @@
+//go:build excluded
+
+package main
+
+func invalid() {
+	this is not Go!!
+}

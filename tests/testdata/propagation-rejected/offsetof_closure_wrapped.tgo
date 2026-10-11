@@ -1,0 +1,12 @@
+package example
+
+import u "unsafe"
+
+type S[T any] struct{ X T }
+
+func next[T any]() (T, error) { var value T; return value, nil }
+
+func run[T any]() error {
+	_ = u.Offsetof(S[func() error]{func() error { next[int]()!; return nil }}.X)
+	return nil
+}

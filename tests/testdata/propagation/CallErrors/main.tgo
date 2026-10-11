@@ -1,0 +1,267 @@
+package main
+
+import "fmt"
+
+type PointerError struct{}
+func (*PointerError) Error() string { return "pointer" }
+type NumberError int
+func (NumberError) Error() string { return "number" }
+type SliceError []int
+func (SliceError) Error() string { return "slice" }
+type MapError map[int]int
+func (MapError) Error() string { return "map" }
+type ChanError chan int
+func (ChanError) Error() string { return "chan" }
+type FuncError func()
+func (FuncError) Error() string { return "func" }
+type StructError struct { Values []int }
+func (StructError) Error() string { return "struct" }
+
+var trace string
+func next[E error](err E) (int, E) { trace += "N"; return 7, err }
+func use(value int) int { trace += "U"; return value }
+func done() { trace += "D" }
+
+func pointerDirect(err *PointerError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func pointerWrapped(err *PointerError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func ifaceDirect(err error) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func ifaceWrapped(err error) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func numberDirect(err NumberError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func numberWrapped(err NumberError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func sliceDirect(err SliceError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func sliceWrapped(err SliceError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func mappedDirect(err MapError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func mappedWrapped(err MapError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func channelDirect(err ChanError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func channelWrapped(err ChanError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func functionDirect(err FuncError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func functionWrapped(err FuncError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func structureDirect(err StructError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func structureWrapped(err StructError) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func genericDirect[E error](err E) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+
+func genericWrapped[E error](err E) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+
+func comparableResult[E interface { error; comparable }](err E) (int, E) {
+ defer done()
+ value := use(next(err)!!)
+ var success E
+ return value, success
+}
+func shadow(nil int, err SliceError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ var success error
+ return value + nil, success
+}
+func genericReturn[E error](err E) (int, E) {
+ defer done()
+ value := use(next(err)!!)
+ var success E
+ return value, success
+}
+func contextassignDirect(err *PointerError) (int, error) {
+ defer done()
+ value := 0
+ value = next(err)!!
+ use(value)
+ return 7, nil
+}
+func contextassignWrapped(err *PointerError) (int, error) {
+ defer done()
+ value := 0
+ value = next(err)!
+ use(value)
+ return 7, nil
+}
+func contextreturnDirect(err *PointerError) (int, error) {
+ defer done()
+ return use(next(err)!!), nil
+}
+func contextreturnWrapped(err *PointerError) (int, error) {
+ defer done()
+ return use(next(err)!), nil
+}
+func contextloopInitDirect(err *PointerError) (int, error) {
+ defer done()
+ for value := next(err)!!; value < 8; value++ { use(value) }
+ return 7, nil
+}
+func contextloopInitWrapped(err *PointerError) (int, error) {
+ defer done()
+ for value := next(err)!; value < 8; value++ { use(value) }
+ return 7, nil
+}
+func contextloopPostDirect(err *PointerError) (int, error) {
+ defer done()
+ for value := 0; value < 1; value = next(err)!! { use(value) }
+ return 7, nil
+}
+func contextloopPostWrapped(err *PointerError) (int, error) {
+ defer done()
+ for value := 0; value < 1; value = next(err)! { use(value) }
+ return 7, nil
+}
+func contextswitchDirect(err *PointerError) (int, error) {
+ defer done()
+ switch next(err)!! { case 7: use(7) }
+ return 7, nil
+}
+func contextswitchWrapped(err *PointerError) (int, error) {
+ defer done()
+ switch next(err)! { case 7: use(7) }
+ return 7, nil
+}
+func contextcaseExprDirect(err *PointerError) (int, error) {
+ defer done()
+ switch 7 { case next(err)!!: use(7) }
+ return 7, nil
+}
+func contextcaseExprWrapped(err *PointerError) (int, error) {
+ defer done()
+ switch 7 { case next(err)!: use(7) }
+ return 7, nil
+}
+func contextshortCircuitDirect(err *PointerError) (int, error) {
+ defer done()
+ if false && next(err)!! == 7 { panic("skipped") }; use(7)
+ return 7, nil
+}
+func contextshortCircuitWrapped(err *PointerError) (int, error) {
+ defer done()
+ if false && next(err)! == 7 { panic("skipped") }; use(7)
+ return 7, nil
+}
+func contextliteralDirect(err *PointerError) (int, error) {
+ defer done()
+ run := func() error { use(next(err)!!); return nil }; return 0, run()
+}
+func contextliteralWrapped(err *PointerError) (int, error) {
+ defer done()
+ run := func() error { use(next(err)!); return nil }; return 0, run()
+}
+func constrainedPointerDirect[E interface { error; *PointerError }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+func constrainedPointerWrapped[E interface { error; *PointerError }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+func constrainedNilableDirect[E interface { error; ~[]int | ~map[int]int }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+func constrainedNilableWrapped[E interface { error; ~[]int | ~map[int]int }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+func constrainedMixedDirect[E interface { error; *PointerError | NumberError }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ return value, nil
+}
+func constrainedMixedWrapped[E interface { error; *PointerError | NumberError }](err E) (int, error) {
+ defer done()
+ value := use(next(err)!)
+ return value, nil
+}
+func shadowPointer(nil int, err *PointerError) (int, error) {
+ defer done()
+ value := use(next(err)!!)
+ var success error
+ return value + nil, success
+}
+func main() { fmt.Print("ok") }

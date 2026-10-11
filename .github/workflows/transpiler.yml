@@ -1,6 +1,6 @@
 name: TGo transpiler
 
-on: [push, pull_request]
+on: [pull_request]
 
 permissions:
   contents: read
@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6
         with:
-          go-version-file: transpiler/go.mod
-          cache-dependency-path: transpiler/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Build fixture outputs and check snapshots
+        run: go test ./tests -run ^TestPropagationFixtures$ -count=1
       - name: Test transpiler
-        run: go -C transpiler test ./...
+        run: go test ./...

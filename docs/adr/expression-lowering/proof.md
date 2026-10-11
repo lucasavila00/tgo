@@ -4,7 +4,7 @@ Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
 ## Test files
 
-Under `transpiler/testdata/proof/`:
+Under `tests/testdata/proof/`:
 
 | File | Cases |
 | --- | --- |
@@ -42,8 +42,11 @@ Under `transpiler/testdata/proof/`:
 ## Test command
 
 ```sh
-go -C transpiler test ./... -run '^TestProof' -count=1
+go test ./tests -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
-`TestProofCompile`. These checks cover every expression in the manifest.
+`TestProofCompile`. These checks cover every expression in the manifest. `rejections.json` records
+sites that need an inaccessible type in a generated typed temporary. Those
+sites must report the named diagnostic. They remain in the inventory; other
+sites must compile and retain the handwritten behavior.

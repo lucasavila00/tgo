@@ -1,0 +1,1 @@
+offsetof_plain_wrapped.tgo:10:35: ! is not allowed inside unsafe.Offsetof operands

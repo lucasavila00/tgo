@@ -1,0 +1,1 @@
+sizeof_alias_generic_wrapped.tgo:10:28: ! is not allowed inside unsafe.Sizeof operands

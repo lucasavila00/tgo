@@ -1,0 +1,18 @@
+package main
+
+import (
+	"testing"
+
+	"example.com/program/library"
+)
+
+func testRead() (int, error) {
+	return library.Read()!!, nil
+}
+
+func TestRead(t *testing.T) {
+	v, err := testRead()
+	if v != 3 || err != nil {
+		t.Fatal(v, err)
+	}
+}

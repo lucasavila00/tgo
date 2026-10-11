@@ -1,55 +1,27 @@
 # HOW
 
-Extend the existing frontend: it already marks `!` and `!!` before Go parsing
-and uses marker calls for type checking. Add recursive parsing of `if` headers
-and branches in `internal/frontend`. Keep standard `go/parser` and `go/types`.
-Store the added syntax and original source positions in frontend records.
-Do not copy Go's parser.
+Extend `internal/frontend`. It already handles `!` and `!!` outside Go's parser.
+Keep `go/parser` and `go/types`; do not copy Go's parser.
 
-Replace each candidate with a fresh marker call in a Go-only parsing copy.
-Parse the complete copy and each header/body fragment with `go/parser`. Use
-those AST contexts to distinguish statement `if` from expression `if`. Preserve
-ordinary statements. Let Go parsing distinguish composite literals and function
-literals from branch braces; brace matching alone is insufficient. Map fragment
-positions and diagnostics back to the original source.
+Parse `if` syntax recursively. Replace candidates with fresh marker calls
+in a Go parsing copy. Parse the whole copy and header/body fragments. Use AST
+context to distinguish statements from expressions. Let Go parse literal
+braces. Store original syntax and positions for diagnostics.
 
-This approach reuses Go's maintained grammar and limits our parser to the added
-syntax. A private Go parser copy would provide one grammar and direct positions,
-but requires continuous upstream updates. A token-only rewrite cannot reliably
-classify nested headers and blocks. Use neither alternative.
+This reuses Go's grammar. A parser copy needs upstream maintenance. Token-only
+replacement cannot distinguish nested literals and branch braces reliably.
 
-Use Go-only checking copies to establish branch bindings, operand types, and
-contextual result types. Keep header and branch locals in their original scopes.
-Check nested expressions inside out, apply WHAT's type rule, then check the
-completed output with `go/types`. Checking copies are never executed.
+Check separate Go AST copies to find bindings and contextual types. Check
+nested expressions first, then apply WHAT's branch type rule. Preserve scopes.
 
-In a function, emit ordinary `if` statements at the expression's evaluation
-point. Each completing branch stores its final expression in a fresh result
-variable. Replace the marker with that variable. Use the existing typed-storage
-lowering for private and generic types; do not require their source spelling.
-Earlier operands must execute first. Short-circuit operands must stay skipped.
-Do not introduce a function boundary: returns, defers, and propagation belong
-to the source function. Preserve scopes and jump targets.
+Inside functions, declare a fresh typed result variable. Emit an ordinary `if`
+at the original evaluation point; each completing branch assigns its result.
+Replace the marker with that variable. Preserve earlier operands, skipped
+operands, scopes, and jump targets. Do not create a function boundary: returns,
+defers, and propagation must reach the source function. Apply existing type-name
+checks; report types that cannot be named.
 
-For a package initializer, emit a generated initializer function with the same
-branch logic and call it from the original declaration. Keep all source package
-references visible in its body so Go retains initialization dependencies. Keep
-declaration order and evaluate branch effects only when selected. There is no
-surrounding function return or defer scope to cross.
+For package initializers, call a generated function containing the branches and
+source package references. Preserve Go initialization dependencies and order.
 
-For `label := if active { "on" } else { "off" }`, generated Go uses a fresh name:
-
-```go
-var tgoResult string
-if active {
-    tgoResult = "on"
-} else {
-    tgoResult = "off"
-}
-label := tgoResult
-```
-
-The driver connects frontend, type checking, and lowering. Format with
-`go/format`, then compile with Go.
-
-[WHAT](what.md) defines semantics. [PROOF](proof.md) defines checks.
+Connect through the driver. Format generated Go and type-check it.

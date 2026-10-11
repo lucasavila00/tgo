@@ -1,34 +1,72 @@
 # Transpiler architecture
 
-This package implements [the expression-lowering plan](../adr/expression-lowering/what.md)
-for [#248](https://github.com/lucasavila00/tgo/issues/248).
-It reads ordinary Go. The `!` and `!!` frontend uses this engine for
-[#247](https://github.com/lucasavila00/tgo/issues/247).
+The transpiler reads TGo and produces Go. It uses Go's parser and type checker.
+The [API guide](../transpiler.md) explains how to use it.
 
-`Load(directory, pattern)` loads one package with Go syntax and type information.
-`Source.Sites` lists every expression by file, byte offsets, and syntax kind.
-`Reason` identifies syntax without a current-function evaluation. `ErrorReturn`
-identifies functions with one `error` result; `ReturnReason` records other
-return signatures. Function literals have their own return target.
+## Packages
 
-`InsertAfter(site, callback)` returns formatted files keyed by absolute path.
-It keeps the input AST unchanged. The callback receives references to the
-expression's results, including tuple results. An assignment destination has
-no value result. The callback must supply valid Go statements for that scope.
+| Package | Work |
+| --- | --- |
+| `cmd/tgo` | Read command arguments and write output files. |
+| `pkg/transpiler` | Provide the public compiler and statement-insertion API. |
+| `internal/driver` | Load modules, select files, check types, and run compilation. |
+| `internal/frontend` | Read `!` and `!!` and prepare source for Go parsing. |
+| `internal/lowering` | Replace expressions with Go statements that keep their behavior. |
 
-For an expression in a function with an `err` binding and one `error` result:
+The public API calls the driver and lowering packages. The driver calls the
+frontend and lowering packages. Neither frontend nor lowering imports the other.
 
-```go
-files, err := source.InsertAfter(site, func(results []ast.Expr) []ast.Stmt {
-    return []ast.Stmt{
-        &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}},
-    }
-})
-```
+## Compilation
 
-The insertion runs after evaluation and before the surrounding operation uses
-the result. It is skipped when the expression is skipped. For example, insertion
-after `right()` in `use(left(), right())` produces this order:
+1. Read the module and select files with Go's build rules.
+2. Replace each postfix operator with a marker that Go can parse.
+3. Use temporary helper calls to check the success values without the final
+   error result. These helpers are for type checking, not error handling.
+4. Replace each propagation operation with a call, an error check, and a return.
+5. Format and write the Go files. Remove helpers that are no longer needed.
+
+`name.tgo` produces `name_tgo.go`. Test and platform suffixes stay at the end:
+`name_test.tgo` produces `name_tgo_test.go`. Existing generated files do not
+participate in source type checking. See the API guide for module output rules. Line directives change diagnostic locations. File
+selection and output use physical source paths.
+
+## Error propagation
+
+`call()!!` returns the same error from the function that contains it.
+`call()!` wraps that error once with the source call name. On failure, later
+statements do not run. Deferred calls still run.
+
+The compiler checks that the caller can return the propagated error. For `!!`,
+the call's final result must be assignable to the caller's final result. For `!`,
+the wrapped `error` must be assignable to that result. A mismatch reports the
+source operator position and both types before lowering.
+
+The failure check uses the call's final result before return conversion. A nil
+pointer, slice, map, channel, or function is success. A nil error interface is
+success, but an interface that contains a nil pointer is failure. A result
+whose type cannot be nil is failure, including a zero-valued concrete error.
+A generic result follows these rules for its instantiated type. The compiler
+uses reflection when Go cannot compare that result directly with nil. It checks
+the result's declared type without extracting an interface's dynamic value.
+
+Lowering visits named functions and function expressions, including functions
+inside package variable initializers and collections. Each function has its
+own return target. The surrounding package initializer keeps its order.
+
+The compiler checks that every accepted propagation operation was processed.
+If one was skipped, compilation fails instead of emitting a helper that
+silently discards its error.
+
+Both operators are forbidden anywhere inside operands of `unsafe.Sizeof`,
+`unsafe.Alignof`, and `unsafe.Offsetof`.
+
+## Statement insertion
+
+`Load` returns typed source and a list of expression positions.
+`InsertAfter` adds statements after a selected expression runs, before its
+parent uses the result. Its callback receives the saved result values.
+
+For example, insert `return err` after `right()` in `use(left(), right())`:
 
 ```go
 leftValue := left()
@@ -37,117 +75,53 @@ return err
 use(leftValue, rightValue)
 ```
 
-The final call remains in the output so source bindings and label targets remain
-valid. It cannot execute after the return. Earlier effects remain; later work
-is skipped. Normal deferred calls still run.
+Earlier work stays before the insertion. Skipped expressions stay skipped.
+The last call remains in the syntax tree, but cannot run after the return.
 
-## Packages and dependencies
+A label on a declaration stays on the first added statement. The remaining
+statements stay in the original scope, so later code can still use the source
+variable. Other statements keep blocks when they need a separate scope.
 
-```mermaid
-graph TD
-    CLI[cmd/tgo] --> API[transpiler]
-    API --> Driver[internal/driver]
-    API --> Lowering[internal/lowering]
-    Driver --> Frontend[internal/frontend]
-    Driver --> Lowering
-```
+The compiler copies changed syntax nodes. It keeps the original source tree
+and type information, so callers can request another transformation.
 
-| Package | Responsibility |
-| --- | --- |
-| `transpiler` | Public `Compile`, `Load`, `Source`, `Site`, and `After` API |
-| `cmd/tgo` | CLI arguments and output files |
-| `internal/driver` | Module files, Go build selection, type checking, and compilation order |
-| `internal/frontend` | Postfix operators and marker calls for the Go type checker |
-| `internal/lowering` | Typed expression inventory, statement insertion, and Go AST emission |
+## Types and storage
 
-The frontend and lowering packages have no dependency on each other or the
-driver. The driver converts frontend marker records to lowering operations
-after type checking. The lowering package receives typed Go syntax and the
-error action for each marker call; it does not read TGo tokens or module files.
+Added variables must keep source types, bindings, and evaluation order.
+Private imported types and generic types need care because their names may
+not be available where statements are added.
 
-Integration tests and the proof corpus remain at the module root. They use the
-public API and check the complete compilation path. The expression unit test
-lives with the lowering implementation. No test depends on driver internals.
+Array writes must use the original array. Slice and map operations must use
+the correct saved values. Map key checks must not run before their source
+position. Short-circuit expressions must not execute skipped operands.
 
-# Verification
+## Tests
 
-```sh
-go -C transpiler test ./... -run '^TestProof' -count=1
-```
+Integration fixtures are in `tests/`. They compare TGo output with committed
+Go snapshots and check behavior. Independent Go references check call order,
+results, errors, panics, and deferred calls. Package unit tests check individual
+operations.
 
-The manifest records expression sites, including excluded syntax and incompatible
-return signatures. `TestProofCompile` compiles neutral and return variants.
-`TestProofNeutral` runs marker variants against handwritten effect and value
-traces and insertion positions across the corpus. `TestProofReturn` checks
-first and second visits, early exits, deferred calls, closure return boundaries,
-and the identity of the returned error.
+The expression proof tests insert statements at each recorded expression and
+compare the results with handwritten expectations. See the
+[test guide](../../tests/README.md) and
+[proof plan](../adr/expression-lowering/proof.md).
 
-Focused execution tests also cover assignments, short circuits, closures,
-loops, switches, ranges, selects, defers, jumps, tuples, Boolean conversions,
-array storage, and pointer receivers. Hosted CI runs the full test suite.
+## Typed temporaries
 
-# Propagation frontend
+Every generated temporary that saves an expression uses an explicit `var`
+type from the checked source. Tuple results use separate typed declarations
+and one assignment, so the call runs once. Contextual shifts keep the type
+supplied by their call, assignment, return, or field.
 
-The frontend reads `.tgo` files in a Go module. Use this command to emit a Go
-module into another directory:
+The compiler rejects a required temporary when Go cannot name its type.
+This includes private imported types and type names hidden by source bindings.
+The error identifies the source position and type. Expose an accessible type
+at that boundary. There is no inferred temporary fallback.
 
-```sh
-go -C transpiler run ./cmd/tgo -o /tmp/generated /path/to/source
-go -C /tmp/generated build ./...
-```
+Return temporaries check type names at function entry. Parameter and result
+names are visible there.
 
-`call()!!` returns the same non-nil error from the current function.
-`call()!` adds the source call name with `%w` once. Both operators remove the
-call's final error result from its success values. Earlier effects remain;
-later work stops on failure. Other function results are zero on this return.
-Normal deferred calls run.
-
-The scanner marks suffixes. The Go parser supplies the syntax tree. The Go
-type checker resolves each call. Generated generic functions let the checker
-see each call without its error result. The existing lowering engine then
-saves the call results, checks the error, and emits the return at that point.
-It lowers all marked calls in one pass over the typed source AST.
-
-Generated result variables supply typed zero values. This keeps private and
-generic result types and avoids type names that local bindings can hide.
-Source named results keep their bindings and values on success.
-
-For generic indexed variables, keep array storage and save slice or map headers.
-If the type set permits both, a generated type test selects the storage form.
-Type aliases at the start of the function keep type parameters available when
-local variables hide their source names.
-
-A literal with an omitted type keeps the type of its original container. This
-lets Go infer private element types. Map key operands are saved without moving
-the map's key checks before later source work.
-
-The Boolean lowerer uses a constant-false expression to infer the result type
-without executing the source expression. A generic function can remain in that
-expression for type checking. Its call cannot run. Other unused generated
-functions are removed.
-
-The module loader uses Go's build selection, including test packages. Files
-outside that selection keep their `.tgo` source. Relative module replacements
-keep their original dependency paths in the emitted module.
-
-Focused propagation checks:
-
-```sh
-go -C transpiler test ./... -run '^TestPropagation' -count=1
-```
-
-Literal tests cover nested omitted types, map values, pointer keys, and array
-keys. A key with an unhashable interface field fails when the map is built,
-after its value expression runs. The engine infers the key type from an empty
-map and assigns its fields or elements to a fresh value.
-
-For an array element read, the engine saves the location's operands and runs
-the index expression before the element access can panic. An explicit address
-operation completes its address checks before insertion after that operation.
-
-A type parameter can accept both arrays and slices. For arrays, the generated
-code uses the original storage. For slices, it saves the slice value, which
-contains a data pointer, length, and capacity. It selects this behavior from
-the instantiated type, without reading array elements. A fresh type alias keeps
-the parameter available if a source local has the same name. RHS results are
-saved before stores, including every result of a tuple call.
+The Boolean lowerer uses a typed local and assigns each operand only when
+the source evaluates it. Comparisons keep their untyped Boolean behavior
+when the surrounding operation supplies a named Boolean type.

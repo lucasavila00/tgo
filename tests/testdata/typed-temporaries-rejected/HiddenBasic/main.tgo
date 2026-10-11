@@ -1,0 +1,10 @@
+package main
+
+func get() (int, error) { return 1, nil }
+
+func run(int string) error {
+	get()!!
+	return nil
+}
+
+func main() {}

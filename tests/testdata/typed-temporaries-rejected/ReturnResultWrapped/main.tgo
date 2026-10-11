@@ -1,0 +1,12 @@
+package main
+
+type Failure interface{ Error() string }
+
+func next() (int, Failure) { return 7, nil }
+
+func run() (error error) {
+	_ = next()!
+	return nil
+}
+
+func main() {}

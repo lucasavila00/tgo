@@ -1,0 +1,10 @@
+//line virtual.tgo:1
+package main
+
+import "fmt"
+
+func wrapped() error {
+	fail()!
+	fmt.Println("continued wrapped")
+	return nil
+}

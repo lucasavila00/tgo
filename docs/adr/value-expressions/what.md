@@ -1,7 +1,6 @@
 # WHAT
 
-Allow `if` to produce one value in expression positions. The ordinary statement
-form keeps Go behavior. A branch's final expression supplies its value.
+An `if` expression produces one value:
 
 ```text
 label := if account.Active {
@@ -11,33 +10,24 @@ label := if account.Active {
 }
 ```
 
-Use Go headers, including initializer statements. Require `else`. Evaluate
-only the selected branch. Every path that completes the expression must supply
-one value. A path that returns, panics, or continues an enclosing loop does not
-need a value.
+Require `else`. Use Go headers, including initializers. Execute only the selected
+branch. Its final expression supplies the value. Preceding statements are
+allowed. Ordinary `if` statements retain Go behavior.
 
-A branch can contain ordinary statements before its final expression. `return`,
-`defer`, `!`, and `!!` operate in the enclosing function. Labels, `break`, and
-`continue` keep their targets.
+`return`, `defer`, `!`, and `!!` act in the enclosing function. Labels, `break`,
+and `continue` retain their targets. Paths that cannot complete, such as return,
+panic, or loop continue, need no value and contribute no type.
 
-A surrounding assignment, return, call argument, or conversion can supply the
-result type. Check each branch against that type with Go assignment rules.
-Without such a type, all typed branch results must have the same type; untyped
-constants must fit that type. If all results are untyped constants, apply Go's
-constant-kind rules and default type. Bare `nil` cannot determine a type.
-Require an explicit conversion when no single type can be determined. Do not
-infer a new interface or convert between unrelated named types. Branches that
-cannot complete do not contribute a result type.
+An assignment, return, call argument, or conversion can supply the type. Each
+branch must satisfy Go assignment rules. Otherwise, typed results must share
+one type, and untyped constants must fit it. If all results are untyped
+constants, use Go constant-kind rules and default types. Bare `nil` cannot
+supply a type. Do not infer interfaces or convert unrelated named types.
+Require an explicit conversion if the type remains unknown. If every branch
+terminates, require a contextual type or explicit conversion.
 
-The expression produces one result. An ordinary block is not an expression.
-An `if` expression is not a Go constant, even when its branches contain
-constants. Reject it where Go requires a constant, including `const` declarations
-and array lengths. If no branch can complete, use the surrounding expected type;
-without one, require an explicit conversion.
+Reject multiple results and constant-only contexts, including `const` and array
+lengths.
 
-The design follows [Kotlin conditional expressions](https://kotlinlang.org/docs/control-flow.html),
-where `if` and `when` produce values. This ADR covers `if`; the second phase
-covers the switch-like construct. Only these conditional constructs produce
-branch values. Do not add general block expressions.
-
-[HOW](how.md) defines implementation. [PROOF](proof.md) defines checks.
+Follow [Kotlin](https://kotlinlang.org/docs/control-flow.html): conditional expressions produce values. This decision covers
+`if`; switch has a separate issue. Ordinary blocks are not expressions.
