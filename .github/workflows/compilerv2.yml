@@ -1,11 +1,6 @@
 name: Compiler v2
 
-on:
-  push:
-    branches: [main]
-    paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']
-  pull_request:
-    paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']
+on: [push, pull_request]
 
 permissions:
   contents: read
