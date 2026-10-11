@@ -53,18 +53,17 @@ func named() (value Value, err error) {
 	return
 }
 
-func generic[T any](value T) (tgo15 T, tgo18 error) {
-	type tgo17 = T
-	var tgo16 tgo17 = tgo15
+func generic[T any](value T) (tgo15 T, tgo17 error) {
+	var tgo16 T = tgo15
+	var tgo18 error = tgo17
 	var tgo19 error = tgo18
-	var tgo20 error = tgo19
 	{
 		var tgo13 Value
 		var tgo14 error
 		tgo13, tgo14 = get()
-		tgo19 = tgo14
-		if tgo19 != tgo20 {
-			return tgo16, tgo19
+		tgo18 = tgo14
+		if tgo18 != tgo19 {
+			return tgo16, tgo18
 		}
 		_ = tgo13
 	}
@@ -72,19 +71,19 @@ func generic[T any](value T) (tgo15 T, tgo18 error) {
 }
 
 func closure() error {
-	call := func() (tgo23 Value, tgo25 error) {
-		var tgo24 Value = tgo23
+	call := func() (tgo22 Value, tgo24 error) {
+		var tgo23 Value = tgo22
+		var tgo25 error = tgo24
 		var tgo26 error = tgo25
-		var tgo27 error = tgo26
 		{
-			var tgo21 Value
-			var tgo22 error
-			tgo21, tgo22 = get()
-			tgo26 = tgo22
-			if tgo26 != tgo27 {
-				return tgo24, tgo26
+			var tgo20 Value
+			var tgo21 error
+			tgo20, tgo21 = get()
+			tgo25 = tgo21
+			if tgo25 != tgo26 {
+				return tgo23, tgo25
 			}
-			return tgo21, nil
+			return tgo20, nil
 		}
 	}
 	v, e := call()

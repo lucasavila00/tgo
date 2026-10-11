@@ -58,6 +58,9 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		original = origin
 	}
 	count := r.resultCount(original)
+	if r.temporaryTypes[expr] != nil {
+		count = 1
+	}
 	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil {
 		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
 			if _, pointer := r.source.Package.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
@@ -91,6 +94,10 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 		statements = append(statements, variable(ref.(*ast.Ident), r.temporaryType(resultType, original), value))
 		r.temporaryTypes[ref] = types.Default(resultType)
+		if r.origins == nil {
+			r.origins = make(map[ast.Expr]ast.Expr)
+		}
+		r.origins[ref] = original
 	}
 	if count != 1 {
 		statements = append(statements, &ast.AssignStmt{Lhs: refs, Tok: token.ASSIGN, Rhs: []ast.Expr{expr}})

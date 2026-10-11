@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
-	"strings"
 )
 
 func variable(name *ast.Ident, typ ast.Expr, value ast.Expr) ast.Stmt {
@@ -44,7 +43,11 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 			}
 			checkName(types.Universe.Lookup(types.Default(t).String()).(*types.TypeName))
 		case *types.TypeParam:
-			localNames[t.Obj().Name()] = r.parameterAlias(t).Name
+			scope := r.source.Package.Types.Scope().Innermost(original.Pos())
+			_, resolved := scope.LookupParent(t.Obj().Name(), original.Pos())
+			if resolved != t.Obj() {
+				localNames[t.Obj().Name()] = r.parameterAlias(t).Name
+			}
 		case *types.Named:
 			checkName(t.Obj())
 			for i := 0; i < t.TypeArgs().Len(); i++ {
@@ -147,10 +150,10 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 		}
 		return alias.Name
 	})
+	var unsafeAlias *ast.Ident
 	if unsafePointer {
-		alias := r.name()
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
-		text = strings.ReplaceAll(text, "unsafe.Pointer", alias.Name+".Pointer")
+		unsafeAlias = r.name()
+		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
 	}
 	result, err := parser.ParseExpr(text)
 	if err != nil {
@@ -166,6 +169,10 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 	}
 	rename = func(expr ast.Expr) {
 		switch e := expr.(type) {
+		case *ast.SelectorExpr:
+			if id, ok := e.X.(*ast.Ident); ok && id.Name == "unsafe" && unsafeAlias != nil {
+				id.Name = unsafeAlias.Name
+			}
 		case *ast.Ident:
 			if name := localNames[e.Name]; name != "" {
 				e.Name = name

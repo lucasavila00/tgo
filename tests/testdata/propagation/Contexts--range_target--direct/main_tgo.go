@@ -38,18 +38,25 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() (tgo4 error) {
-	tgo5 := tgo4
-	tgo6 := tgo5
+	var tgo5 error = tgo4
+	var tgo6 error = tgo5
+
 	a := [2]int{}
-	for tgo1 := range []int{1, 2} {
-		tgo2, tgo3 := step("I")
-		tgo5 = tgo3
-		if tgo5 != tgo6 {
-			return tgo5
-		}
-		a[tgo2] = tgo1
-		{
-			fmt.Print("b")
+	{
+		var tgo1 int
+
+		for tgo1 = range []int{1, 2} {
+			var tgo2 int
+			var tgo3 error
+			tgo2, tgo3 = step("I")
+			tgo5 = tgo3
+			if tgo5 != tgo6 {
+				return tgo5
+			}
+			a[tgo2] = tgo1
+			{
+				fmt.Print("b")
+			}
 		}
 	}
 	return nil

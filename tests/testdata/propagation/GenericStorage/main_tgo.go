@@ -21,8 +21,8 @@ func step(name string) (int, error) {
 
 func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 	type tgo1 = T
-	tgo8 := tgo7
-	tgo9 := tgo8
+	var tgo8 error = tgo7
+	var tgo9 error = tgo8
 
 	index := func() (int, error) {
 		a = b
@@ -32,22 +32,26 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 		T := 3
 		_ = T
 		{
-			tgo3 := tgo2.TypeFor[tgo1]().Kind() == tgo2.Array
+			var tgo3 bool = tgo2.TypeFor[tgo1]().Kind() == tgo2.Array
 			var tgo4 tgo1
 			if !tgo3 {
 				tgo4 = a
 			}
-			tgo5, tgo6 := index()
+			var tgo5 int
+			var tgo6 error
+			tgo5, tgo6 = index()
 			tgo8 = tgo6
 			if tgo8 != tgo9 {
 				return tgo8
 			}
-			tgo10, tgo11 := step("V")
+			var tgo10 int
+			var tgo11 error
+			tgo10, tgo11 = step("V")
 			tgo8 = tgo11
 			if tgo8 != tgo9 {
 				return tgo8
 			}
-			tgo12 := tgo10
+			var tgo12 int = tgo10
 			(*func() *tgo1 {
 				if tgo3 {
 					return &a
@@ -62,19 +66,24 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 }
 
 func arrays[T interface{ ~[2]int | ~[3]int }](a, b T) (tgo15 error) {
-	tgo16 := tgo15
-	tgo17 := tgo16
+	var tgo16 error = tgo15
+	var tgo17 error = tgo16
+
 	index := func() (int, error) {
 		a = b
 		return step("I")
 	}
 	{
-		tgo13, tgo14 := index()
+		var tgo13 int
+		var tgo14 error
+		tgo13, tgo14 = index()
 		tgo16 = tgo14
 		if tgo16 != tgo17 {
 			return tgo16
 		}
-		tgo18, tgo19 := step("V")
+		var tgo18 int
+		var tgo19 error
+		tgo18, tgo19 = step("V")
 		tgo16 = tgo19
 		if tgo16 != tgo17 {
 			return tgo16
@@ -89,34 +98,41 @@ type Box[T interface{ ~[2]int | ~[]int }] struct{ Value T }
 
 func (b *Box[T]) Set() (tgo26 error) {
 	type tgo20 = T
-	tgo27 := tgo26
-	tgo28 := tgo27
+	var tgo27 error = tgo26
+	var tgo28 error = tgo27
+
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
 		}
 	}()
 	{
-		tgo21 := b
-		tgo22 := tgo2.TypeFor[tgo20]().Kind() == tgo2.Array
+		var tgo21 *Box[T] = b
+		var tgo22 bool = tgo2.TypeFor[tgo20]().Kind() == tgo2.Array
 		var tgo23 tgo20
 		if !tgo22 {
-			tgo23 = tgo21.Value
+			tgo23 = tgo21.
+				Value
 		}
-		tgo24, tgo25 := step("I")
+		var tgo24 int
+		var tgo25 error
+		tgo24, tgo25 = step("I")
 		tgo27 = tgo25
 		if tgo27 != tgo28 {
 			return tgo27
 		}
-		tgo29, tgo30 := step("V")
+		var tgo29 int
+		var tgo30 error
+		tgo29, tgo30 = step("V")
 		tgo27 = tgo30
 		if tgo27 != tgo28 {
 			return tgo27
 		}
-		tgo31 := tgo29
+		var tgo31 int = tgo29
 		(*func() *tgo20 {
 			if tgo22 {
-				return &tgo21.Value
+				return &tgo21.
+					Value
 			}
 			return &tgo23
 		}())[tgo24] = tgo31

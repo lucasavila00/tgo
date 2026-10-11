@@ -38,18 +38,22 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
 	{
-		tgo1, tgo2 := step("T")
+		var tgo1 int
+		var tgo2 error
+		tgo1, tgo2 = step("T")
 		tgo4 = tgo2
 		if tgo4 != tgo5 {
 			return tgo4
 		}
-		tgo6 := tgo1
-		tgo7 := -1
+		var tgo6 int = tgo1
+		var tgo7 int = -1
 		if tgo7 == -1 {
-			tgo8, tgo9 := step("C")
+			var tgo8 int
+			var tgo9 error
+			tgo8, tgo9 = step("C")
 			tgo4 = tgo9
 			if tgo4 != tgo5 {
 				return tgo4

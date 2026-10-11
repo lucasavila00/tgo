@@ -28,13 +28,13 @@ func use(value uint64, other int) {
 	fmt.Printf("%d %d ", value, other)
 }
 
+func count() uint { trace += "C"; return 40 }
+
 func calls(fail bool) (tgo3 error) {
 	var tgo4 error = tgo3
 	var tgo5 error = tgo4
-
-	n := uint(40)
 	{
-		var tgo6 uint64 = 1 << n
+		var tgo6 uint64 = 1 << count()
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = next(fail)
@@ -45,7 +45,7 @@ func calls(fail bool) (tgo3 error) {
 		use(tgo6, tgo1)
 	}
 	{
-		var tgo10 uint64 = 1 << n
+		var tgo10 uint64 = 1 << count()
 		var tgo7 int
 		var tgo8 error
 		tgo7, tgo8 = next(fail)
@@ -135,14 +135,12 @@ func named(fail bool) (tgo32 error) {
 }
 
 func generic[T ~uint64](value T, fail bool) (tgo38 error) {
-	type tgo42 = T
 	var tgo39 error = tgo38
 	var tgo40 error = tgo39
 
 	consume := func(first T, second int) { fmt.Printf("%d %d ", first, second) }
 	{
-		var tgo41 func(first tgo42, second int) = consume
-		var tgo43 tgo42 = value
+		var tgo41 func(first T, second int) = consume
 		var tgo36 int
 		var tgo37 error
 		tgo36, tgo37 = next(fail)
@@ -150,7 +148,19 @@ func generic[T ~uint64](value T, fail bool) (tgo38 error) {
 		if tgo39 != tgo40 {
 			return tgo39
 		}
-		tgo41(tgo43, tgo36)
+		tgo41(1<<uint(40), tgo36)
+	}
+	{
+		var tgo44 func(first T, second int) = consume
+		var tgo45 T = value
+		var tgo42 int
+		var tgo43 error
+		tgo42, tgo43 = next(fail)
+		tgo39 = tgo43
+		if tgo39 != tgo40 {
+			return tgo39
+		}
+		tgo44(tgo45, tgo42)
 	}
 	return nil
 }

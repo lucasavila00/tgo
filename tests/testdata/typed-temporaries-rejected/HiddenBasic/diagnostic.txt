@@ -1,0 +1,1 @@
+TGo: main.tgo:6:7: cannot name type int in a generated typed temporary: the source hides the type name int; expose the type with an accessible name

@@ -20,8 +20,9 @@ func step(name string) (int, error) {
 }
 
 func run() (tgo4 error) {
-	tgo5 := tgo4
-	tgo6 := tgo5
+	var tgo5 error = tgo4
+	var tgo6 error = tgo5
+
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
@@ -29,14 +30,17 @@ func run() (tgo4 error) {
 	}()
 	a := []N{9, 9}
 	{
-		tgo1 := a
-		tgo2, tgo3 := step("I")
+		var tgo1 []N = a
+		var tgo2 int
+		var tgo3 error
+		tgo2, tgo3 = step("I")
 		tgo5 = tgo3
 		if tgo5 != tgo6 {
 			return tgo5
 		}
-		tgo11 := tgo7(&tgo1[tgo2])
-		tgo12 := 0 == 0
+		var tgo11 N = tgo7(&tgo1[tgo2])
+		var tgo12 bool = 0 == 0
+
 		for tgo11 = range 2 {
 			if tgo12 {
 				tgo12 = 0 != 0

@@ -38,9 +38,12 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() (tgo4 error) {
-	tgo5 := tgo4
-	tgo6 := tgo5
-	tgo1, tgo2, tgo3 := pair()
+	var tgo5 error = tgo4
+	var tgo6 error = tgo5
+	var tgo1 int
+	var tgo2 string
+	var tgo3 error
+	tgo1, tgo2, tgo3 = pair()
 	tgo5 = tgo3
 	if tgo5 != tgo6 {
 		return tgo5
