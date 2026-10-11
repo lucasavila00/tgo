@@ -31,7 +31,9 @@ func saveOutputs(source *moduleFiles) []savedOutput {
 		must(err)
 		info, err := os.Stat(output.path)
 		must(err)
-		output.content, output.mode, output.exists = content, info.Mode().Perm(), true
+		output.content = content
+		output.mode = info.Mode().Perm()
+		output.exists = true
 		outputs = append(outputs, output)
 	}
 	return outputs
