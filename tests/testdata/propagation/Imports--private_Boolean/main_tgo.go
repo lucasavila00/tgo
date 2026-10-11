@@ -2,14 +2,16 @@ package main
 
 import (
 	"errors"
-	"example.com/program/foreign"
 	"fmt"
+
+	"example.com/program/foreign"
 )
 
 func run() (tgo3 error) {
 	tgo4 := tgo3
 	tgo5 := tgo4
-	tgo6 := 0 != 0 && (true && tgoPropagation1(foreign.Boolean()))
+	tgo6 := 0 != 0 &&
+		(true && tgoPropagation1(foreign.Boolean()))
 	tgo6 = true
 	if tgo6 {
 		tgo1, tgo2 := foreign.Boolean()
@@ -23,6 +25,7 @@ func run() (tgo3 error) {
 	fmt.Printf("%T", v)
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		foreign.Reset(failure)

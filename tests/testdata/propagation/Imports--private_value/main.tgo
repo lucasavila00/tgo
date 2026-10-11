@@ -1,4 +1,31 @@
 package main
-import("fmt";"errors";"example.com/program/foreign")
-func run()error{v:=foreign.Number("A")!!;fmt.Printf("%T",v);return nil}
-func main(){for _,failure:=range []int{0,1,2}{foreign.Reset(failure);err:=run();if err==nil{fmt.Print("S|")}else if errors.Is(err,foreign.Failure){if err!=foreign.Failure{fmt.Print(err.Error())};fmt.Print("E|")}else{panic(err)}}}
+
+import (
+	"errors"
+	"fmt"
+
+	"example.com/program/foreign"
+)
+
+func run() error {
+	v := foreign.Number("A")!!
+	fmt.Printf("%T", v)
+	return nil
+}
+
+func main() {
+	for _, failure := range []int{0, 1, 2} {
+		foreign.Reset(failure)
+		err := run()
+		if err == nil {
+			fmt.Print("S|")
+		} else if errors.Is(err, foreign.Failure) {
+			if err != foreign.Failure {
+				fmt.Print(err.Error())
+			}
+			fmt.Print("E|")
+		} else {
+			panic(err)
+		}
+	}
+}

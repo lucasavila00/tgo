@@ -9,7 +9,9 @@ import (
 
 type Failure struct{}
 
-func (*Failure) Error() string { return "failure" }
+func (*Failure) Error() string {
+	return "failure"
+}
 
 var sentinel = &Failure{}
 var any = 7
@@ -21,6 +23,7 @@ func target(typedNil bool) error {
 	}
 	return sentinel
 }
+
 func direct() (tgo2 error) {
 	tgo3 := tgo2
 	tgo4 := tgo3
@@ -33,6 +36,7 @@ func direct() (tgo2 error) {
 	}
 	panic("not reached")
 }
+
 func wrapped() (tgo6 error) {
 	tgo7 := tgo6
 	tgo8 := tgo7
@@ -46,6 +50,7 @@ func wrapped() (tgo6 error) {
 	}
 	panic("not reached")
 }
+
 func shadow(nil, true, false int) (tgo11 error) {
 	tgo12 := tgo11
 	tgo13 := tgo12
@@ -60,6 +65,7 @@ func shadow(nil, true, false int) (tgo11 error) {
 	var success error
 	return success
 }
+
 func main() {
 	var p *Failure
 	e := direct()

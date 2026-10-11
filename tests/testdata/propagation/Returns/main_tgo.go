@@ -16,6 +16,7 @@ func get() (Value, error) {
 	}
 	return 8, nil
 }
+
 func unnamed(Value string) (tgo3 Value, tgo5 error) {
 	tgo4 := tgo3
 	tgo6 := tgo5
@@ -29,6 +30,7 @@ func unnamed(Value string) (tgo3 Value, tgo5 error) {
 		return tgo1, nil
 	}
 }
+
 func named() (value Value, err error) {
 	tgo10 := value
 	tgo11 := err
@@ -45,6 +47,7 @@ func named() (value Value, err error) {
 	}
 	return
 }
+
 func generic[T any](value T) (tgo15 T, tgo17 error) {
 	tgo16 := tgo15
 	tgo18 := tgo17
@@ -59,6 +62,7 @@ func generic[T any](value T) (tgo15 T, tgo17 error) {
 	}
 	return value, nil
 }
+
 func closure() error {
 	call := func() (tgo22 Value, tgo24 error) {
 		tgo23 := tgo22
@@ -77,6 +81,7 @@ func closure() error {
 	fmt.Print(v, e == sentinel)
 	return nil
 }
+
 func main() {
 	for _, failure := range []bool{false, true} {
 		fail = failure

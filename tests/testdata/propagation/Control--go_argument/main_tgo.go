@@ -16,12 +16,16 @@ func step(name string) (int, error) {
 	}
 	return 1, nil
 }
+
 func run() (tgo3 error) {
 	tgo4 := tgo3
 	tgo5 := tgo4
 	done := make(chan struct{})
 	{
-		tgo6 := func(v int) { fmt.Print("g"); close(done) }
+		tgo6 := func(v int) {
+			fmt.Print("g")
+			close(done)
+		}
 		tgo1, tgo2 := step("G")
 		tgo4 = tgo2
 		if tgo4 != tgo5 {
@@ -32,6 +36,7 @@ func run() (tgo3 error) {
 	<-done
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		visit = 0

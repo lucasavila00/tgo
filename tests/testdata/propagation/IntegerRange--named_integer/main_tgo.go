@@ -18,6 +18,7 @@ func step(name string) (int, error) {
 	}
 	return 1, nil
 }
+
 func run() (tgo4 error) {
 	tgo5 := tgo4
 	tgo6 := tgo5
@@ -55,6 +56,7 @@ func run() (tgo4 error) {
 	}
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		visit = 0

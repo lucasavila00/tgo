@@ -18,10 +18,27 @@ func step(name string) (int, error) {
 	}
 	return 1, nil
 }
-func predicate(name string) (bool, error) { _, err := step(name); return true, err }
-func pair() (int, string, error)          { v, err := step("P"); return v, "x", err }
-func only() error                         { _, err := step("O"); return err }
-func identity[T any](v T) (T, error)      { _, err := step("F"); return v, err }
+
+func predicate(name string) (bool, error) {
+	_, err := step(name)
+	return true, err
+}
+
+func pair() (int, string, error) {
+	v, err := step("P")
+	return v, "x", err
+}
+
+func only() error {
+	_, err := step("O")
+	return err
+}
+
+func identity[T any](v T) (T, error) {
+	_, err := step("F")
+	return v, err
+}
+
 func run() (tgo3 error) {
 	tgo4 := tgo3
 	tgo5 := tgo4
@@ -50,6 +67,7 @@ func run() (tgo3 error) {
 	}
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		visit = 0

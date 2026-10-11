@@ -18,11 +18,16 @@ func step(name string) (int, error) {
 	}
 	return 1, nil
 }
+
 func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 	type tgo1 = T
 	tgo8 := tgo7
 	tgo9 := tgo8
-	index := func() (int, error) { a = b; return step("I") }
+
+	index := func() (int, error) {
+		a = b
+		return step("I")
+	}
 	{
 		T := 3
 		_ = T
@@ -53,11 +58,16 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) (tgo7 error) {
 	}
 	fmt.Print(a)
 	return nil
+
 }
+
 func arrays[T interface{ ~[2]int | ~[3]int }](a, b T) (tgo15 error) {
 	tgo16 := tgo15
 	tgo17 := tgo16
-	index := func() (int, error) { a = b; return step("I") }
+	index := func() (int, error) {
+		a = b
+		return step("I")
+	}
 	{
 		tgo13, tgo14 := index()
 		tgo16 = tgo14
@@ -114,6 +124,7 @@ func (b *Box[T]) Set() (tgo26 error) {
 	fmt.Print(b.Value)
 	return nil
 }
+
 func show(err error) {
 	if err == nil {
 		fmt.Print("S|")
@@ -123,8 +134,10 @@ func show(err error) {
 		panic(err)
 	}
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
+
 		visit = 0
 		failAt = failure
 		show(set([2]int{}, [2]int{7, 8}))
@@ -140,5 +153,6 @@ func main() {
 		failAt = failure
 		var b *Box[[2]int]
 		show(b.Set())
+
 	}
 }

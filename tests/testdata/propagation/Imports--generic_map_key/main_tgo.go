@@ -5,8 +5,9 @@ import tgo11 "iter"
 import tgo9 "maps"
 
 import (
-	"example.com/program/foreign"
 	"fmt"
+
+	"example.com/program/foreign"
 )
 
 func run[K comparable](key K) (tgo3 error) {
@@ -29,6 +30,7 @@ func run[K comparable](key K) (tgo3 error) {
 	fmt.Print(len(v))
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		foreign.Reset(failure)

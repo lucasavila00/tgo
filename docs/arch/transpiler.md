@@ -66,8 +66,9 @@ after type checking. The lowering package receives typed Go syntax and the
 error action for each marker call; it does not read TGo tokens or module files.
 
 Integration tests and the proof corpus are in `tests/`. They use the
-public API and check the complete compilation path. The expression unit test
-lives with the lowering implementation. No test depends on driver internals.
+public API and check the complete compilation path. Unit tests for expressions
+and output names stay with their implementation.
+Integration tests do not depend on driver internals.
 Propagation cases use fixture directories
 and compare generated output with committed snapshots before execution. See the
 [integration test guide](../../tests/README.md).

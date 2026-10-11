@@ -1,11 +1,57 @@
 package main
-import("fmt";"errors")
-var sentinel=errors.New("failure")
+
+import (
+	"errors"
+	"fmt"
+)
+
+var sentinel = errors.New("failure")
 var fail bool
+
 type Value int
-func get()(Value,error){if fail{return 7,sentinel};return 8,nil}
-func unnamed(Value string)(Value,error){return get()!!,nil}
-func named()(value Value,err error){value=5;err=sentinel;get()!!;return}
-func generic[T any](value T)(T,error){get()!!;return value,nil}
-func closure()error{call:=func()(Value,error){return get()!!,nil};v,e:=call();fmt.Print(v,e==sentinel);return nil}
-func main(){for _,failure:=range []bool{false,true}{fail=failure;v,e:=unnamed("shadow");fmt.Print(v,e==sentinel,"|");v,e=named();fmt.Print(v,e==sentinel,"|");s,e:=generic("value");fmt.Print(s,e==sentinel,"|");closure();fmt.Print("|")}}
+
+func get() (Value, error) {
+	if fail {
+		return 7, sentinel
+	}
+	return 8, nil
+}
+
+func unnamed(Value string) (Value, error) {
+	return get()!!, nil
+}
+
+func named() (value Value, err error) {
+	value = 5
+	err = sentinel
+	get()!!
+	return
+}
+
+func generic[T any](value T) (T, error) {
+	get()!!
+	return value, nil
+}
+
+func closure() error {
+	call := func() (Value, error) {
+		return get()!!, nil
+	}
+	v, e := call()
+	fmt.Print(v, e == sentinel)
+	return nil
+}
+
+func main() {
+	for _, failure := range []bool{false, true} {
+		fail = failure
+		v, e := unnamed("shadow")
+		fmt.Print(v, e == sentinel, "|")
+		v, e = named()
+		fmt.Print(v, e == sentinel, "|")
+		s, e := generic("value")
+		fmt.Print(s, e == sentinel, "|")
+		closure()
+		fmt.Print("|")
+	}
+}

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"example.com/program/library"
 	"testing"
+
+	"example.com/program/library"
 )
 
 func testRead() (tgo8 int, tgo10 error) {
@@ -18,6 +19,7 @@ func testRead() (tgo8 int, tgo10 error) {
 		return tgo6, nil
 	}
 }
+
 func TestRead(t *testing.T) {
 	v, err := testRead()
 	if v != 3 || err != nil {

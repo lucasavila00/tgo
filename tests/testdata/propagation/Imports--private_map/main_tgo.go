@@ -6,8 +6,9 @@ import tgo7 "maps"
 
 import (
 	"errors"
-	"example.com/program/foreign"
 	"fmt"
+
+	"example.com/program/foreign"
 )
 
 func run() (tgo3 error) {
@@ -32,6 +33,7 @@ func run() (tgo3 error) {
 	fmt.Print(len(v))
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		foreign.Reset(failure)

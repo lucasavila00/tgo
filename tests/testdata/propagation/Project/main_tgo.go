@@ -2,8 +2,9 @@ package main
 
 import (
 	"embed"
-	"example.com/program/library"
 	"fmt"
+
+	"example.com/program/library"
 )
 
 //go:embed message.txt
@@ -22,6 +23,7 @@ func run() (tgo3 error) {
 	fmt.Print(v, message)
 	return nil
 }
+
 func main() {
 	if err := run(); err != nil {
 		panic(err)

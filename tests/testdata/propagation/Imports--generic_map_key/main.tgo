@@ -1,4 +1,27 @@
 package main
-import("fmt";"example.com/program/foreign")
-func run[K comparable](key K)error{v:=foreign.Generic[K]{key:{Number:int(foreign.Number("A")!!)},key:{Number:int(foreign.Number("B")!!)}};fmt.Print(len(v));return nil}
-func main(){for _,failure:=range []int{0,1,2}{foreign.Reset(failure);err:=run(7);if err==nil{fmt.Print("S|")}else if err==foreign.Failure{fmt.Print("E|")}else{panic(err)}}}
+
+import (
+	"fmt"
+
+	"example.com/program/foreign"
+)
+
+func run[K comparable](key K) error {
+	v := foreign.Generic[K]{key: {Number: int(foreign.Number("A")!!)}, key: {Number: int(foreign.Number("B")!!)}}
+	fmt.Print(len(v))
+	return nil
+}
+
+func main() {
+	for _, failure := range []int{0, 1, 2} {
+		foreign.Reset(failure)
+		err := run(7)
+		if err == nil {
+			fmt.Print("S|")
+		} else if err == foreign.Failure {
+			fmt.Print("E|")
+		} else {
+			panic(err)
+		}
+	}
+}

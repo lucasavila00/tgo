@@ -18,6 +18,7 @@ func step(name string) (int, error) {
 	}
 	return 1, nil
 }
+
 func run() error {
 	defer func() {
 		if recover() != nil {
@@ -26,9 +27,11 @@ func run() error {
 	}()
 	a := []int{}
 	for a[tgoPropagation1(step("I"))] = range -1 {
+
 	}
 	return nil
 }
+
 func main() {
 	for _, failure := range []int{0, 1, 2} {
 		visit = 0
