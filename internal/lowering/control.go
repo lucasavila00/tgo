@@ -17,7 +17,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+		if value := r.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
 			return r.withBreakExit(s, &copy, r.integerRange(s, &copy, before), exit)
 		}
 		var stores []ast.Stmt
@@ -98,7 +98,7 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	var tagValue ast.Expr
 	if len(tag) != 0 {
 		tagValue = tag[0]
-		if tv := r.source.checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
+		if tv := r.source.inventory.Checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
 			saved, values := r.save(tagValue)
 			setup = append(setup, saved...)
 			tagValue = values[0]

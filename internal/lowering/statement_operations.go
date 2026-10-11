@@ -11,7 +11,7 @@ func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	if len(refs) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
-				if object := r.source.checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
+				if object := r.source.inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
 					// Keep the terminating statement after unreachable inserted code.
 					return append(before, s)
 				}
@@ -44,8 +44,8 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 			copy.Lhs[i] = place
 		}
 	}
-	setup, values := r.operands(s.Rhs)
-	before = append(before, setup...)
+	valueSetup, values := r.operands(s.Rhs)
+	before = append(before, valueSetup...)
 	copy.Rhs = values
 	deferred := false
 	for _, place := range copy.Lhs {
@@ -54,12 +54,12 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 	if deferred {
 		var refs []ast.Expr
 		for _, value := range values {
-			if tv := r.source.checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+			if tv := r.source.inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
 				refs = append(refs, value)
 				continue
 			}
-			setup, saved := r.save(value)
-			before = append(before, setup...)
+			saveSetup, saved := r.save(value)
+			before = append(before, saveSetup...)
 			refs = append(refs, saved...)
 		}
 		return append(before, r.orderedStores(copy.Lhs, refs, copy.Tok)...)

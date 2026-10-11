@@ -47,11 +47,11 @@ func (r *rewrite) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr)
 	var before []ast.Stmt
 	var result ast.Expr
 	copy := *e
-	if selection := r.source.checked.TypesInfo.Selections[e]; selection != nil && selection.Kind() == types.MethodVal {
+	if selection := r.source.inventory.Checked.TypesInfo.Selections[e]; selection != nil && selection.Kind() == types.MethodVal {
 		signature := selection.Obj().Type().(*types.Signature)
 		_, pointerReceiver := signature.Recv().Type().Underlying().(*types.Pointer)
-		_, pointerValue := r.source.checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
-		if pointerReceiver && !pointerValue && r.source.checked.TypesInfo.Types[e.X].Addressable() {
+		_, pointerValue := r.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
+		if pointerReceiver && !pointerValue && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 			before, copy.X = r.address(e.X)
 			result = &copy
 			return before, result
@@ -68,7 +68,7 @@ func (r *rewrite) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr
 	copy := *e
-	if storageKinds(r.source.checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.checked.TypesInfo.Types[e.X].Addressable() {
+	if storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 		before, copy.X = r.genericBase(e.X)
 		setup, index := r.capture(e.Index)
 		before = append(before, setup...)
@@ -100,7 +100,7 @@ func (r *rewrite) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	copy := *e
 	input := []ast.Expr{e.X}
 	array := r.addressableArray(e.X)
-	mixed := storageKinds(r.source.checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.checked.TypesInfo.Types[e.X].Addressable()
+	mixed := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable()
 	if mixed {
 		before, copy.X = r.genericBase(e.X)
 		input = nil
@@ -124,15 +124,15 @@ func (r *rewrite) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 			values[i] = refs[0]
 		}
 	}
-	i := 0
+	boundIndex := 0
 	if !array && !mixed {
 		copy.X = values[0]
-		i = 1
+		boundIndex = 1
 	}
 	for _, bound := range []*ast.Expr{&copy.Low, &copy.High, &copy.Max} {
 		if *bound != nil {
-			*bound = values[i]
-			i++
+			*bound = values[boundIndex]
+			boundIndex++
 		}
 	}
 	result = &copy
@@ -146,7 +146,7 @@ func (r *rewrite) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 	var input []ast.Expr
 	for _, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			if tv := r.source.checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
+			if tv := r.source.inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
 				input = append(input, pair.Key)
 			}
 			input = append(input, pair.Value)
@@ -161,7 +161,7 @@ func (r *rewrite) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 	for elementIndex, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
 			keyValue := *pair
-			if tv := r.source.checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
+			if tv := r.source.inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
 				keyValue.Key = values[operandIndex]
 				operandIndex++
 			}
