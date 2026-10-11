@@ -38,7 +38,7 @@ Saved values use explicit types. If a required type cannot be named in the gener
 func Compile(dir string)
 ```
 
-Compile translates the module's TGo files into Go files in the same module. Invalid source and compiler failures panic.
+Compile translates the module's TGo files into Go files in the same module. On failure, it restores previous generated files and panics.
 
 ## type After
 
