@@ -2,8 +2,9 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-- Use Go's existing parser and type checker. Do not write a parser or fork Go.
-- Load source and type information with [`go/packages`][packages].
+- Use Go's existing parser. The [source-checking decision](../source-checking/what.md)
+  replaces the original requirement to use only Go's stock type checker.
+- Use [`go/packages`][packages] for package selection and dependency metadata.
 - Read the original AST (abstract syntax tree); build a new `go/ast` output.
 - Adapt [Go's ordering pass][order] to that public AST.
 - Format output with `go/format`; compile it with the Go toolchain.

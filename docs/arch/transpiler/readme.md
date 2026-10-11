@@ -16,8 +16,9 @@ statements needed to implement them.
 | `internal/checker` | Check TGo source types and scope | Added expressions need source rules before Go statements are generated. |
 | `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
 
-Dependencies follow this order. Frontend and lowering do not call each other.
-The driver supplies checked syntax and operation records to the lowerer.
+The driver selects packages and asks the private checker to check their source.
+The checker reads frontend markers. Lowering uses the checked types and markers.
+The public API retains stock Go package objects.
 
 ## Preserve execution
 
@@ -55,6 +56,8 @@ Checking afterward would turn success into failure. `!` returns the original
 error; `!!` adds call-name context with `%w`.
 
 The private source checker handles propagation and `if` values together.
+For `outer(inner()!)!`, it checks the inner success type before the outer call.
+Each source package is checked once; operators need no package reload.
 It checks branch values against the surrounding type and keeps branch
 statements in the source function. The frontend's call markers identify added
 syntax; they do not create source functions. This keeps returns and defers in

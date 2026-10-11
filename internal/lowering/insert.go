@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
-	"go/parser"
 	"go/token"
 	"reflect"
 )
@@ -67,42 +66,6 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 		if !r.lowered[call] {
 			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
 		}
-	}
-	// Keep only marker declarations that the type checker still needs.
-	used := make(map[string]bool)
-	parsed := make(map[string]*ast.File)
-	fset := token.NewFileSet()
-	for name, content := range output {
-		file, err := parser.ParseFile(fset, name, content, parser.ParseComments)
-		if err != nil {
-			return nil, err
-		}
-		parsed[name] = file
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok {
-					used[id.Name] = true
-				}
-			}
-			return true
-		})
-	}
-	for name, file := range parsed {
-		declarations := file.Decls[:0]
-		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok {
-				if _, marker := operations[fn.Name.Name]; marker && !used[fn.Name.Name] {
-					continue
-				}
-			}
-			declarations = append(declarations, decl)
-		}
-		file.Decls = declarations
-		var buf bytes.Buffer
-		if err := format.Node(&buf, fset, file); err != nil {
-			return nil, err
-		}
-		output[name] = buf.Bytes()
 	}
 	return output, nil
 }
