@@ -42,6 +42,9 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 			if pair.original == nil {
 				continue
 			}
+			if name, ok := pair.original.(*ast.Ident); ok && name.Name == "_" {
+				continue
+			}
 			value := r.name()
 			*pair.output = value
 			before = append(before, variable(value, r.temporaryType(r.typeOf(pair.original), pair.original), nil))
