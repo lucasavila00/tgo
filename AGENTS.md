@@ -2,14 +2,16 @@
 
 ## Repository status
 
-We are developing version 2 of the TGo compiler, `compilerv2`, through
-[#248](https://github.com/lucasavila00/tgo/issues/248) and
-[#247](https://github.com/lucasavila00/tgo/issues/247). Compiler source, tests, and usage notes are in
+`compilerv2` is the active TGo compiler. Compiler source, tests, and usage
+notes are in
 [`compilerv2/`](compilerv2/README.md). The old compiler and architecture
 documents were removed. Git history retains them.
 
+Treat compiler changes as production code. Verify correctness and preserve
+source behavior.
+
 Build compilerv2 from the [compiler v2 plan](docs/adr/expression-lowering/what.md).
-Do not restore the old compiler code or architecture for now. The old
+Do not restore the old compiler code or architecture. The old
 specification, guides, and user agent rules have been removed. Use the README
 for syntax examples.
 
@@ -105,10 +107,11 @@ Do not add safety checks, runtime behavior, abstractions, or support systems
 that the user did not request. Follow each stated trust assumption. Do not add
 checks for data or boundaries that the user declared trusted.
 
-## 9. Validate Documentation
+## 9. Use Hosted CI for Full Validation
 
-Check changed documentation and its local links. No CI or compiler test suite
-exists in this checkout. compilerv2 must provide focused validation.
+Check changed documentation and its local links. Run focused local tests for
+the changed compiler code. Push the branch and use GitHub Actions for the
+full compiler test suite. Do not run the full CI suite locally.
 
 ## 10. Do Not Post Comments Without a Request
 

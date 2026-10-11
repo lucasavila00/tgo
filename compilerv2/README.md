@@ -2,7 +2,8 @@
 
 This package implements [the expression-lowering plan](../docs/adr/expression-lowering/what.md)
 for [#248](https://github.com/lucasavila00/tgo/issues/248).
-It reads ordinary Go. The `!` and `!!` frontend in #247 will use this engine.
+It reads ordinary Go. The `!` and `!!` frontend uses this engine for
+[#247](https://github.com/lucasavila00/tgo/issues/247).
 
 `Load(directory, pattern)` loads one package with Go syntax and type information.
 `Source.Sites` lists every expression by file, byte offsets, and syntax kind.
@@ -118,8 +119,6 @@ Focused propagation checks:
 ```sh
 go -C compilerv2 test ./... -run '^TestPropagation' -count=1
 ```
-
-The propagation PR remains a draft while its full runtime matrix is completed.
 
 Literal tests cover nested omitted types, map values, pointer keys, and array
 keys. A key with an unhashable interface field fails when the map is built,
