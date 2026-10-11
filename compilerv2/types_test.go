@@ -34,6 +34,8 @@ func TestInsertOmittedLiteralContexts(t *testing.T) {
 		{"slice", `a:=[][]int{{value()}};fmt.Print(a)`, "{value()}", "VM[[1]]"},
 		{"map value", `a:=map[int][]int{0:{value()}};fmt.Print(a[0])`, "{value()}", "VM[1]"},
 		{"pointer key", `a:=map[*Key]int{{value()}:2};for k:=range a{fmt.Print(k.N)}`, "{value()}", "VM1"},
+		{"pointer map", `a:=map[int]*map[Key]int{0:{{value()}:2}};fmt.Print(len(*a[0]))`, "{value()}", "VM1"},
+		{"pointer key in pointer map", `a:=map[int]*map[*Key]int{0:{{value()}:2}};for k:=range *a[0]{fmt.Print(k.N)}`, "{value()}", "VM1"},
 		{"array key", `a:=map[[20]int]int{{12:value(),value()}:2};fmt.Print(len(a))`, "{12:value(),value()}", "VVM1"},
 		{"nested", `a:=[][][]int{{{value()}}};fmt.Print(a)`, "{value()}", "VM[[[1]]]"},
 		{"key panic", `defer func(){if recover()!=nil{fmt.Print("P")}}();_=map[Bad]int{{bad()}:value()}`, "{bad()}", "BMVP"},
