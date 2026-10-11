@@ -46,4 +46,4 @@ go -C compilerv2 test ./... -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
-`TestProofCompile`. Run the full matrix in hosted CI; retain per-site results.
+`TestProofCompile`. Run the full matrix in hosted CI.

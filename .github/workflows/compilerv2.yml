@@ -2,7 +2,7 @@ name: Compiler v2
 
 on:
   push:
-    branches: [feat/compilerv2-expression-lowering, feat/compilerv2-propagation, main]
+    branches: [main]
     paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']
   pull_request:
     paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  proof:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,16 +19,5 @@ jobs:
         with:
           go-version-file: compilerv2/go.mod
           cache-dependency-path: compilerv2/go.sum
-      - name: Check compiler v2
-        shell: bash
-        env:
-          TGO_PROOF_ARTIFACTS: ${{ github.workspace }}/proof-artifacts
-        run: go -C compilerv2 test ./... -count=1 -json | tee proof-results.json
-      - name: Keep expression-site results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: expression-site-results
-          path: |
-            proof-results.json
-            proof-artifacts
+      - name: Test compiler v2
+        run: go -C compilerv2 test ./...

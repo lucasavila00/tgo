@@ -66,8 +66,7 @@ and the identity of the returned error.
 
 Focused execution tests also cover assignments, short circuits, closures,
 loops, switches, ranges, selects, defers, jumps, tuples, Boolean conversions,
-array storage, and pointer receivers. Hosted CI keeps generated variants and
-their test results as artifacts.
+array storage, and pointer receivers. Hosted CI runs the full test suite.
 
 # Propagation frontend
 
