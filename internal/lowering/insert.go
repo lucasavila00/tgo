@@ -63,6 +63,20 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
 		}
 	}
+	for _, file := range s.checked.Syntax {
+		var missing error
+		ast.Inspect(file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok && s.checked.Operations[id.Name].Element && !r.lowered[call] {
+					missing = fmt.Errorf("%s: comprehension output was not lowered", s.checked.Fset.Position(call.Pos()))
+				}
+			}
+			return missing == nil
+		})
+		if missing != nil {
+			return nil, missing
+		}
+	}
 	for call := range r.comprehensions {
 		if !r.lowered[call] {
 			return nil, fmt.Errorf("%s: comprehension was not lowered", s.checked.Fset.Position(call.Pos()))
@@ -77,7 +91,7 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 }
 
 func (r *rewrite) contains(node ast.Node) bool {
-	if r.suppressed {
+	if r.suppressed || node == nil {
 		return false
 	}
 	if contains(node, r.target) {

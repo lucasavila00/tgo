@@ -34,7 +34,7 @@ func TestParseComprehensions(t *testing.T) {
 }
 
 func TestComprehensionsKeepOrdinaryLoops(t *testing.T) {
-	input := []byte(`package p; func f() { for range 2 { print(1); for range 3 {} }; _ = []int{x for x := range 3} }`)
+	input := []byte(`package p; func g(xs []int) []int { r := []int{}; for _,x := range xs { r=append(r,x) }; return r }; func f() { for range 2 { print(1); for range 3 {} }; _ = []int{x for x := range 3} }`)
 	parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", input, make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)

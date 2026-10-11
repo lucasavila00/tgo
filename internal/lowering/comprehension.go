@@ -49,8 +49,8 @@ func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Compreh
 }
 
 func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) ([]ast.Stmt, []ast.Expr) {
+	r.lowered[call] = true
 	before, values := r.operands(call.Args)
-
 	keyType, element := types.ComprehensionTypes(destination.typ)
 	if keyType == nil {
 		value := r.name()
@@ -60,10 +60,7 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 			return before, nil
 		}
 		if destination.grow != nil {
-			r.prepareSliceImport()
-			grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{destination.result, integer(1)}}
-			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{grown}}, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.SliceExpr{X: destination.result, High: &ast.BinaryExpr{X: destination.grow, Op: token.ADD, Y: integer(1)}}}}, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.grow}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}}, &ast.IncDecStmt{X: destination.grow, Tok: token.INC})
-			return before, nil
+			return append(before, r.growComprehension(destination, value)...), nil
 		}
 		appendCall := &ast.CallExpr{Fun: ast.NewIdent("append"), Args: []ast.Expr{destination.result, value}}
 		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{appendCall}})
@@ -113,4 +110,19 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 		}
 		return true
 	})
+}
+
+// growComprehension appends through slices.Grow when source hides append.
+func (r *rewrite) growComprehension(destination *collectionDestination, value ast.Expr) []ast.Stmt {
+	r.prepareSliceImport()
+	result, count := destination.result, destination.grow
+	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{result, integer(1)}}
+	extended := &ast.SliceExpr{X: result, High: &ast.BinaryExpr{X: count, Op: token.ADD, Y: integer(1)}}
+	slot := &ast.IndexExpr{X: result, Index: count}
+	return []ast.Stmt{
+		&ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: []ast.Expr{grown}},
+		&ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: []ast.Expr{extended}},
+		&ast.AssignStmt{Lhs: []ast.Expr{slot}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}},
+		&ast.IncDecStmt{X: count, Tok: token.INC},
+	}
 }
