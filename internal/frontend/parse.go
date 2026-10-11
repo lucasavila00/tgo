@@ -14,6 +14,7 @@ type Parsed struct {
 	Comprehensions map[string]*Comprehension
 	Conditionals   map[string]token.Position
 	Propagations   map[string]Marker
+	ShortReturns   map[string]ShortReturn
 }
 
 type mappedSource struct {
@@ -46,7 +47,7 @@ func insertedOffsets(count, offset int) []int {
 // ParseFile parses added expressions and maps syntax positions to the input.
 // Conditional bodies remain statements in the original enclosing function.
 func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed, error) {
-	result := &Parsed{Comprehensions: make(map[string]*Comprehension), Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker)}
+	result := &Parsed{Comprehensions: make(map[string]*Comprehension), Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker), ShortReturns: make(map[string]ShortReturn)}
 	original := fset.AddFile(filename, -1, len(input))
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
@@ -65,6 +66,13 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	source := prepareSource(sourceName, input, used, result.Propagations)
 	for {
 		for {
+			shortReturn, err := source.prepareShortReturn(original, used, result.ShortReturns)
+			if err != nil {
+				return nil, err
+			}
+			if shortReturn {
+				continue
+			}
 			conditional := source.prepareConditionals(filename, original, used, result.Conditionals)
 			changed, err := source.prepareComprehension(original, used, result.Comprehensions)
 			if err != nil {
