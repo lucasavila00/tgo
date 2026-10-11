@@ -38,6 +38,24 @@ func TestTypedTemporaryRejected(t *testing.T) {
 	}
 }
 
+func TestTypedTemporaryDiagnosticStable(t *testing.T) {
+	fixture := "testdata/typed-temporaries-rejected/Imports--returned_function"
+	expected, err := os.ReadFile(filepath.Join(fixture, "diagnostic.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 16; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			defer func() {
+				if actual := recover(); fmt.Sprint(actual) != strings.TrimSpace(string(expected)) {
+					t.Fatalf("diagnostic: %v, want %s", actual, expected)
+				}
+			}()
+			transpiler.Compile(fixture)
+		})
+	}
+}
+
 func TestTypedTemporaryReference(t *testing.T) {
 	for _, name := range []string{"ContextualTypes", "VariadicGeneric", "TypeNameIdentity", "ReturnTypeScope"} {
 		t.Run(name, func(t *testing.T) { checkTypedTemporaryReference(t, name) })

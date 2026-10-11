@@ -34,6 +34,8 @@ func TestInsertReturn(t *testing.T) {
 		{"switch skipped case", `func run(err error) error { switch 1 { case left(): fmt.Print("A"); case right(): fmt.Print("B") }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "right()", "LAfalse"},
 		{"range expression", `func values() []int { fmt.Print("V"); return []int{1,2} }; func run(err error) error { for _,v:=range values() { fmt.Print(v) }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "values()", "Vtrue"},
 		{"select receive", `func run(err error) error { c:=make(chan int,1); c<-1; select { case v:= <-c: fmt.Print(v) }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "<-c", "true"},
+		{"parenthesized select receive", `func run(err error) error { c:=make(chan int,1); c<-1; select { case (<-c): fmt.Print("received") }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "(<-c)", "true"},
+		{"parenthesized select assignment", `func run(err error) error { c:=make(chan int,1); c<-1; var v int; select { case v = ((<-c)): fmt.Print(v) }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "((<-c))", "true"},
 		{"select target", `func run(err error) error { c:=make(chan int,1); c<-1; a:=[3]int{}; select { case a[left()]= <-c: fmt.Print(a) }; return nil }; func main() { fmt.Print(run(failure)==failure) }`, "left()", "Ltrue"},
 		{"comma map", `func run(err error) error { a:=map[int]int{1:2}; v,ok:=a[1]; fmt.Print(v,ok); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "a[1]", "true"},
 		{"comma assertion", `func run(err error) error { var a any=1; v,ok:=a.(int); fmt.Print(v,ok); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "a.(int)", "true"},

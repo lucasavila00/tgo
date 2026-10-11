@@ -11,13 +11,14 @@ import (
 func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(value)} }
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
+	exit := r.prepareBreakExit(s, s.X)
 	copy := *s
 	copy.Body = r.block(s.Body)
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) > 0 {
-			return r.integerRange(s, &copy, before)
+		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+			return r.withBreakExit(s, &copy, r.integerRange(s, &copy, before), exit)
 		}
 		var stores []ast.Stmt
 		var lhs, rhs []ast.Expr
@@ -43,10 +44,17 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 		stores = append(stores, r.orderedStores(lhs, rhs, token.ASSIGN)...)
 		copy.Body = &ast.BlockStmt{List: append(stores, copy.Body)}
 	}
-	return append(before, &copy)
+	return r.withBreakExit(s, &copy, append(before, &copy), exit)
 }
 
 func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
+	roots := []ast.Node{s.Init, s.Tag}
+	for _, stmt := range s.Body.List {
+		for _, expr := range stmt.(*ast.CaseClause).List {
+			roots = append(roots, expr)
+		}
+	}
+	exit := r.prepareBreakExit(s, roots...)
 	copy := *s
 	var init []ast.Stmt
 	if s.Init != nil {
@@ -81,10 +89,10 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 			if len(init) != 0 {
 				copy.Init = init[0]
 			}
-			return []ast.Stmt{&copy}
+			return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
 		}
 		copy.Init = nil
-		return []ast.Stmt{&ast.BlockStmt{List: append(append(init, tagBefore...), &copy)}}
+		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(append(init, tagBefore...), &copy)}}, exit)
 	}
 	setup := append(init, tagBefore...)
 	var tagValue ast.Expr
@@ -120,10 +128,11 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	}
 	copy.Init = nil
 	copy.Tag = selected
-	return []ast.Stmt{&ast.BlockStmt{List: append(setup, &copy)}}
+	return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(setup, &copy)}}, exit)
 }
 
 func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
+	exit := r.prepareBreakExit(s, s.Init, s.Assign)
 	copy := *s
 	var before []ast.Stmt
 	if s.Init != nil {
@@ -161,9 +170,9 @@ func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
 	}
 	if len(before) != 0 {
 		copy.Init = nil
-		return []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}
+		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}, exit)
 	}
-	return []ast.Stmt{&copy}
+	return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
 }
 
 func firstExpression(node ast.Node) ast.Expr {

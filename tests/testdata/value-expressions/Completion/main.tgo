@@ -1,0 +1,175 @@
+package main
+
+import "fmt"
+
+func early(flag bool) int {
+	return if flag {
+		return 7
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func wide(flag bool) int {
+	return if flag {
+		return 7
+		1 << 100
+	} else {
+		9
+	}
+}
+
+func nested(flag bool) int {
+	return if flag {
+		if !flag {
+			return 6
+		} else {
+			return 8
+		}
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func jump(flag bool) int8 {
+	return if flag {
+		goto value
+		return 0
+	value:
+		127
+	} else {
+		1
+	}
+}
+
+func deferred(flag bool, trace *string) int {
+	return if flag {
+		defer func() { *trace += "D" }()
+		return 7
+		nil
+	} else {
+		9
+	}
+}
+
+func argument(flag bool) int {
+	return if flag {
+		var ignored int = if !flag {
+			return 6
+		} else {
+			return 8
+		}
+		_ = ignored
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func innerBreak(flag bool) int {
+	return if flag {
+		for {
+			break
+		}
+		3
+	} else {
+		9
+	}
+}
+
+func allReturn(flag bool) int {
+	var ignored int = if flag {
+		return 7
+	} else {
+		return 9
+	}
+	_ = ignored
+}
+
+func namedReturn(flag bool) (out int) {
+	defer func() { out += 10 }()
+	var ignored int = if flag {
+		out = 7
+		return
+	} else {
+		out = 9
+		return
+	}
+	_ = ignored
+}
+
+func pairReturn(flag bool) (int, string) {
+	var ignored int = if flag {
+		return 7, "a"
+	} else {
+		return 9, "b"
+	}
+	_ = ignored
+}
+
+func genericReturn[T ~int](flag bool) T {
+	var ignored int = if flag {
+		return T(7)
+	} else {
+		return T(9)
+	}
+	_ = ignored
+}
+
+func loopReturn(flag bool) int {
+	i := 100
+	_ = i
+	for i := if flag {continue} else {0}; i < 2; i++ {
+		capture := func() int { return i }
+		var ignored int = if flag {
+			return capture() + 7
+		} else {
+			return capture() + 7
+		}
+		_ = ignored
+	}
+	var ignored int = if flag {
+		return 9
+	} else {
+		return 9
+	}
+	_ = ignored
+}
+
+func main() {
+	for _, flag := range []bool{true, false} {
+		expect, nestedExpect, jumpExpect, breakExpect := 9, 9, int8(1), 9
+		trace, traceExpect := "", ""
+		if flag {
+			expect, nestedExpect, jumpExpect, breakExpect = 7, 8, 127, 3
+			traceExpect = "D"
+		}
+		if early(flag) != expect || wide(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
+			panic("branch result")
+		}
+		if allReturn(flag) != expect || namedReturn(flag) != expect+10 || genericReturn[int](flag) != expect {
+			panic("function return")
+		}
+		loopExpect := 7
+		if flag {
+			loopExpect = 8
+		}
+		if loopReturn(flag) != loopExpect {
+			panic("loop return binding")
+		}
+		number, text := pairReturn(flag)
+		textExpect := "b"
+		if flag {
+			textExpect = "a"
+		}
+		if number != expect || text != textExpect {
+			panic("multiple returns")
+		}
+		if deferred(flag, &trace) != expect || trace != traceExpect {
+			panic("branch defer")
+		}
+	}
+	fmt.Println("ok")
+}

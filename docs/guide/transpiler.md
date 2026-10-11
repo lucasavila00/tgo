@@ -1,7 +1,7 @@
 # Transpiler use and API
 
 The transpiler reads `.tgo` files in a Go module and emits a Go module.
-It uses Go syntax with postfix error propagation.
+It adds postfix error propagation and value-producing `if` to Go syntax.
 
 ## Propagate errors
 
@@ -33,6 +33,30 @@ loops, switches, ranges, selects, and arguments to `defer` and `go`.
 `unsafe.Sizeof`, `unsafe.Alignof`, or `unsafe.Offsetof`. This includes nested
 function bodies and generic operands. Import aliases do not change this rule.
 The diagnostic identifies the operator's source position and the builtin.
+
+## Choose a value
+
+An `if` expression runs one branch and uses its final expression as its value:
+
+```text
+name := if active {
+    log("active")
+    account.Name
+} else {
+    "inactive"
+}
+```
+
+Require `else`. Branches can contain ordinary statements. Return, defer,
+propagation, and jumps act in the enclosing function. A branch that returns or
+cannot complete needs no final value. A `continue` cannot target a range whose
+collection is still being computed.
+
+An assignment, return, argument, or conversion can supply the result type.
+Otherwise, typed branches must have the same type. Untyped constants use Go's
+constant rules. Add an explicit type or conversion when the type is unknown or
+branches have different types. The result is not a constant; branches supply
+one value each. Ordinary `if` statements keep their Go behavior.
 
 ## Command
 

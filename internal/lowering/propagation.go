@@ -22,6 +22,9 @@ func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 	if r.frame.prepared {
 		output.List = append(r.frame.prefix, output.List...)
 	}
+	if r.source.checked.TypesInfo.TGoReturnBlocks[body] {
+		output = r.returnBlock(typ, output)
+	}
 	if aliases := r.aliasStatements[node]; len(aliases) != 0 {
 		output.List = append(aliases, output.List...)
 	}

@@ -7,6 +7,11 @@ import (
 )
 
 func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
+	var roots []ast.Node
+	for _, stmt := range s.Body.List {
+		roots = append(roots, stmt.(*ast.CommClause).Comm)
+	}
+	exit := r.prepareBreakExit(s, roots...)
 	copy := *s
 	copy.Body = &ast.BlockStmt{}
 	var before []ast.Stmt
@@ -31,12 +36,12 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 				c.Chan, c.Value = channel, value
 				clause.Comm = &c
 			case *ast.ExprStmt:
-				receive := comm.X.(*ast.UnaryExpr)
+				receive := ast.Unparen(comm.X).(*ast.UnaryExpr)
 				c := *receive
 				setup, channel := r.capture(receive.X)
 				before = append(before, setup...)
 				c.X = channel
-				if receive == r.target {
+				if receive == ast.Unparen(r.target) {
 					r.inserted = true
 					value := r.name()
 					before = append(before, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
@@ -47,7 +52,7 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 					clause.Comm = &ast.ExprStmt{X: &c}
 				}
 			case *ast.AssignStmt:
-				receive := comm.Rhs[0].(*ast.UnaryExpr)
+				receive := ast.Unparen(comm.Rhs[0]).(*ast.UnaryExpr)
 				c := *receive
 				setup, channel := r.capture(receive.X)
 				before = append(before, setup...)
@@ -64,7 +69,7 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 					before = append(before, variable(values[i].(*ast.Ident), r.temporaryType(typ, receive), nil))
 				}
 				clause.Comm = &ast.AssignStmt{Lhs: values, Tok: token.ASSIGN, Rhs: []ast.Expr{&c}}
-				if receive == r.target {
+				if receive == ast.Unparen(r.target) {
 					r.inserted = true
 					body = append(body, r.after(values)...)
 				}
@@ -95,5 +100,5 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 		clause.Body = body
 		copy.Body.List = append(copy.Body.List, &clause)
 	}
-	return append(before, &copy)
+	return r.withBreakExit(s, &copy, append(before, &copy), exit)
 }

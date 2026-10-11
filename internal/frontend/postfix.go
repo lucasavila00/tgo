@@ -121,20 +121,29 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {
-			cursor.Replace(&ast.CallExpr{Fun: &ast.Ident{Name: operation.Name, NamePos: expression.Pos()}, Lparen: expression.Pos(), Rparen: expression.End() - 1, Args: []ast.Expr{ast.Unparen(expression)}})
+			width := token.Pos(1)
+			if operation.Wrap {
+				width++
+			}
+			cursor.Replace(&ast.CallExpr{
+				Fun:    &ast.Ident{Name: operation.Name, NamePos: expression.Pos()},
+				Lparen: expression.Pos(), Args: []ast.Expr{ast.Unparen(expression)},
+				Rparen: expression.End() + width - 1,
+			})
 			return false
 		}
 		return true
 	}, nil)
 	comments := file.Comments[:0]
 	for _, group := range file.Comments {
-		remove := false
+		kept := group.List[:0]
 		for _, comment := range group.List {
-			if comment.Text == "/*"+operation.Name+"*/" {
-				remove = true
+			if comment.Text != "/*"+operation.Name+"*/" {
+				kept = append(kept, comment)
 			}
 		}
-		if !remove {
+		group.List = kept
+		if len(kept) != 0 {
 			comments = append(comments, group)
 		}
 	}

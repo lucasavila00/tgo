@@ -18,8 +18,12 @@ type rewrite struct {
 	next              int
 	inserted          bool
 	labels            map[string]string
+	breakExits        map[*ast.BranchStmt]*ast.Ident
+	controlTargets    map[ast.Stmt]ast.Stmt
+	bindings          map[types.Object]string
 	suppressedRoot    ast.Expr
 	propagations      map[ast.Expr]Propagation
+	conditionals      map[*ast.CallExpr]*ast.IfStmt
 	lowered           map[ast.Expr]bool
 	frame             *returnFrame
 	formatAlias       *ast.Ident
@@ -27,7 +31,6 @@ type rewrite struct {
 	extraImports      []*ast.ImportSpec
 	extraDeclarations []ast.Decl
 	zeroSequence      *ast.Ident
-	zeroPointer       *ast.Ident
 	iterAlias         *ast.Ident
 	mapAlias          *ast.Ident
 	sliceAlias        *ast.Ident
@@ -183,6 +186,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if operation, ok := r.propagations[expr]; ok && !r.suppressed {
 		return r.propagatedCall(expr.(*ast.CallExpr), operation)
 	}
+	if call, ok := expr.(*ast.CallExpr); ok {
+		if statement := r.conditionals[call]; statement != nil {
+			return r.conditionalCall(call, statement)
+		}
+	}
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	switch e := expr.(type) {
@@ -194,6 +202,10 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:
+		if r.unsafeOperand(e) {
+			before, result = r.unevaluatedCall(e)
+			break
+		}
 		copy := *e
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr

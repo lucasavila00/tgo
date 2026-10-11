@@ -18,6 +18,11 @@ func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
 }
 
 func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
+	if branch, ok := statement.(*ast.BranchStmt); ok {
+		if exit := r.breakExits[branch]; exit != nil {
+			return []ast.Stmt{&ast.BranchStmt{Tok: token.GOTO, Label: exit}}
+		}
+	}
 	if branch, ok := statement.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO {
 		if name := r.labels[branch.Label.Name]; name != "" {
 			copy := *branch
@@ -105,11 +110,14 @@ func attachLabel(statements []ast.Stmt, label *ast.Ident) {
 	statements[last] = &ast.LabeledStmt{Label: label, Stmt: statements[last]}
 }
 
-func hasLabelBranch(node ast.Node, label string) bool {
+func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
-			return false
+			call, _ := r.source.parents[n].(*ast.CallExpr)
+			if r.conditionals[call] == nil {
+				return false
+			}
 		}
 		if branch, ok := n.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO && branch.Label.Name == label {
 			found = true
@@ -120,8 +128,18 @@ func hasLabelBranch(node ast.Node, label string) bool {
 }
 
 func (r *rewrite) hasMappedBranch(node ast.Node) bool {
+	found := false
+	ast.Inspect(node, func(n ast.Node) bool {
+		if branch, ok := n.(*ast.BranchStmt); ok && r.breakExits[branch] != nil {
+			found = true
+		}
+		return !found
+	})
+	if found {
+		return true
+	}
 	for label := range r.labels {
-		if hasLabelBranch(node, label) {
+		if r.hasLabelBranch(node, label) {
 			return true
 		}
 	}
@@ -129,7 +147,7 @@ func (r *rewrite) hasMappedBranch(node ast.Node) bool {
 }
 
 func (r *rewrite) header(statement ast.Stmt) []ast.Stmt {
-	if !r.contains(statement) {
+	if !r.contains(statement) && !r.hasMappedBranch(statement) {
 		return []ast.Stmt{statement}
 	}
 	return r.statementInner(statement)

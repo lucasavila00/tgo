@@ -1,26 +1,22 @@
 # HOW
 
-Pin private copies of `go/types` and its compiled-package reader
-together. Extend the existing frontend wrapper. Use Go's parser for headers and
-statements. Store branch syntax and source positions beside generated call
-placeholders in the syntax tree.
+Build private `go/types` and compiled-package-reader packages from one pinned
+Go version. A build script applies checked-in patches. Extend the frontend
+wrapper: Go's parser reads headers and statements; marker calls retain branch
+syntax and source positions.
 
-The private checker visits branches in the source function's scope. Retain
-branch types and constants until context resolves them, including through
-operators and shifts. The complete `if` value is nonconstant. Generic inference
-uses every completing branch value across all conditional arguments together;
-then check each branch against the inferred parameter type. Extend scope, jump, termination, and package
-dependency checks.
+The private checker visits branches in the source function's scope. Keep branch
+constants until context resolves their types, including through operators and
+shifts. The complete `if` value is nonconstant. Generic inference uses every
+completing branch across conditional arguments, then checks each branch against
+the parameter type. Check scopes, jumps, termination, and dependencies. Reject `continue` to a
+range while computing its collection.
 
-Give the driver and lowerer private checked-package records. Public `Load` keeps
-stock `packages.Package` and separately checks the same ordinary Go syntax for
-lowering. These two checks keep separate type objects.
+The driver supplies private checked packages to the lowerer. Public `Load`
+retains stock `packages.Package` and checks its ordinary Go syntax separately.
+Keep each check's type objects separate.
 
-Emit a typed result variable and ordinary `if`:
-
-```text
-name := if ok { "yes" } else { "no" }
-```
+Emit typed storage and ordinary `if`:
 
 ```go
 var tgo1 string
@@ -32,6 +28,8 @@ if ok {
 name := tgo1
 ```
 
-Preserve earlier and conditional evaluation. Returns, defers, and propagation
-stay in the source function. Package initializer functions retain dependencies.
-Reject unnameable result types. Format and check emitted Go with stock `go/types`.
+Returns, defers, and propagation keep the source function. Preserve evaluation
+order and package dependencies. Keep unsafe operands in constant-false blocks
+to retain bindings and labels without execution; supply the builtin an expression
+of the same type. Reject unnameable result types. Check emitted Go with stock Go
+checking.

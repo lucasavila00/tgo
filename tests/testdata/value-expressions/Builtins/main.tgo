@@ -1,0 +1,24 @@
+package main
+
+import "fmt"
+
+func choose(ok bool) int8 {
+	return min(if ok { return 7 } else { return 9 }, int8(3))
+}
+
+func point(ok bool) complex64 {
+	return complex(if ok { return 1 } else { return 2 }, float32(3))
+}
+
+func pair() (float32, float32) { return 1, 2 }
+
+func main() {
+	for _, ok := range []bool{true, false} {
+		a := min(if ok { 1 } else { 2 }, int8(3))
+		b := max(int8(3), if ok { 1 } else { 2 })
+		c := complex(if ok { 1 } else { 2 }, float32(3))
+		d := complex(if ok { 1 } else { 2 }, if ok { 3 } else { 4 })
+		e := min(1, if ok { 1.5 } else { 2.5 })
+		fmt.Printf("%T:%v %T:%v %T:%v %T:%v %T:%v %v %v %v\n", a, a, b, b, c, c, d, d, e, e, choose(ok), point(ok), complex(pair()))
+	}
+}

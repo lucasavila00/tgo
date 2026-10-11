@@ -112,7 +112,10 @@ func (s *Source) inventory(file *ast.File, dir string) {
 				case *ast.FuncDecl:
 					fn = parent
 				case *ast.FuncLit:
-					fn = parent
+					call, _ := s.parents[parent].(*ast.CallExpr)
+					if s.checked.Conditionals[call] == nil {
+						fn = parent
+					}
 				case *ast.GenDecl:
 					if parent.Tok == token.CONST {
 						site.Reason = "constant declaration"

@@ -33,7 +33,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // LowerPropagations replaces typed marker calls with calls, error checks, and returns.
 // It returns Go file contents and reports an error if a selected operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -62,6 +62,11 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
 		}
 	}
+	for call := range r.conditionals {
+		if !r.lowered[call] {
+			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
+		}
+	}
 	return output, nil
 }
 
@@ -77,6 +82,11 @@ func (r *rewrite) contains(node ast.Node) bool {
 			return true
 		}
 	}
+	for expression := range r.conditionals {
+		if contains(node, expression) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -88,7 +98,8 @@ func (r *rewrite) isTarget(expression ast.Expr) bool {
 		return true
 	}
 	_, ok := r.propagations[expression]
-	return ok
+	call, _ := expression.(*ast.CallExpr)
+	return ok || r.conditionals[call] != nil
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {
@@ -106,7 +117,6 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		r.extraDeclarations = nil
 		r.formatAlias = nil
 		r.zeroSequence = nil
-		r.zeroPointer = nil
 		r.iterAlias = nil
 		r.mapAlias = nil
 		r.sliceAlias = nil
@@ -122,7 +132,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.checked.Fset, copy); err != nil {
+		if err := format.Node(&buf, r.source.checked.Fset, r.renameBindings(copy)); err != nil {
 			return nil, err
 		}
 		output[r.source.checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
@@ -137,6 +147,17 @@ func (r *rewrite) functionBodies(node ast.Node) ast.Node {
 		return node
 	}
 	switch fn := node.(type) {
+	case *ast.ValueSpec:
+		copy := *fn
+		copy.Values = append([]ast.Expr(nil), fn.Values...)
+		for i, value := range fn.Values {
+			if r.packageConditional(value) {
+				copy.Values[i] = r.packageInitializer(value)
+			} else {
+				copy.Values[i] = r.functionBodies(value).(ast.Expr)
+			}
+		}
+		return &copy
 	case *ast.FuncDecl:
 		copy := *fn
 		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)

@@ -12,8 +12,8 @@ statements needed to implement them.
 | `cmd/tgo` | Choose paths and write output | File-output policy belongs to the command. |
 | `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
 | `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
-| `internal/checker` | Check source with Go types and TGo rules | Nested operators need success types before lowering. |
 | `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
+| `internal/checker` | Check TGo source types and scope | Added expressions need source rules before Go statements are generated. |
 | `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
 
 The driver selects packages and asks the private checker to check their source.
@@ -55,18 +55,45 @@ type. A nil pointer can become a non-nil interface during that conversion.
 Checking afterward would turn success into failure. `!` returns the original
 error; `!!` adds call-name context with `%w`.
 
-The private checker gives `call()!` the call's success result types. For
-`outer(inner()!)!`, it checks the inner call before checking the outer call.
-Each source package is checked once; operators need no file rewrite or package
-reload. The driver then lowers the source and checks the emitted Go.
-Source checks also verify error return types and forbidden unsafe operands.
+The private source checker handles propagation and `if` values together.
+For `outer(inner()!)!`, it checks the inner success type before the outer call.
+Each source package is checked once; operators need no package reload.
+It checks branch values against the surrounding type and keeps branch
+statements in the source function. The frontend's call markers identify added
+syntax; they do not create source functions. This keeps returns and defers in
+their original function.
 
-`make prepare` applies tracked patches to pinned Go checker and import-reader
-source. Generated upstream files stay outside Git. See the
-[upstream source instructions](../../../internal/checker/upstream.md).
+In a generic call, another argument can supply the if value's type.
+For `pair(if ok { nil } else { nil }, pointer)`, a pointer of type `*int`
+determines `T` as `*int`. Infer from every branch that produces a value and
+from the other arguments together. Then check each branch against the resolved
+parameter type. This supplies nil's type and checks branch constants for
+overflow. A branch that returns or jumps supplies no inference operand.
+
+`make prepare` builds the checker and its compiled-package reader from one
+pinned Go source version and checked-in patches. Generated upstream source
+stays out of Git. See [the patch instructions](../../../internal/checker/upstream.md).
+Their type objects stay separate from stock `go/types` objects. Public `Load`
+keeps its stock package and checks the same syntax separately for lowering.
+After lowering, stock Go checking checks the emitted module.
 
 The function keeps its source result names. Failure returns use saved zero
 values for results before the error. Deferred calls still run.
+
+## Keep loop targets
+
+An initializer can contain an if value that breaks or continues its loop.
+Run that initializer on the loop's first visit. Later visits run the post
+statement before checking the condition. The generated loop therefore remains
+the target of both jumps.
+
+Go creates a separate variable for each iteration of a loop declared with
+`:=`. Keep those declarations in the generated Go loop header. Store the
+initializer result on the first visit. Rename these bindings by checked object
+identity: in `for i := if ok { break } else { i }; ...`, the final `i` in the
+initializer still refers to the outer variable. Closures in the body refer to
+the per-iteration variable. The rename copies emitted syntax and leaves the
+checked source unchanged.
 
 ## Source controls output
 
@@ -80,3 +107,17 @@ file selection; line directives decide diagnostic locations.
 
 See the [correctness report](correctness.md) for behavior checks and the
 [user guide](../../guide/transpiler.md) for commands and API use.
+
+## Prepare conditional syntax
+
+Go's parser owns headers and statement grammar. The frontend first finds clear
+expression operands, such as `return if` and `use(if ...)`. It checks each
+conditional's bounded syntax fragment, then wraps independent operands together
+in one buffer edit. The complete file is parsed after preparation. Token nesting
+keeps inner operands ahead of their containing expressions.
+
+A colon can introduce a label, map value, case body, or slice bound. For these
+ambiguous positions, the frontend uses the parsed AST to identify an expression
+operand. Nested expressions can need several preparation rounds. This preserves
+Go's grammar and source positions; deeply nested syntax still costs more than
+independent expressions.

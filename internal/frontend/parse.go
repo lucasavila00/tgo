@@ -11,6 +11,7 @@ import (
 // Parsed contains Go syntax and records for the added TGo expressions.
 type Parsed struct {
 	File         *ast.File
+	Conditionals map[string]token.Position
 	Propagations map[string]Marker
 }
 
@@ -40,9 +41,10 @@ func insertedOffsets(count, offset int) []int {
 	return result
 }
 
-// ParseFile parses propagation and keeps positions from the original source.
+// ParseFile parses added expressions and maps syntax positions to the input.
+// Conditional bodies remain statements in the original enclosing function.
 func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed, error) {
-	result := &Parsed{Propagations: make(map[string]Marker)}
+	result := &Parsed{Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker)}
 	original := fset.AddFile(filename, -1, len(input))
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
@@ -59,17 +61,29 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 		}
 	}
 	source := prepareSource(sourceName, input, used, result.Propagations)
-	temporary := token.NewFileSet()
-	file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
-	if err != nil {
-		if errors, ok := err.(scanner.ErrorList); ok {
+	for {
+		for source.prepareConditionals(filename, original, used, result.Conditionals) {
+		}
+		temporary := token.NewFileSet()
+		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
+		if err == nil {
+			return result.finish(fset, file, temporary.File(file.Pos()), original, source.offsets), nil
+		}
+		errors, ok := err.(scanner.ErrorList)
+		if !ok {
+			return nil, err
+		}
+		start := conditionalStart(file, temporary, source.text)
+		if start < 0 {
 			for _, diagnostic := range errors {
 				diagnostic.Pos = original.Position(original.Pos(source.offsets[diagnostic.Pos.Offset]))
 			}
+			return nil, errors
 		}
-		return nil, err
+		if err := source.wrapConditional(filename, original, start, used, result.Conditionals); err != nil {
+			return nil, err
+		}
 	}
-	return result.finish(fset, file, temporary.File(file.Pos()), original, source.offsets), nil
 }
 
 func prepareSource(sourceName string, input []byte, used map[string]bool, propagations map[string]Marker) mappedSource {

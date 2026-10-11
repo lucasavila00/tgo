@@ -1,11 +1,14 @@
 --- a/types/api.go
 +++ b/types/api.go
-@@ -40,7 +40,7 @@
+@@ -37,10 +37,10 @@
+ import (
+ 	"bytes"
+ 	"fmt"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	_ "unsafe" // for linkname
  )
  
@@ -13,56 +16,208 @@
  // A Config specifies the configuration for type checking.
  // The zero value for Config is a ready-to-use default configuration.
  type Config struct {
-+	// TGo records propagation operations in the source syntax tree.
++	// TGo identifies added expressions in the source syntax tree.
 +	TGo map[string]TGoOperation
 +
  	// Context is the context used for resolving global identifiers. If nil, the
  	// type checker will initialize this field with a newly created context.
  	Context *Context
+@@ -200,6 +203,12 @@
+ // If the package has type errors, the collected information may
+ // be incomplete.
+ type Info struct {
++	// TGoBranches records whether each conditional branch can reach its end.
++	TGoBranches map[*ast.BlockStmt]bool
++
++	// TGoReturnBlocks marks function bodies that need one final generated return.
++	TGoReturnBlocks map[*ast.BlockStmt]bool
++
+ 	// Types maps expressions to their types, and for constant
+ 	// expressions, also their values. Invalid expressions are
+ 	// omitted.
 --- a/types/assignments.go
 +++ b/types/assignments.go
-@@ -12,7 +12,7 @@
+@@ -11,8 +11,8 @@
+ 
  import (
  	"fmt"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"strings"
  )
  
+@@ -263,9 +263,7 @@
+ 		var target *target
+ 		// avoid calling ExprString if not needed
+ 		if T != nil {
+-			if _, ok := T.Underlying().(*Signature); ok {
+-				target = newTarget(T, ExprString(lhs))
+-			}
++			target = newTarget(T, ExprString(lhs))
+ 		}
+ 		x = new(operand)
+ 		check.expr(target, x, rhs)
+@@ -398,7 +396,13 @@
+ 	// error message don't handle it as n:n mapping below.
+ 	isCall := false
+ 	if r == 1 {
+-		_, isCall = ast.Unparen(orig_rhs[0]).(*ast.CallExpr)
++		call, ok := ast.Unparen(orig_rhs[0]).(*ast.CallExpr)
++		isCall = ok
++		if ok {
++			if op, found := check.tgoOperation(call); found && op.Conditional {
++				isCall = false
++			}
++		}
+ 	}
+ 
+ 	// If we have a n:n mapping from lhs variable to rhs expression,
+@@ -482,7 +486,13 @@
+ 	// error message don't handle it as n:n mapping below.
+ 	isCall := false
+ 	if r == 1 {
+-		_, isCall = ast.Unparen(orig_rhs[0]).(*ast.CallExpr)
++		call, ok := ast.Unparen(orig_rhs[0]).(*ast.CallExpr)
++		isCall = ok
++		if ok {
++			if op, found := check.tgoOperation(call); found && op.Conditional {
++				isCall = false
++			}
++		}
+ 	}
+ 
+ 	// If we have a n:n mapping from lhs variable to rhs expression,
 --- a/types/builtins.go
 +++ b/types/builtins.go
-@@ -13,7 +13,7 @@
+@@ -10,10 +10,10 @@
+ package types
+ 
+ import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  )
  
  // builtin type-checks a call to the built-in specified by id and
+@@ -53,7 +53,7 @@
+ 	switch id {
+ 	default:
+ 		// check all arguments
+-		args = check.exprList(argList)
++		args = check.builtinArguments(call, id)
+ 		nargs = len(args)
+ 		for _, a := range args {
+ 			if !a.isValid() {
 --- a/types/call.go
 +++ b/types/call.go
-@@ -9,7 +9,7 @@
+@@ -7,9 +7,9 @@
+ package types
+ 
  import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"strings"
  )
  
+@@ -86,7 +86,7 @@
+ 		var args []*operand
+ 		var params []*Var
+ 		var reverse bool
+-		if T != nil && sig.tparams != nil {
++		if T != nil && T.sig != nil && sig.tparams != nil {
+ 			if !versionErr && !check.allowVersion(go1_21) {
+ 				if ix != nil {
+ 					check.versionErrorf(instErrPos, go1_21, "partially instantiated function in assignment")
+@@ -307,6 +307,28 @@
+ 		}
+ 	}
+ 
++	// Resolved parameter types supply context before conditional arguments.
++	for i, arg := range call.Args {
++		index := i
++		if sig.variadic && index >= sig.params.Len()-1 {
++			index = sig.params.Len() - 1
++		}
++		if index < 0 || index >= sig.params.Len() {
++			break
++		}
++		typ := sig.params.At(index).Type()
++		if sig.variadic && index == sig.params.Len()-1 && !hasDots(call) {
++			typ = typ.(*Slice).Elem()
++		}
++		if !isParameterized(sig.TypeParams().list(), typ) {
++			check.expressionType(arg, typ)
++		}
++	}
++	if sig.TypeParams().Len() > 0 {
++		for _, arg := range call.Args {
++			check.prepareConditionalArgument(arg)
++		}
++	}
+ 	// evaluate arguments
+ 	args, atargs := check.genericExprList(call.Args)
+ 	sig = check.arguments(call, sig, targs, xlist, args, atargs)
+@@ -623,7 +645,8 @@
+ 	// infer missing type arguments of callee and function arguments
+ 	if len(tparams) > 0 {
+ 		err := check.newError(CannotInferTypeArgs)
+-		targs = check.infer(call, tparams, targs, sigParams, args, false, err)
++		params, inferenceArgs := check.conditionalInference(sigParams, args)
++		targs = check.infer(call, tparams, targs, params, inferenceArgs, false, err)
+ 		if targs == nil {
+ 			// TODO(gri) If infer inferred the first targs[:n], consider instantiating
+ 			//           the call signature for better error messages/gopls behavior.
+@@ -665,7 +688,9 @@
+ 	if len(args) > 0 {
+ 		context := check.sprintf("argument to %s", call.Fun)
+ 		for i, a := range args {
+-			check.assignment(a, sigParams.vars[i].typ, context)
++			if !check.assignConditionalArgument(a, sigParams.vars[i].typ, context) {
++				check.assignment(a, sigParams.vars[i].typ, context)
++			}
+ 		}
+ 	}
+ 
 --- a/types/check.go
 +++ b/types/check.go
-@@ -11,7 +11,7 @@
+@@ -8,10 +8,10 @@
+ 
+ import (
+ 	"fmt"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"os"
  )
  
+@@ -36,6 +36,8 @@
+ // An environment represents the environment within which an object is
+ // type-checked.
+ type environment struct {
++	statementContext stmtContext
++
+ 	decl          *declInfo              // package-level declaration whose init expression/function body is checked
+ 	scope         *Scope                 // top-most scope for lookups
+ 	version       goVersion              // current accepted language version; changes across files
+@@ -116,6 +118,11 @@
+ // A Checker maintains the state of the type checker.
+ // It must be created with [NewChecker].
+ type Checker struct {
++	conditionalValues  map[*ast.CallExpr][]*operand
++	expressionTypes    map[ast.Expr]Type
++	sliceSourceContext Type
++	inferConditionals  map[*ast.CallExpr]bool
++
+ 	// package information
+ 	// (initialized by NewChecker, valid for the life-time of checker)
+ 	conf *Config
 --- a/types/const.go
 +++ b/types/const.go
 @@ -12,7 +12,7 @@
@@ -109,20 +264,86 @@
  )
 --- a/types/expr.go
 +++ b/types/expr.go
-@@ -11,7 +11,7 @@
+@@ -8,10 +8,10 @@
+ 
+ import (
+ 	"fmt"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  )
  
  /*
-@@ -1121,6 +1121,9 @@
+@@ -290,6 +290,9 @@
+ 		return
+ 
+ 	case *ast.CallExpr:
++		if _, ok := check.conditionalValues[x]; ok && !isUntyped(typ) {
++			check.convertConditional(x, typ)
++		}
+ 		// Resulting in an untyped constant (e.g., built-in complex).
+ 		// The respective calls take care of calling updateExprType
+ 		// for the arguments if necessary.
+@@ -948,21 +951,18 @@
+ // target represent the (signature) type and description of the LHS
+ // variable of an assignment, or of a function result variable.
+ type target struct {
++	typ  Type
+ 	sig  *Signature
+ 	desc string
+ }
+ 
+-// newTarget creates a new target for the given type and description.
+-// The result is nil if typ is not a signature.
++// newTarget records the assignment type, including a function signature when present.
+ func newTarget(typ Type, desc string) *target {
+-	if typ != nil {
+-		if u, _ := commonUnder(typ, nil); u != nil {
+-			if sig, _ := u.(*Signature); sig != nil {
+-				return &target{sig, desc}
+-			}
+-		}
++	if typ == nil {
++		return nil
+ 	}
+-	return nil
++	sig, _ := typ.Underlying().(*Signature)
++	return &target{typ: typ, sig: sig, desc: desc}
+ }
+ 
+ // rawExpr typechecks expression e and initializes x with the expression
+@@ -982,6 +982,12 @@
+ 		}()
+ 	}
+ 
++	if T == nil && check.expressionTypes[e] != nil {
++		T = newTarget(check.expressionTypes[e], "expression")
++	}
++	if T != nil {
++		check.expressionType(e, T.typ)
++	}
+ 	kind := check.exprInternal(T, x, e, hint)
+ 
+ 	if !allowGeneric {
+@@ -1008,7 +1014,7 @@
+ 		}
+ 	case *Signature:
+ 		if t.tparams != nil {
+-			if enableReverseTypeInference && T != nil {
++			if enableReverseTypeInference && T != nil && T.sig != nil {
+ 				check.funcInst(T, x.Pos(), x, nil, true)
+ 				return
+ 			}
+@@ -1121,6 +1127,12 @@
  		x.typ_ = T
  
  	case *ast.CallExpr:
 +		if op, ok := check.tgoOperation(e); ok {
++			if op.Conditional {
++				return check.conditionalExpr(T, x, e, hint)
++			}
 +			return check.propagationExpr(x, e, op)
 +		}
  		return check.callExpr(x, e)
@@ -185,15 +406,45 @@
  // ----------------------------------------------------------------------------
 --- a/types/labels.go
 +++ b/types/labels.go
-@@ -7,7 +7,7 @@
+@@ -5,9 +5,9 @@
+ package types
+ 
  import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"slices"
  )
  
+@@ -121,6 +121,17 @@
+ 
+ 	var stmtBranches func(*ast.LabeledStmt, ast.Stmt)
+ 	stmtBranches = func(lstmt *ast.LabeledStmt, s ast.Stmt) {
++		previous := b.lstmt
++		switch s.(type) {
++		case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
++			if lstmt != nil {
++				b.lstmt = lstmt
++			}
++		}
++		check.conditionalStatements(s, func(statement *ast.IfStmt) {
++			stmtBranches(nil, statement)
++		})
++		b.lstmt = previous
+ 		switch s := s.(type) {
+ 		case *ast.DeclStmt:
+ 			if d, _ := s.Decl.(*ast.GenDecl); d != nil && d.Tok == token.VAR {
+@@ -199,6 +210,9 @@
+ 				// "for" statement, and that is the one whose execution advances."
+ 				valid := false
+ 				if t := b.enclosingTarget(name); t != nil {
++					if loop, ok := t.Stmt.(*ast.RangeStmt); ok && loop.X.Pos() <= s.Pos() && s.Pos() < loop.X.End() {
++						check.error(s, MisplacedContinue, "continue cannot advance a range before its collection is computed")
++					}
+ 					switch t.Stmt.(type) {
+ 					case *ast.ForStmt, *ast.RangeStmt:
+ 						valid = true
 --- a/types/literals.go
 +++ b/types/literals.go
 @@ -12,7 +12,7 @@
@@ -205,6 +456,30 @@
  	"strings"
  )
  
+@@ -174,6 +174,13 @@
+ 				key, _ := kv.Key.(*ast.Ident)
+ 				// do all possible checks early (before exiting due to errors)
+ 				// so we don't drop information on the floor
++				if key != nil {
++					if obj, _, _ := lookupFieldOrMethod(utyp, false, check.pkg, key.Name, false); obj != nil {
++						if field, ok := obj.(*Var); ok {
++							check.expressionType(kv.Value, field.typ)
++						}
++					}
++				}
+ 				check.genericExpr(x, kv.Value, nil)
+ 				if key == nil {
+ 					check.errorf(kv, InvalidLitField, "invalid field name %s in struct literal", kv.Key)
+@@ -218,6 +225,9 @@
+ 					check.error(kv, MixedStructLit, "mixture of field:value and value elements in struct literal")
+ 					continue
+ 				}
++				if i < len(fields) {
++					check.expressionType(e, fields[i].typ)
++				}
+ 				check.genericExpr(x, e, nil)
+ 				if i >= len(fields) {
+ 					check.errorf(x, InvalidStructLit, "too many values in struct literal of type %s", base)
 --- a/types/mono.go
 +++ b/types/mono.go
 @@ -10,7 +10,7 @@
@@ -229,15 +504,25 @@
  // An operandMode specifies the (addressing) mode of an operand.
 --- a/types/range.go
 +++ b/types/range.go
-@@ -12,7 +12,7 @@
+@@ -10,9 +10,9 @@
+ package types
+ 
  import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  )
  
  // rangeStmt type-checks a range statement of form
+@@ -34,6 +34,7 @@
+ 	// So we have to be careful not to evaluate the arg in the
+ 	// described situation.
+ 
++	check.rejectRangeCollectionContinue(rangeVar)
+ 	check.hasCallOrRecv = false
+ 	check.expr(nil, &x, rangeVar)
+ 
 --- a/types/resolver.go
 +++ b/types/resolver.go
 @@ -10,7 +10,7 @@
@@ -249,6 +534,135 @@
  	"slices"
  	"strconv"
  	"strings"
+--- a/types/return.go
++++ b/types/return.go
+@@ -52,15 +52,15 @@
+ 		}
+ 
+ 	case *ast.SwitchStmt:
+-		return check.isTerminatingSwitch(s.Body, label)
++		return !check.hasBreak(s, label, true) && check.isTerminatingSwitch(s.Body, label)
+ 
+ 	case *ast.TypeSwitchStmt:
+-		return check.isTerminatingSwitch(s.Body, label)
++		return !check.hasBreak(s, label, true) && check.isTerminatingSwitch(s.Body, label)
+ 
+ 	case *ast.SelectStmt:
+ 		for _, s := range s.Body.List {
+ 			cc := s.(*ast.CommClause)
+-			if !check.isTerminatingList(cc.Body, "") || hasBreakList(cc.Body, label, true) {
++			if !check.isTerminatingList(cc.Body, "") || check.hasBreak(cc, label, true) {
+ 				return false
+ 			}
+ 
+@@ -68,7 +68,7 @@
+ 		return true
+ 
+ 	case *ast.ForStmt:
+-		if s.Cond == nil && !hasBreak(s.Body, label, true) {
++		if s.Cond == nil && !check.hasBreak(s, label, true) && !check.hasBreak(s.Body, label, true) {
+ 			return true
+ 		}
+ 	}
+@@ -93,7 +93,7 @@
+ 		if cc.List == nil {
+ 			hasDefault = true
+ 		}
+-		if !check.isTerminatingList(cc.Body, "") || hasBreakList(cc.Body, label, true) {
++		if !check.isTerminatingList(cc.Body, "") || check.hasBreak(cc, label, true) {
+ 			return false
+ 		}
+ 	}
+@@ -107,7 +107,14 @@
+ // hasBreak reports if s is or contains a break statement
+ // referring to the label-ed statement or implicit-ly the
+ // closest outer breakable statement.
+-func hasBreak(s ast.Stmt, label string, implicit bool) bool {
++func (check *Checker) hasBreak(s ast.Stmt, label string, implicit bool) bool {
++	branchBreak := false
++	check.conditionalStatements(s, func(statement *ast.IfStmt) {
++		branchBreak = branchBreak || check.hasBreak(statement, label, implicit)
++	})
++	if branchBreak {
++		return true
++	}
+ 	switch s := s.(type) {
+ 	default:
+ 		panic("unreachable")
+@@ -118,7 +125,7 @@
+ 		// no chance
+ 
+ 	case *ast.LabeledStmt:
+-		return hasBreak(s.Stmt, label, implicit)
++		return check.hasBreak(s.Stmt, label, implicit)
+ 
+ 	case *ast.BranchStmt:
+ 		if s.Tok == token.BREAK {
+@@ -131,42 +138,42 @@
+ 		}
+ 
+ 	case *ast.BlockStmt:
+-		return hasBreakList(s.List, label, implicit)
++		return check.hasBreakList(s.List, label, implicit)
+ 
+ 	case *ast.IfStmt:
+-		if hasBreak(s.Body, label, implicit) ||
+-			s.Else != nil && hasBreak(s.Else, label, implicit) {
++		if check.hasBreak(s.Body, label, implicit) ||
++			s.Else != nil && check.hasBreak(s.Else, label, implicit) {
+ 			return true
+ 		}
+ 
+ 	case *ast.CaseClause:
+-		return hasBreakList(s.Body, label, implicit)
++		return check.hasBreakList(s.Body, label, implicit)
+ 
+ 	case *ast.SwitchStmt:
+-		if label != "" && hasBreak(s.Body, label, false) {
++		if label != "" && check.hasBreak(s.Body, label, false) {
+ 			return true
+ 		}
+ 
+ 	case *ast.TypeSwitchStmt:
+-		if label != "" && hasBreak(s.Body, label, false) {
++		if label != "" && check.hasBreak(s.Body, label, false) {
+ 			return true
+ 		}
+ 
+ 	case *ast.CommClause:
+-		return hasBreakList(s.Body, label, implicit)
++		return check.hasBreakList(s.Body, label, implicit)
+ 
+ 	case *ast.SelectStmt:
+-		if label != "" && hasBreak(s.Body, label, false) {
++		if label != "" && check.hasBreak(s.Body, label, false) {
+ 			return true
+ 		}
+ 
+ 	case *ast.ForStmt:
+-		if label != "" && hasBreak(s.Body, label, false) {
++		if label != "" && check.hasBreak(s.Body, label, false) {
+ 			return true
+ 		}
+ 
+ 	case *ast.RangeStmt:
+-		if label != "" && hasBreak(s.Body, label, false) {
++		if label != "" && check.hasBreak(s.Body, label, false) {
+ 			return true
+ 		}
+ 	}
+@@ -174,9 +181,9 @@
+ 	return false
+ }
+ 
+-func hasBreakList(list []ast.Stmt, label string, implicit bool) bool {
++func (check *Checker) hasBreakList(list []ast.Stmt, label string, implicit bool) bool {
+ 	for _, s := range list {
+-		if hasBreak(s, label, implicit) {
++		if check.hasBreak(s, label, implicit) {
+ 			return true
+ 		}
+ 	}
 --- a/types/signature.go
 +++ b/types/signature.go
 @@ -8,7 +8,7 @@
@@ -262,15 +676,152 @@
  )
 --- a/types/stmt.go
 +++ b/types/stmt.go
-@@ -10,7 +10,7 @@
+@@ -7,10 +7,10 @@
+ package types
+ 
+ import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
  	"go/token"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"slices"
  )
  
+@@ -45,7 +45,7 @@
+ 		check.labels(body)
+ 	}
+ 
+-	if sig.results.Len() > 0 && !check.isTerminating(body, "") {
++	if sig.results.Len() > 0 && !check.isTerminating(body, "") && !check.conditionalFunctionExit(body) {
+ 		check.error(atPos(body.Rbrace), MissingReturn, "missing return")
+ 	}
+ 
+@@ -409,6 +409,10 @@
+ 
+ // stmt typechecks statement s.
+ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
++	previous := check.statementContext
++	check.statementContext = ctxt
++	defer func() { check.statementContext = previous }()
++
+ 	// statements must end with the same top scope as they started with
+ 	if debug {
+ 		defer func(scope *Scope) {
+@@ -464,11 +468,16 @@
+ 	case *ast.SendStmt:
+ 		var ch, val operand
+ 		check.expr(nil, &ch, s.Chan)
++		var elem Type
++		if ch.isValid() {
++			elem = check.chanElem(inNode(s, s.Arrow), &ch, false)
++			check.expressionType(s.Value, elem)
++		}
+ 		check.genericExpr(&val, s.Value, nil)
+ 		if !ch.isValid() || !val.isValid() {
+ 			return
+ 		}
+-		if elem := check.chanElem(inNode(s, s.Arrow), &ch, false); elem != nil {
++		if elem != nil {
+ 			check.assignment(&val, elem, "send")
+ 		}
+ 
+@@ -538,9 +547,17 @@
+ 		check.suspendedCall("go", s.Call)
+ 
+ 	case *ast.DeferStmt:
++		if check.sig == nil {
++			check.error(s, InvalidSyntaxTree, "defer requires an enclosing function")
++			return
++		}
+ 		check.suspendedCall("defer", s.Call)
+ 
+ 	case *ast.ReturnStmt:
++		if check.sig == nil {
++			check.error(s, InvalidSyntaxTree, "return requires an enclosing function")
++			return
++		}
+ 		res := check.sig.results
+ 		// Return with implicit results allowed for function with named results.
+ 		// (If one is named, all are named.)
+@@ -606,7 +623,9 @@
+ 		check.openScope(s, "if")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
+ 		var x operand
+ 		check.expr(nil, &x, s.Cond)
+ 		if x.isValid() && !allBoolean(x.typ()) {
+@@ -629,7 +648,10 @@
+ 		check.openScope(s, "switch")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
++		check.statementContext = inner
+ 		var x operand
+ 		if s.Tag != nil {
+ 			check.expr(nil, &x, s.Tag)
+@@ -658,6 +680,11 @@
+ 				check.error(c, InvalidSyntaxTree, "incorrect expression switch case")
+ 				continue
+ 			}
++			if x.isValid() {
++				for _, value := range clause.List {
++					check.expressionType(value, x.typ())
++				}
++			}
+ 			check.caseValues(&x, clause.List, seen)
+ 			check.openScope(clause, "case")
+ 			inner := inner
+@@ -675,7 +702,10 @@
+ 		check.openScope(s, "type switch")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
++		check.statementContext = inner
+ 
+ 		// A type switch guard must be of the form:
+ 		//
+@@ -833,7 +863,10 @@
+ 		check.openScope(s, "for")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
++		check.statementContext = inner
+ 		if s.Cond != nil {
+ 			var x operand
+ 			check.expr(nil, &x, s.Cond)
+@@ -841,7 +874,9 @@
+ 				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
+ 			}
+ 		}
+-		check.simpleStmt(s.Post)
++		if s.Post != nil {
++			check.stmt(inner, s.Post)
++		}
+ 		// spec: "The init statement may be a short variable
+ 		// declaration, but the post statement must not."
+ 		if s, _ := s.Post.(*ast.AssignStmt); s != nil && s.Tok == token.DEFINE {
+@@ -855,6 +890,7 @@
+ 
+ 	case *ast.RangeStmt:
+ 		inner |= breakOk | continueOk
++		check.statementContext = inner
+ 		// s.TokPos is invalid when there are no range variables (for range x {});
+ 		// noNewVarPos is unused in that case, but inNode asserts a valid pos.
+ 		tokPos := s.TokPos
 --- a/types/struct.go
 +++ b/types/struct.go
 @@ -7,7 +7,7 @@
@@ -372,6 +923,17 @@
  	"slices"
  	"strings"
  )
+--- a/upstream/errors/codes.go
++++ b/upstream/errors/codes.go
+@@ -665,7 +665,7 @@
+ 	// undeclared by the imported package.
+ 	//
+ 	// Example:
+-	//  import "go/types"
++	//  import "github.com/lucasavila00/tgo/internal/checker/types"
+ 	//
+ 	//  var _ = types.NotAnActualIdentifier
+ 	UndeclaredImportedName
 --- a/upstream/exportdata/exportdata.go
 +++ b/upstream/exportdata/exportdata.go
 @@ -14,7 +14,7 @@
