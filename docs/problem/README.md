@@ -30,18 +30,18 @@ both now and in the future.
 
 ## Adoption and automatic modernization
 
-Shorter syntax must have a clear upgrade path from existing Go code. Users
-must not have to find and rewrite every use by hand. Each new language feature
-must include linter rules that find equivalent older forms and automatic fixes
-that use the new feature when the change can preserve behavior.
+Automatic modernization is a nice-to-have. A language feature can be designed
+and implemented without a linter rule or automatic fix. Users can write the
+new syntax directly. Add automatic fixes where equivalent older forms can be
+converted without changing behavior.
 
 The intended upgrade path is:
 
 1. Select a Go package. Rename all handwritten `.go` source and test files to
    `.tgo`. Keep file suffixes, build constraints, imports, and module paths.
 2. Compile the package and correct compiler errors.
-3. Run the TGo linter. Apply automatic modernization fixes and resolve the
-   remaining linter errors.
+3. Run the TGo linter and resolve linter errors. Apply automatic modernization
+   fixes where available.
 
 Generated Go files are outputs. Other packages can remain Go. The compiler
 checks language validity. Modernization shortens code without changing its
@@ -52,8 +52,7 @@ For example, a call followed by `if err != nil { return err }` can become
 `call()!!` when both forms have the same behavior. These changes must
 preserve types, scope, evaluation order, control flow, error identity, deferred
 calls, and public APIs. Use `!` only when the existing error wrapper matches
-its behavior. Code that needs a design choice must receive a clear diagnostic
-instead of an automatic change.
+its behavior. Leave code unchanged when conversion needs a design choice.
 
 ## Approaches of interest
 
