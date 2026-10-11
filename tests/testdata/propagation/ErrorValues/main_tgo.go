@@ -1,6 +1,6 @@
 package main
 
-import tgo3 "fmt"
+import fmt_tgo3 "fmt"
 
 import (
 	"errors"
@@ -38,7 +38,7 @@ func wrapped() error {
 	{
 		var tgo2 error = target(false)
 		if tgo2 != nil {
-			return tgo3.Errorf("%s: %w", "target", tgo2)
+			return fmt_tgo3.Errorf("%s: %w", "target", tgo2)
 		}
 	}
 	panic("not reached")

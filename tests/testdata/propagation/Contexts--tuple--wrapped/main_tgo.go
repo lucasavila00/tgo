@@ -1,6 +1,6 @@
 package main
 
-import tgo4 "fmt"
+import fmt_tgo4 "fmt"
 
 import (
 	"errors"
@@ -45,7 +45,7 @@ func run() error {
 	var tgo3 error
 	tgo1, tgo2, tgo3 = pair()
 	if tgo3 != nil {
-		return tgo4.Errorf("%s: %w", "pair", tgo3)
+		return fmt_tgo4.Errorf("%s: %w", "pair", tgo3)
 	}
 	a, b := tgo1, tgo2
 	fmt.Print(a, b)

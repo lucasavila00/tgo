@@ -1,6 +1,6 @@
 package main
 
-import tgo4 "fmt"
+import fmt_tgo4 "fmt"
 
 import (
 	"errors"
@@ -31,7 +31,7 @@ func named(fail, wrap bool) (value int, err error) {
 			var tgo2 error
 			tgo1, tgo2 = next(fail)
 			if tgo2 != nil {
-				return tgo3, tgo4.Errorf("%s: %w", "next", tgo2)
+				return tgo3, fmt_tgo4.Errorf("%s: %w", "next", tgo2)
 			}
 			value = tgo1
 		}

@@ -1,6 +1,6 @@
 package main
 
-import tgo8 "fmt"
+import fmt_tgo8 "fmt"
 
 import (
 	"errors"
@@ -49,7 +49,7 @@ func run[T any](f func(...T), channels chan (<-chan T), failAt int) error {
 			var tgo7 error
 			tgo6, tgo7 = next(failAt)
 			if tgo7 != nil {
-				return tgo8.Errorf("%s: %w", "next", tgo7)
+				return fmt_tgo8.Errorf("%s: %w", "next", tgo7)
 			}
 			consume(tgo9, tgo10, tgo6)
 		}

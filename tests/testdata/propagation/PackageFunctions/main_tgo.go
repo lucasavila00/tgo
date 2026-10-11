@@ -1,6 +1,6 @@
 package main
 
-import tgo5 "fmt"
+import fmt_tgo5 "fmt"
 
 import (
 	"errors"
@@ -38,7 +38,7 @@ var wrapped = func(fail bool) error {
 	var tgo4 error
 	tgo3, tgo4 = next(fail)
 	if tgo4 != nil {
-		return tgo5.Errorf("%s: %w", "next", tgo4)
+		return fmt_tgo5.Errorf("%s: %w", "next", tgo4)
 	}
 	value := tgo3
 	trace = append(trace, fmt.Sprint(value))

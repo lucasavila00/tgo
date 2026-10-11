@@ -85,7 +85,7 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 			panic("wrapped errors do not fit the function return type")
 		}
 		if r.formatAlias == nil {
-			r.formatAlias = r.name()
+			r.formatAlias = r.nameFor("fmt")
 			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 		}
 		errorValue = &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("%s: %w")}, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(operation.CallName)}, errorValue}}
@@ -123,7 +123,7 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 	}
 	if generic || nilOnly {
 		if r.reflectAlias == nil {
-			r.reflectAlias = r.name()
+			r.reflectAlias = r.nameFor("reflect")
 			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
 		}
 		reflected, failed := r.name(), r.name()

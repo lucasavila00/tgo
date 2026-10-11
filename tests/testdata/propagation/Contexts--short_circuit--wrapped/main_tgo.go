@@ -1,6 +1,6 @@
 package main
 
-import tgo3 "fmt"
+import fmt_tgo3 "fmt"
 
 import (
 	"errors"
@@ -48,7 +48,7 @@ func run() error {
 			var tgo2 error
 			tgo1, tgo2 = predicate("B")
 			if tgo2 != nil {
-				return tgo3.Errorf("%s: %w", "predicate", tgo2)
+				return fmt_tgo3.Errorf("%s: %w", "predicate", tgo2)
 			}
 			tgo4 = tgo1
 		}
@@ -62,7 +62,7 @@ func run() error {
 			var tgo6 error
 			tgo5, tgo6 = predicate("C")
 			if tgo6 != nil {
-				return tgo3.Errorf("%s: %w", "predicate", tgo6)
+				return fmt_tgo3.Errorf("%s: %w", "predicate", tgo6)
 			}
 			tgo7 = tgo5
 		}

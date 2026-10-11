@@ -1,7 +1,7 @@
 package main
 
-import tgo53 "reflect"
-import tgo7 "fmt"
+import reflect_tgo53 "reflect"
+import fmt_tgo7 "fmt"
 
 import "fmt"
 
@@ -59,7 +59,7 @@ func pointerWrapped(err *PointerError) (int, error) {
 	var tgo5 *PointerError
 	tgo4, tgo5 = next(err)
 	if tgo5 != nil {
-		return tgo6, tgo7.Errorf("%s: %w", "next", tgo5)
+		return tgo6, fmt_tgo7.Errorf("%s: %w", "next", tgo5)
 	}
 	value := use(tgo4)
 	return value, nil
@@ -85,7 +85,7 @@ func ifaceWrapped(err error) (int, error) {
 	var tgo12 error
 	tgo11, tgo12 = next(err)
 	if tgo12 != nil {
-		return tgo13, tgo7.Errorf("%s: %w", "next", tgo12)
+		return tgo13, fmt_tgo7.Errorf("%s: %w", "next", tgo12)
 	}
 	value := use(tgo11)
 	return value, nil
@@ -111,7 +111,7 @@ func numberWrapped(err NumberError) (int, error) {
 	var tgo18 NumberError
 	tgo17, tgo18 = next(err)
 	if 0 == 0 {
-		return tgo19, tgo7.Errorf("%s: %w", "next", tgo18)
+		return tgo19, fmt_tgo7.Errorf("%s: %w", "next", tgo18)
 	}
 	value := use(tgo17)
 	return value, nil
@@ -137,7 +137,7 @@ func sliceWrapped(err SliceError) (int, error) {
 	var tgo24 SliceError
 	tgo23, tgo24 = next(err)
 	if tgo24 != nil {
-		return tgo25, tgo7.Errorf("%s: %w", "next", tgo24)
+		return tgo25, fmt_tgo7.Errorf("%s: %w", "next", tgo24)
 	}
 	value := use(tgo23)
 	return value, nil
@@ -163,7 +163,7 @@ func mappedWrapped(err MapError) (int, error) {
 	var tgo30 MapError
 	tgo29, tgo30 = next(err)
 	if tgo30 != nil {
-		return tgo31, tgo7.Errorf("%s: %w", "next", tgo30)
+		return tgo31, fmt_tgo7.Errorf("%s: %w", "next", tgo30)
 	}
 	value := use(tgo29)
 	return value, nil
@@ -189,7 +189,7 @@ func channelWrapped(err ChanError) (int, error) {
 	var tgo36 ChanError
 	tgo35, tgo36 = next(err)
 	if tgo36 != nil {
-		return tgo37, tgo7.Errorf("%s: %w", "next", tgo36)
+		return tgo37, fmt_tgo7.Errorf("%s: %w", "next", tgo36)
 	}
 	value := use(tgo35)
 	return value, nil
@@ -215,7 +215,7 @@ func functionWrapped(err FuncError) (int, error) {
 	var tgo42 FuncError
 	tgo41, tgo42 = next(err)
 	if tgo42 != nil {
-		return tgo43, tgo7.Errorf("%s: %w", "next", tgo42)
+		return tgo43, fmt_tgo7.Errorf("%s: %w", "next", tgo42)
 	}
 	value := use(tgo41)
 	return value, nil
@@ -241,7 +241,7 @@ func structureWrapped(err StructError) (int, error) {
 	var tgo48 StructError
 	tgo47, tgo48 = next(err)
 	if 0 == 0 {
-		return tgo49, tgo7.Errorf("%s: %w", "next", tgo48)
+		return tgo49, fmt_tgo7.Errorf("%s: %w", "next", tgo48)
 	}
 	value := use(tgo47)
 	return value, nil
@@ -253,10 +253,10 @@ func genericDirect[E error](err E) (int, error) {
 	var tgo50 int
 	var tgo51 E
 	tgo50, tgo51 = next(err)
-	var tgo54 tgo53.Value = tgo53.ValueOf(&tgo51).Elem()
+	var tgo54 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo51).Elem()
 	var tgo55 bool = 0 == 0
 	switch tgo54.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo55 = !tgo54.IsNil()
 	}
 	if tgo55 {
@@ -272,14 +272,14 @@ func genericWrapped[E error](err E) (int, error) {
 	var tgo56 int
 	var tgo57 E
 	tgo56, tgo57 = next(err)
-	var tgo59 tgo53.Value = tgo53.ValueOf(&tgo57).Elem()
+	var tgo59 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo57).Elem()
 	var tgo60 bool = 0 == 0
 	switch tgo59.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo60 = !tgo59.IsNil()
 	}
 	if tgo60 {
-		return tgo58, tgo7.Errorf("%s: %w", "next", tgo57)
+		return tgo58, fmt_tgo7.Errorf("%s: %w", "next", tgo57)
 	}
 	value := use(tgo56)
 	return value, nil
@@ -294,10 +294,10 @@ func comparableResult[E interface {
 	var tgo61 int
 	var tgo62 E
 	tgo61, tgo62 = next(err)
-	var tgo64 tgo53.Value = tgo53.ValueOf(&tgo62).Elem()
+	var tgo64 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo62).Elem()
 	var tgo65 bool = 0 == 0
 	switch tgo64.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo65 = !tgo64.IsNil()
 	}
 	if tgo65 {
@@ -313,10 +313,10 @@ func shadow(nil int, err SliceError) (int, error) {
 	var tgo66 int
 	var tgo67 SliceError
 	tgo66, tgo67 = next(err)
-	var tgo69 tgo53.Value = tgo53.ValueOf(&tgo67).Elem()
+	var tgo69 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo67).Elem()
 	var tgo70 bool = 0 == 0
 	switch tgo69.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo70 = !tgo69.IsNil()
 	}
 	if tgo70 {
@@ -332,10 +332,10 @@ func genericReturn[E error](err E) (int, E) {
 	var tgo71 int
 	var tgo72 E
 	tgo71, tgo72 = next(err)
-	var tgo74 tgo53.Value = tgo53.ValueOf(&tgo72).Elem()
+	var tgo74 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo72).Elem()
 	var tgo75 bool = 0 == 0
 	switch tgo74.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo75 = !tgo74.IsNil()
 	}
 	if tgo75 {
@@ -370,7 +370,7 @@ func contextassignWrapped(err *PointerError) (int, error) {
 		var tgo80 *PointerError
 		tgo79, tgo80 = next(err)
 		if tgo80 != nil {
-			return tgo81, tgo7.Errorf("%s: %w", "next", tgo80)
+			return tgo81, fmt_tgo7.Errorf("%s: %w", "next", tgo80)
 		}
 		value = tgo79
 	}
@@ -398,7 +398,7 @@ func contextreturnWrapped(err *PointerError) (int, error) {
 		var tgo86 *PointerError
 		tgo85, tgo86 = next(err)
 		if tgo86 != nil {
-			return tgo87, tgo7.Errorf("%s: %w", "next", tgo86)
+			return tgo87, fmt_tgo7.Errorf("%s: %w", "next", tgo86)
 		}
 		return use(tgo85), nil
 	}
@@ -438,7 +438,7 @@ func contextloopInitWrapped(err *PointerError) (int, error) {
 		var tgo93 *PointerError
 		tgo92, tgo93 = next(err)
 		if tgo93 != nil {
-			return tgo94, tgo7.Errorf("%s: %w", "next", tgo93)
+			return tgo94, fmt_tgo7.Errorf("%s: %w", "next", tgo93)
 		}
 		var tgo95 bool = 0 == 0
 		for value := tgo92; ; {
@@ -497,7 +497,7 @@ func contextloopPostWrapped(err *PointerError) (int, error) {
 				var tgo101 *PointerError
 				tgo100, tgo101 = next(err)
 				if tgo101 != nil {
-					return tgo102, tgo7.Errorf("%s: %w", "next", tgo101)
+					return tgo102, fmt_tgo7.Errorf("%s: %w", "next", tgo101)
 				}
 				value = tgo100
 			}
@@ -537,7 +537,7 @@ func contextswitchWrapped(err *PointerError) (int, error) {
 		var tgo108 *PointerError
 		tgo107, tgo108 = next(err)
 		if tgo108 != nil {
-			return tgo109, tgo7.Errorf("%s: %w", "next", tgo108)
+			return tgo109, fmt_tgo7.Errorf("%s: %w", "next", tgo108)
 		}
 		switch tgo107 {
 		case 7:
@@ -581,7 +581,7 @@ func contextcaseExprWrapped(err *PointerError) (int, error) {
 			var tgo116 *PointerError
 			tgo115, tgo116 = next(err)
 			if tgo116 != nil {
-				return tgo117, tgo7.Errorf("%s: %w", "next", tgo116)
+				return tgo117, fmt_tgo7.Errorf("%s: %w", "next", tgo116)
 			}
 			if 7 == tgo115 {
 				tgo114 = 0
@@ -628,7 +628,7 @@ func contextshortCircuitWrapped(err *PointerError) (int, error) {
 			var tgo123 *PointerError
 			tgo122, tgo123 = next(err)
 			if tgo123 != nil {
-				return tgo124, tgo7.Errorf("%s: %w", "next", tgo123)
+				return tgo124, fmt_tgo7.Errorf("%s: %w", "next", tgo123)
 			}
 			tgo125 = tgo122 == 7
 		}
@@ -663,7 +663,7 @@ func contextliteralWrapped(err *PointerError) (int, error) {
 			var tgo129 *PointerError
 			tgo128, tgo129 = next(err)
 			if tgo129 != nil {
-				return tgo7.Errorf("%s: %w", "next", tgo129)
+				return fmt_tgo7.Errorf("%s: %w", "next", tgo129)
 			}
 			use(tgo128)
 		}
@@ -696,7 +696,7 @@ func constrainedPointerWrapped[E interface {
 	var tgo134 E
 	tgo133, tgo134 = next(err)
 	if tgo134 != nil {
-		return tgo135, tgo7.Errorf("%s: %w", "next", tgo134)
+		return tgo135, fmt_tgo7.Errorf("%s: %w", "next", tgo134)
 	}
 	value := use(tgo133)
 	return value, nil
@@ -726,7 +726,7 @@ func constrainedNilableWrapped[E interface {
 	var tgo140 E
 	tgo139, tgo140 = next(err)
 	if tgo140 != nil {
-		return tgo141, tgo7.Errorf("%s: %w", "next", tgo140)
+		return tgo141, fmt_tgo7.Errorf("%s: %w", "next", tgo140)
 	}
 	value := use(tgo139)
 	return value, nil
@@ -740,10 +740,10 @@ func constrainedMixedDirect[E interface {
 	var tgo142 int
 	var tgo143 E
 	tgo142, tgo143 = next(err)
-	var tgo145 tgo53.Value = tgo53.ValueOf(&tgo143).Elem()
+	var tgo145 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo143).Elem()
 	var tgo146 bool = 0 == 0
 	switch tgo145.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo146 = !tgo145.IsNil()
 	}
 	if tgo146 {
@@ -761,14 +761,14 @@ func constrainedMixedWrapped[E interface {
 	var tgo147 int
 	var tgo148 E
 	tgo147, tgo148 = next(err)
-	var tgo150 tgo53.Value = tgo53.ValueOf(&tgo148).Elem()
+	var tgo150 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo148).Elem()
 	var tgo151 bool = 0 == 0
 	switch tgo150.Kind() {
-	case tgo53.Chan, tgo53.Func, tgo53.Interface, tgo53.Map, tgo53.Pointer, tgo53.Slice:
+	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
 		tgo151 = !tgo150.IsNil()
 	}
 	if tgo151 {
-		return tgo149, tgo7.Errorf("%s: %w", "next", tgo148)
+		return tgo149, fmt_tgo7.Errorf("%s: %w", "next", tgo148)
 	}
 	value := use(tgo147)
 	return value, nil

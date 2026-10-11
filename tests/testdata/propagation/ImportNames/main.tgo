@@ -1,0 +1,17 @@
+package main
+
+import "fmt"
+
+func target() (int, error) {
+	return 0, fmt.Errorf("failure")
+}
+
+func run() error {
+	target()!!
+	return nil
+}
+
+func main() {
+	fmt.Println(run())
+	fmt.Println(fmt_tgo3)
+}
