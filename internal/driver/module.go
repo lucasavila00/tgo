@@ -18,13 +18,12 @@ type moduleFiles struct {
 	names []string
 }
 
-// preparedModule contains the separate files used for Go package checking.
+// preparedModule records generated paths staged in the source module.
 type preparedModule struct {
-	source     *moduleFiles
-	dir        string
-	tgoFiles   map[string]string
-	used       map[string]bool
-	moduleData []byte
+	source   *moduleFiles
+	dir      string
+	tgoFiles map[string]string
+	used     map[string]bool
 }
 
 // findModule returns the module root that Go selects for dir.
@@ -68,7 +67,7 @@ func readModule(root string) *moduleFiles {
 	}))
 	// Source files control compilation; matching generated files can be stale.
 	for name := range files {
-		if strings.HasSuffix(name, ".tgo") {
+		if strings.HasSuffix(name, ".tgo") && ownsModuleFile(files, name) {
 			delete(files, generatedName(name))
 		}
 	}
@@ -80,8 +79,8 @@ func readModule(root string) *moduleFiles {
 	return &moduleFiles{root: root, files: files, names: names}
 }
 
-// prepareModule copies source to work and keeps replacement paths valid.
-func prepareModule(source *moduleFiles, work string) *preparedModule {
+// prepareModule writes original TGo at generated Go paths for package selection.
+func prepareModule(source *moduleFiles) *preparedModule {
 	used := make(map[string]bool)
 	// Reserve source identifiers before the compiler adds names.
 	for _, content := range source.files {
@@ -93,30 +92,31 @@ func prepareModule(source *moduleFiles, work string) *preparedModule {
 	}
 	tgoFiles := make(map[string]string)
 	for _, name := range source.names {
-		content := source.files[name]
-		if strings.HasSuffix(name, ".tgo") {
-			goName := generatedName(name)
-			tgoFiles[goName] = name
-			name = goName
+		if !strings.HasSuffix(name, ".tgo") || !ownsModuleFile(source.files, name) {
+			continue
 		}
-		path := filepath.Join(work, name)
-		must(os.MkdirAll(filepath.Dir(path), 0700))
-		must(os.WriteFile(path, content, 0600))
+		goName := generatedName(name)
+		tgoFiles[goName] = name
+		must(os.WriteFile(filepath.Join(source.root, goName), source.files[name], 0644))
 	}
+	return &preparedModule{source: source, dir: source.root, tgoFiles: tgoFiles, used: used}
+}
+
+// outputModuleFile keeps replacement paths valid when output is written elsewhere.
+func outputModuleFile(root string) []byte {
 	// Relative replacement paths still refer to the source module's dependencies.
-	moduleData, err := os.ReadFile(filepath.Join(work, "go.mod"))
+	moduleData, err := os.ReadFile(filepath.Join(root, "go.mod"))
 	must(err)
 	mod, err := modfile.Parse("go.mod", moduleData, nil)
 	must(err)
 	for _, replace := range mod.Replace {
 		if replace.New.Version == "" && !filepath.IsAbs(replace.New.Path) {
-			must(mod.AddReplace(replace.Old.Path, replace.Old.Version, filepath.Join(source.root, replace.New.Path), ""))
+			must(mod.AddReplace(replace.Old.Path, replace.Old.Version, filepath.Join(root, replace.New.Path), ""))
 		}
 	}
 	moduleData, err = mod.Format()
 	must(err)
-	must(os.WriteFile(filepath.Join(work, "go.mod"), moduleData, 0600))
-	return &preparedModule{source: source, dir: work, tgoFiles: tgoFiles, used: used, moduleData: moduleData}
+	return moduleData
 }
 
 // collectOutput keeps source and emits Go only for selected TGo files.
@@ -124,7 +124,7 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 	module := checked.sources.module
 	output := make(map[string][]byte)
 	for name, content := range module.source.files {
-		if strings.HasSuffix(name, ".tgo") {
+		if strings.HasSuffix(name, ".tgo") && module.tgoFiles[generatedName(name)] == name {
 			goName := generatedName(name)
 			output[name] = content
 			if !checked.activeFiles[goName] {
@@ -135,10 +135,29 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 			output[goName] = generated
 		} else {
 			if name == "go.mod" {
-				content = module.moduleData
+				content = outputModuleFile(module.dir)
 			}
 			output[name] = content
 		}
 	}
+	if sums, err := os.ReadFile(filepath.Join(module.dir, "go.sum")); err == nil {
+		output["go.sum"] = sums
+	} else if !os.IsNotExist(err) {
+		must(err)
+	}
 	return output
+}
+
+// ownsModuleFile keeps data directories, dependencies, and nested modules as assets.
+func ownsModuleFile(files map[string][]byte, name string) bool {
+	for dir := filepath.Dir(name); dir != "."; dir = filepath.Dir(dir) {
+		base := filepath.Base(dir)
+		if base == "vendor" || base == "testdata" || strings.HasPrefix(base, ".") || strings.HasPrefix(base, "_") {
+			return false
+		}
+		if _, exists := files[filepath.Join(dir, "go.mod")]; exists {
+			return false
+		}
+	}
+	return true
 }

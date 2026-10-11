@@ -31,7 +31,7 @@ func selectSources(module *preparedModule) *selectedSources {
 	return &selectedSources{module: module, packages: selected}
 }
 
-// checkSources checks all selected source packages before output changes any file.
+// checkSources checks selected source packages before lowering.
 func checkSources(sources *selectedSources) *checkedModule {
 	module := sources.module
 	loader, err := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used)
@@ -73,7 +73,16 @@ func lowerModule(module *checkedModule) {
 		output, err := source.LowerPropagations(operations)
 		must(err)
 		for name, content := range output {
-			must(os.WriteFile(name, content, 0600))
+			relative, err := filepath.Rel(module.sources.module.dir, name)
+			must(err)
+			if module.sources.module.tgoFiles[relative] != "" {
+				must(os.WriteFile(name, content, 0644))
+			}
+		}
+	}
+	for name := range module.sources.module.tgoFiles {
+		if !module.activeFiles[name] {
+			must(os.Remove(filepath.Join(module.sources.module.dir, name)))
 		}
 	}
 }
