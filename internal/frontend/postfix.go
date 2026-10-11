@@ -20,7 +20,8 @@ type Marker struct {
 	Position token.Position
 }
 
-// MarkPostfix changes suffixes into comments that survive Go parsing.
+// MarkPostfix replaces postfix ! and !! with named comments that Go can parse.
+// It reserves fresh names in used and records each operator in operations.
 func MarkPostfix(filename string, input []byte, used map[string]bool, operations map[string]Marker) []byte {
 	fset := token.NewFileSet()
 	file := fset.AddFile(filename, -1, len(input))
@@ -70,7 +71,8 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 	return output.Bytes()
 }
 
-// MarkerExpressions pairs each suffix comment with its call.
+// MarkerExpressions matches recorded comments to calls in the parsed file.
+// It records the source call name and panics if an operator does not follow a call.
 func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[string]Marker) map[ast.Expr]Marker {
 	result := make(map[ast.Expr]Marker)
 	for _, group := range file.Comments {
@@ -114,7 +116,8 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 	return result
 }
 
-// WrapMarker replaces a postfix call with a call to its type-checking marker.
+// WrapMarker replaces the selected expression with a helper call for type checking.
+// It changes file in place and removes the comment for this operation.
 func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {
@@ -138,7 +141,8 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	file.Comments = comments
 }
 
-// MarkerDeclaration gives the marker its success result types.
+// MarkerDeclaration builds a generic helper that returns count success arguments.
+// The helper accepts and discards the final error argument during type checking.
 func MarkerDeclaration(operation Marker, count int) ast.Decl {
 	parameters := &ast.FieldList{}
 	arguments := &ast.FieldList{}

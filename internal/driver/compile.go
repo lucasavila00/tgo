@@ -21,8 +21,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// Compile emits a Go module from the TGo files in a module directory.
-// Invalid source and compiler failures panic.
+// Compile translates the module's TGo files and returns file contents by module-relative path.
+// It keeps other module files in the result and panics on invalid source or compiler failures.
 func Compile(dir string) map[string][]byte {
 	dir, mustErr := filepath.Abs(dir)
 	must(mustErr)
