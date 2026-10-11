@@ -291,3 +291,17 @@ func TestSwitchExpressionErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestSwitchExpressionDiagnosticPosition(t *testing.T) {
+	for _, test := range []struct{ source, position string }{
+		{"func f(n int) {\n _ = switch n {\n case 1:\n  break\n default:\n  2\n }\n}", "main.tgo:5:3:"},
+		{"func f(n int) {\n _ = switch n {\n case 1:\n  2\n }\n}", "main.tgo:3:6:"},
+	} {
+		t.Run(test.position, func(t *testing.T) {
+			_, err := checkTGo(t, test.source)
+			if err == nil || !strings.HasPrefix(err.Error(), test.position) {
+				t.Fatalf("error: %v, want position %s", err, test.position)
+			}
+		})
+	}
+}
