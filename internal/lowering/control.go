@@ -16,6 +16,12 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 		r.suppressed = true
 		copy.Body = r.block(s.Body)
 		r.suppressed = suppressed
+		// No iteration can execute the assignment operands or body.
+		for expression := range r.propagations {
+			if contains(s, expression) {
+				r.lowered[expression] = true
+			}
+		}
 		r.inserted = true
 		return []ast.Stmt{&copy}
 	}
