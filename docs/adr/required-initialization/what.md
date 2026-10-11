@@ -8,8 +8,6 @@ var count int = 0      // Valid.
 var owner *User = nil  // Valid for a nullable pointer.
 ```
 
-Later assignments do not satisfy this rule, even if every path assigns before
-use. Do not add definite-assignment analysis.
 
 Forbid named results, including `_`, in TGo function declarations, function
 literals, and function type signatures. This includes interface methods.
