@@ -5,9 +5,45 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestReadModuleReadsOnlyOwnedSource(t *testing.T) {
+	root := t.TempDir()
+	files := map[string]string{
+		"go.mod":              "module example.com/source\n",
+		"main.tgo":            "package p\nvar Value = 1\n",
+		"ordinary.go":         "package p\nvar Keep = 2\n",
+		"main_tgo.go":         "stale snapshot",
+		"asset.bin":           "asset contents",
+		"testdata/example.go": "fixture snapshot",
+		"vendor/example.go":   "dependency source",
+		"nested/go.mod":       "module example.com/nested\n",
+		"nested/example.go":   "nested source",
+		"nested/example.tgo":  "nested TGo source",
+		".data/example.go":    "hidden source",
+		"_data/example.go":    "data source",
+	}
+	for name, content := range files {
+		path := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	source := readModule(root)
+	want := map[string][]byte{"main.tgo": []byte(files["main.tgo"]), "ordinary.go": []byte(files["ordinary.go"])}
+	if !reflect.DeepEqual(source.files, want) {
+		t.Fatalf("source files: got %v, want %v", source.files, want)
+	}
+	if !reflect.DeepEqual(source.names, []string{"main.tgo", "ordinary.go"}) {
+		t.Fatalf("source order: %v", source.names)
+	}
+}
 
 func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	root := t.TempDir()
