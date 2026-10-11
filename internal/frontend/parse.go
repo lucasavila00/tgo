@@ -32,7 +32,10 @@ func originalSource(input []byte) mappedSource {
 
 func (s *mappedSource) replace(start, end int, text string, offsets []int) {
 	s.text = s.text[:start] + text + s.text[end:]
-	s.offsets = append(append(append([]int(nil), s.offsets[:start]...), offsets...), s.offsets[end:]...)
+	updatedOffsets := append([]int(nil), s.offsets[:start]...)
+	updatedOffsets = append(updatedOffsets, offsets...)
+	updatedOffsets = append(updatedOffsets, s.offsets[end:]...)
+	s.offsets = updatedOffsets
 }
 
 func insertedOffsets(count, offset int) []int {
