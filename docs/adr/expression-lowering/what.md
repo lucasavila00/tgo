@@ -2,39 +2,60 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-Evaluate the selected expression once, then insert `return err`.
+`!!` evaluates a call, checks its error, and returns that same error before
+using the call's other results. These examples run inside a function that
+returns `error`.
 
 ## Inside a call
 
-Insert after `target()` in `join(first(), target(), last())`:
+Source:
+
+```text
+join(first(), target()!!, last())
+```
+
+Generated Go:
 
 ```go
 firstValue := first()
-targetValue := target()
-return err
+targetValue, err := target()
+if err != nil {
+    return err
+}
 join(firstValue, targetValue, last())
 ```
 
-`first()` and `target()` run. `last()` and `join()` do not. The unreachable
-last line keeps the temporary variables used.
+`first()` runs before `target()`. If `target()` fails, neither `last()` nor
+`join()` runs.
 
 ## Inside a conditional expression
 
-Insert after `right()` in `use(left() && right())`:
+`left()` returns `bool`. `right()` returns `(bool, error)`.
+
+Source:
+
+```text
+use(left() && right()!!)
+```
+
+Generated Go:
 
 ```go
 r := left()
 if r {
-    r = right()
-    return err
+    rightValue, err := right()
+    if err != nil {
+        return err
+    }
+    r = rightValue
 }
 use(r)
 ```
 
-If `left()` is false, skip `right()` and the return. Otherwise, run `right()`
-and return.
+If `left()` is false, `right()` does not run. If `right()` fails, `use()` does
+not run. Otherwise, `use()` receives the Boolean result.
 
-Only after-evaluation insertion is needed. #247 adds the error check around
-`return err` and handles `!` / `!!` syntax.
+#248 proves after-evaluation statement insertion. #247 adds the error check
+and `!` / `!!` syntax. No before-insertion API is needed.
 
 [HOW](how.md) chooses the tools. [PROOF](proof.md) defines the tests.
