@@ -1,2 +1,20 @@
 // Package frontend prepares TGo postfix syntax for Go parsing and type checking.
+//
+// The frontend prepares TGo error propagation for Go's parser. It uses Go's
+// scanner and AST utilities. The driver supplies source bytes, reserved names,
+// and a map in which to record operations.
+//
+// MarkPostfix replaces postfix ! or !! after a call with a unique comment.
+// For example, read()!! becomes a Go call followed by its marker comment.
+// The operation records the source position and whether the error needs wrapping.
+//
+// MarkerExpressions finds the call associated with each recorded comment.
+// WrapMarker replaces that expression with a helper call.
+// MarkerDeclaration builds a generic helper with the required number of
+// success results. The helper lets Go check the surrounding expression without
+// the call's final error result. The driver later sends these operations to the
+// lowerer, which replaces executable helper calls and removes unused declarations.
+//
+// See the architecture for nested-call
+// preparation and the checks performed after typing.
 package frontend
