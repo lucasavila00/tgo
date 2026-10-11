@@ -29,23 +29,23 @@ func use(value uint64, other int) {
 func count() uint { trace += "C"; return 40 }
 
 func calls(fail bool) error {
-	use(1<<count(), next(fail)!!)
 	use(1<<count(), next(fail)!)
+	use(1<<count(), next(fail)!!)
 	return nil
 }
 
 func returns(fail bool) (uint64, int, error) {
 	n := uint(40)
-	return 1 << n, next(fail)!!, nil
+	return 1 << n, next(fail)!, nil
 }
 
 func assign(fail bool) error {
 	n := uint(40)
 	var first uint64
 	var second int
-	first, second = 1<<n, next(fail)!!
+	first, second = 1<<n, next(fail)!
 	use(first, second)
-	pair := Pair{First: 1 << n, Second: next(fail)!}
+	pair := Pair{First: 1 << n, Second: next(fail)!!}
 	use(pair.First, pair.Second)
 	return nil
 }
@@ -55,14 +55,14 @@ func useNumber(value Number, next int) { fmt.Printf("%d %d ", value, next) }
 func named(fail bool) error {
 	n := uint(40)
 	var value Number = 1 << n
-	useNumber(value, next(fail)!!)
+	useNumber(value, next(fail)!)
 	return nil
 }
 
 func generic[T ~uint64](value T, fail bool) error {
 	consume := func(first T, second int) { fmt.Printf("%d %d ", first, second) }
-	consume(1<<uint(40), next(fail)!!)
-	consume(value, next(fail)!!)
+	consume(1<<uint(40), next(fail)!)
+	consume(value, next(fail)!)
 	return nil
 }
 

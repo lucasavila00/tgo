@@ -38,8 +38,8 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	switch step("T")! {
-	case step("C")!:
+	switch step("T")!! {
+	case step("C")!!:
 		fmt.Print("m")
 		fallthrough
 	case 2:

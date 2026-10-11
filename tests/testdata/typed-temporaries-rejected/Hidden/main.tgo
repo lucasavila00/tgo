@@ -5,7 +5,7 @@ type Value int
 func get() (Value, error) { return 1, nil }
 
 func run(Value string) error {
-	get()!!
+	get()!
 	return nil
 }
 

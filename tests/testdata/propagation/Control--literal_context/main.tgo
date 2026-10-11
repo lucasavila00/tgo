@@ -19,7 +19,7 @@ func step(name string) (int, error) {
 
 func run() error {
 	type S struct{ v int }
-	a := []S{{step("A")!!}, {step("B")!!}}
+	a := []S{{step("A")!}, {step("B")!}}
 	fmt.Print(a)
 	return nil
 }

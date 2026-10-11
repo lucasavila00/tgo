@@ -38,7 +38,7 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	for i := 0; i < 2; i += step("P")! {
+	for i := 0; i < 2; i += step("P")!! {
 		fmt.Print("b")
 		continue
 	}

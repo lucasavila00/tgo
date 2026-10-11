@@ -42,7 +42,7 @@ func run() error {
 	ch <- 1
 	a := [2]int{}
 	select {
-	case a[step("I")!] = <-ch:
+	case a[step("I")!!] = <-ch:
 		fmt.Print("b")
 	}
 	return nil

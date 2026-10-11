@@ -4,7 +4,7 @@ package main
 import "fmt"
 
 func wrapped() error {
-	fail()!
+	fail()!!
 	fmt.Println("continued wrapped")
 	return nil
 }

@@ -38,7 +38,7 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	a, b := pair()!
+	a, b := pair()!!
 	fmt.Print(a, b)
 	return nil
 }

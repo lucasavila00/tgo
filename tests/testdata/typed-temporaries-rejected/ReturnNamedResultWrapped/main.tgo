@@ -6,7 +6,7 @@ type Result struct{ Value int }
 func next() (int, Failure) { return 7, nil }
 
 func run() (Result Result, err Failure) {
-	_ = next()!
+	_ = next()!!
 	return
 }
 

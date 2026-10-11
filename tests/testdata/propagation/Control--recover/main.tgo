@@ -23,7 +23,7 @@ func run() error {
 			fmt.Print("r")
 		}
 	}()
-	panic(step("P")!!)
+	panic(step("P")!)
 
 }
 

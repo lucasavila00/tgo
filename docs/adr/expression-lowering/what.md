@@ -2,7 +2,7 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-`!!` evaluates a call, checks its error, and returns that same error before
+`!` evaluates a call, checks its error, and returns that same error before
 using the call's other results. These examples run inside a function that
 returns `error`.
 
@@ -11,7 +11,7 @@ returns `error`.
 Source:
 
 ```text
-join(first(), target()!!, last())
+join(first(), target()!, last())
 ```
 
 Generated Go:
@@ -35,7 +35,7 @@ join(firstValue, targetValue, last())
 Source:
 
 ```text
-use(left() && right()!!)
+use(left() && right()!)
 ```
 
 Generated Go:

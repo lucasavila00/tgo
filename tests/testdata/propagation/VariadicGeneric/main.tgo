@@ -28,8 +28,8 @@ func run[T any](f func(...T), channels chan (<-chan T), failAt int) error {
 	{
 		T := 1
 		_ = T
-		consume(f, channels, next(failAt)!!)
 		consume(f, channels, next(failAt)!)
+		consume(f, channels, next(failAt)!!)
 	}
 	return nil
 }

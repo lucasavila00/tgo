@@ -49,9 +49,9 @@ func checkPropagationReturns(pkg *packages.Package, operations map[string]fronte
 			if tuple, ok := returned.(*types.Tuple); ok {
 				returned = tuple.At(tuple.Len() - 1).Type()
 			}
-			operator := "!!"
+			operator := "!"
 			if operation.Wrap {
-				operator = "!"
+				operator = "!!"
 				returned = types.Universe.Lookup("error").Type()
 			}
 			target := signature.Results().At(signature.Results().Len() - 1).Type()

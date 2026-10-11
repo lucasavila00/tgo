@@ -21,13 +21,13 @@ func next(fail bool) (int, Failure) {
 func generic[T any](value T, fail, wrap bool) (T, Failure) {
 	if wrap {
 		run := func(T int) (T, Failure) {
-			_ = next(fail)!
+			_ = next(fail)!!
 			return value, nil
 		}
 		return run(0)
 	}
 	run := func(T int) (T, Failure) {
-		_ = next(fail)!!
+		_ = next(fail)!
 		return value, nil
 	}
 	return run(0)
@@ -36,13 +36,13 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 func named[T any](value T, fail, wrap bool) (T, Failure) {
 	if wrap {
 		run := func() (T T, err Failure) {
-			_ = next(fail)!
+			_ = next(fail)!!
 			return value, nil
 		}
 		return run()
 	}
 	run := func() (T T, err Failure) {
-		_ = next(fail)!!
+		_ = next(fail)!
 		return value, nil
 	}
 	return run()
@@ -50,9 +50,9 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 
 func annotated(Result int, fail, wrap bool) (Visible, Failure) {
 	if wrap {
-		_ = next(fail)!
-	} else {
 		_ = next(fail)!!
+	} else {
+		_ = next(fail)!
 	}
 	return Visible{Value: Result}, nil
 }
@@ -60,9 +60,9 @@ func annotated(Result int, fail, wrap bool) (Visible, Failure) {
 func local(fail, wrap bool) (int, error) {
 	error := 1
 	if wrap {
-		_ = next(fail)!
-	} else {
 		_ = next(fail)!!
+	} else {
+		_ = next(fail)!
 	}
 	return error, nil
 }

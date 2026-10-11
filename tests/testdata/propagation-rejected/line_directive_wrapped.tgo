@@ -3,4 +3,4 @@ package main
 import "unsafe"
 func value() (int, error) { return 1, nil }
 //line virtual.tgo:50:1
-func run() error { _ = unsafe.Sizeof(value()!); return nil }
+func run() error { _ = unsafe.Sizeof(value()!!); return nil }

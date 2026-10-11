@@ -7,7 +7,7 @@ import (
 )
 
 func run[K comparable](key K) error {
-	v := foreign.Generic[K]{key: {Number: int(foreign.Number("A")!!)}, key: {Number: int(foreign.Number("B")!!)}}
+	v := foreign.Generic[K]{key: {Number: int(foreign.Number("A")!)}, key: {Number: int(foreign.Number("B")!)}}
 	fmt.Print(len(v))
 	return nil
 }

@@ -1,1 +1,1 @@
-offsetof_plain_direct.tgo:10:35: !! is not allowed inside unsafe.Offsetof operands
+offsetof_plain_direct.tgo:10:35: ! is not allowed inside unsafe.Offsetof operands

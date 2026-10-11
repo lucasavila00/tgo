@@ -5,8 +5,8 @@ It uses Go syntax with postfix error propagation.
 
 ## Propagate errors
 
-`call()!!` returns the original non-nil error from the current function.
-`call()!` wraps it once with the source call name and `%w`. `errors.Is` and
+`call()!` returns the original non-nil error from the current function.
+`call()!!` wraps it once with the source call name and `%w`. `errors.Is` and
 `errors.As` can still find the original error. Both operators remove the
 call's final error result from its success values.
 
@@ -16,13 +16,13 @@ package example
 import "strconv"
 
 func Parse(text string) (int, error) {
-    value := strconv.Atoi(text)!!
+    value := strconv.Atoi(text)!
     return value, nil
 }
 ```
 
 The containing function must end its result list with an error interface.
-For `!!`, the call's final result must be assignable to that interface. For `!`,
+For `!`, the call's final result must be assignable to that interface. For `!!`,
 the wrapped `error` must be assignable to it. On failure, other results receive
 typed zero values. Earlier effects remain; later work
 stops. Deferred calls run. A function literal has its own return target.

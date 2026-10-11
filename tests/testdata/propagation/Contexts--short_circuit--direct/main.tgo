@@ -38,8 +38,8 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	fmt.Print(false && predicate("B")!!)
-	fmt.Print(true && predicate("C")!!)
+	fmt.Print(false && predicate("B")!)
+	fmt.Print(true && predicate("C")!)
 	return nil
 }
 

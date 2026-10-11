@@ -1,1 +1,1 @@
-alignof_alias_generic_wrapped.tgo:10:29: ! is not allowed inside unsafe.Alignof operands
+alignof_alias_generic_wrapped.tgo:10:29: !! is not allowed inside unsafe.Alignof operands

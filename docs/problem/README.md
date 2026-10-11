@@ -47,9 +47,9 @@ behavior. Linting also blocks bad practices, such as zero-value use in TGo.
 Resolve compiler and linter errors to complete the upgrade.
 
 For example, a call followed by `if err != nil { return err }` can become
-`call()!!` when both forms have the same behavior. These changes must
+`call()!` when both forms have the same behavior. These changes must
 preserve types, scope, evaluation order, control flow, error identity, deferred
-calls, and public APIs. Use `!` only when the existing error wrapper matches
+calls, and public APIs. Use `!!` only when the existing error wrapper matches
 its behavior. Leave code unchanged when conversion needs a design choice.
 
 ## Approaches of interest
