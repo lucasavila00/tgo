@@ -6,9 +6,9 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// Compile translates the module's TGo files and returns file contents by module-relative path.
-// It writes generated Go into the module, keeps other files in the result, and panics on failure.
-func Compile(dir string) map[string][]byte {
+// Compile translates the module's TGo files into Go files in the same module.
+// Invalid source and compiler failures panic.
+func Compile(dir string) {
 	root := findModule(dir)
 	source := readModule(root)
 	prepared := prepareModule(source)
@@ -16,7 +16,6 @@ func Compile(dir string) map[string][]byte {
 	checked := checkSources(selected)
 	lowerModule(checked)
 	checkGenerated(prepared.dir)
-	return collectOutput(checked)
 }
 
 func must(err error) {

@@ -69,7 +69,12 @@ func TestTypeNameIdentityOutputStable(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4; i++ {
-		actual := transpiler.Compile(copyFixture(t, fixture))["main_tgo.go"]
+		work := copyFixture(t, fixture)
+		transpiler.Compile(work)
+		actual, err := os.ReadFile(filepath.Join(work, "main_tgo.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !bytes.Equal(actual, want) {
 			t.Fatalf("compilation %d differs from the snapshot", i+1)
 		}
@@ -79,9 +84,9 @@ func TestTypeNameIdentityOutputStable(t *testing.T) {
 func checkTypedTemporaryReference(t *testing.T, name string) {
 	t.Helper()
 	fixture := filepath.Join("testdata/propagation", name)
-	generated := t.TempDir()
-	files := transpiler.Compile(copyFixture(t, fixture))
-	file, err := parser.ParseFile(token.NewFileSet(), "main_tgo.go", files["main_tgo.go"], 0)
+	generated := copyFixture(t, fixture)
+	transpiler.Compile(generated)
+	file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(generated, "main_tgo.go"), nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +109,6 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 		}
 		return true
 	})
-	writeFiles(t, generated, files)
 	want, err := os.ReadFile(filepath.Join(fixture, "stdout.txt"))
 	if err != nil {
 		t.Fatal(err)

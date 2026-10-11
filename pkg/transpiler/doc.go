@@ -1,8 +1,7 @@
 // Package transpiler exposes TGo compilation and expression rewriting.
 //
-// Compile writes generated Go in the source module and returns file contents.
-// The caller can also write those files elsewhere. Commands and other tools use
-// the same compiler.
+// Compile writes and checks generated Go in the source module. Commands and
+// other tools use the same compiler.
 //
 // Load and InsertAfter support tools that need statements at an expression's
 // evaluation point. The callback receives evaluated results, not source text

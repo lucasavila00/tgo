@@ -76,10 +76,9 @@ var _ = fmt.Println
 				transpiler.Compile(dir)
 				return
 			}
-			output := t.TempDir()
-			writeFiles(t, output, transpiler.Compile(dir))
+			transpiler.Compile(dir)
 			command := exec.Command("go", "run", "-p=1", ".")
-			command.Dir = output
+			command.Dir = dir
 			actual, err := command.CombinedOutput()
 			if err != nil || string(actual) != "true\n" {
 				t.Fatalf("generated program: %v\n%s", err, actual)

@@ -36,7 +36,8 @@ func TestPropagationFixtures(t *testing.T) {
 			source := readFiles(t, input)
 			work := t.TempDir()
 			writeFiles(t, work, source)
-			files := transpiler.Compile(work)
+			transpiler.Compile(work)
+			files := readFiles(t, work)
 			inputs := 0
 			for name := range source {
 				if strings.HasSuffix(name, ".tgo") {
@@ -60,10 +61,8 @@ func TestPropagationFixtures(t *testing.T) {
 					t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots\nSAVED:\n%s\nGENERATED:\n%s", name, saved, content)
 				}
 			}
-			output := t.TempDir()
-			writeFiles(t, output, files)
 			command := exec.Command("go", "run", ".")
-			command.Dir = output
+			command.Dir = work
 			actual, err := command.CombinedOutput()
 			if err != nil {
 				t.Fatalf("run generated source: %v\n%s", err, actual)
@@ -78,7 +77,7 @@ func TestPropagationFixtures(t *testing.T) {
 			for name := range files {
 				if strings.HasSuffix(name, "_test.go") {
 					command := exec.Command("go", "test", "./...")
-					command.Dir = output
+					command.Dir = work
 					actual, err := command.CombinedOutput()
 					if err != nil {
 						t.Fatalf("generated tests: %v\n%s", err, actual)
@@ -134,9 +133,11 @@ func TestPropagationSnapshotDeterminism(t *testing.T) {
 	for _, name := range []string{"Contexts--short_circuit--direct", "Contexts--short_circuit--wrapped"} {
 		t.Run(name, func(t *testing.T) {
 			dir := copyFixture(t, filepath.Join("testdata/propagation", name))
-			first := transpiler.Compile(dir)
+			transpiler.Compile(dir)
+			first := readFiles(t, dir)
 			for i := 0; i < 3; i++ {
-				next := transpiler.Compile(dir)
+				transpiler.Compile(dir)
+				next := readFiles(t, dir)
 				if len(next) != len(first) {
 					t.Fatal("generated file set changed")
 				}

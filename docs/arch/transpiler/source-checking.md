@@ -60,8 +60,8 @@ Data directories, nested modules, and vendor dependencies retain their inputs
 and snapshots as assets. Go excludes `testdata` and directories whose names
 start with `.` or `_` from package discovery. Ordinary Go and assets
 stay at their original paths. Go uses normal module loading and can update
-module metadata. Returned output includes current sums and makes local
-replacement paths absolute so it can be written elsewhere.
+module metadata. Compilation returns no file contents. Relative local
+replacement paths remain unchanged.
 
 Warm-cache comparison with copy-based commit `8ba19b9`: Go 1.27.1, Linux amd64,
 `GOMAXPROCS=4`, three one-call samples after a warm-up. The table shows medians.
@@ -74,12 +74,13 @@ Allocations exclude child processes.
 | If value with propagation, no asset | 39 ms | 29 ms | 427 KB / 414 KB |
 | Same source with a 32 MiB asset | 164 ms | 135 ms | 67.5 MB / 67.5 MB |
 
-Assets add no compiler write step. The API still reads and returns their bytes,
-so allocation cost remains. Both paths use one metadata load and one final Go
-load. These short samples describe this workload; they do not establish a
+The disk-stage measurements are from commit `e062dfe`, which still read and
+returned asset bytes. The current driver lists asset paths without reading
+their contents. Both paths use one metadata load and one final Go load.
+These short samples describe this workload; they do not establish a
 speed guarantee. `BenchmarkCompileAssets` retains the asset comparison.
 
 Fixture checks compile temporary copies and read committed snapshots before
 compilation. The compiler itself works in place. Tests compare final disk files
-with returned bytes, exercise failure followed by correction, and check embed,
+with snapshots, exercise failure followed by correction, and check embed,
 cgo headers, vendor selection, workspace dependencies, and module updates.

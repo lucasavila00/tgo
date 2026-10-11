@@ -34,6 +34,6 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	return s.source.InsertAfter(site, after)
 }
 
-// Compile emits a Go module from the TGo files in a module directory.
-// It writes generated Go into that module and returns its files. Invalid source and compiler failures panic.
-func Compile(dir string) map[string][]byte { return driver.Compile(dir) }
+// Compile translates the module's TGo files into Go files in the same module.
+// Invalid source and compiler failures panic.
+func Compile(dir string) { driver.Compile(dir) }
