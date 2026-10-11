@@ -36,13 +36,13 @@ Compile every valid generated snapshot with the pinned Go version. Run each
 compilation twice and compare bytes for deterministic output. Fixture changes
 require explicit snapshot review; tests must not update snapshots on failure.
 
-Run focused checks with:
+Test command:
 
 ```sh
 go test ./tests -run '^TestValueExpression' -count=1
 ```
 
-Run the full test suite in GitHub Actions. These tests are required for the
-implementation; this ADR does not claim they already exist.
+These tests are required for the implementation. This ADR defines the checks
+to add; it does not claim they already exist.
 
 [WHAT](what.md) defines behavior. [HOW](how.md) defines implementation.
