@@ -1,27 +1,39 @@
 # HOW
 
-Extend `internal/frontend`. It already handles `!` and `!!` outside Go's parser.
-Keep `go/parser` and `go/types`; do not copy Go's parser.
+Extend the frontend wrapper for `!` and `!!`. Recognize expression `if`.
+Use `go/parser` for headers and ordinary branch statements. Handle nested
+expressions recursively. Record source positions. Put a generated call in the
+surrounding Go syntax tree to stand for each expression until its type is known.
 
-Parse `if` syntax recursively. Replace candidates with fresh marker calls
-in a Go parsing copy. Parse the whole copy and header/body fragments. Use AST
-context to distinguish statements from expressions. Let Go parse literal
-braces. Store original syntax and positions for diagnostics.
+Check branch values in their original assignment, call, return, or conversion
+context with `go/types`. Keep source bindings and apply WHAT's type rule.
+The Go representation used to check these branch values is still undecided.
 
-This reuses Go's grammar. A parser copy needs upstream maintenance. Token-only
-replacement cannot distinguish nested literals and branch braces reliably.
+Replace the expression with a fresh typed result variable and an ordinary `if`.
+For:
 
-Check separate Go AST copies to find bindings and contextual types. Check
-nested expressions first, then apply WHAT's branch type rule. Preserve scopes.
+```text
+name := if ok { "yes" } else { "no" }
+```
 
-Inside functions, declare a fresh typed result variable. Emit an ordinary `if`
-at the original evaluation point; each completing branch assigns its result.
-Replace the marker with that variable. Preserve earlier operands, skipped
-operands, scopes, and jump targets. Do not create a function boundary: returns,
-defers, and propagation must reach the source function. Apply existing type-name
-checks; report types that cannot be named.
+emit:
 
-For package initializers, call a generated function containing the branches and
-source package references. Preserve Go initialization dependencies and order.
+```go
+var tgo1 string
+if ok {
+    tgo1 = "yes"
+} else {
+    tgo1 = "no"
+}
+name := tgo1
+```
+
+Each completing branch assigns its final value. Keep earlier operands first
+and conditional operands conditional. Preserve scopes and jump targets.
+Returns, defers, and propagation stay in the source function.
+Report result types that cannot be named.
+
+For package initializers, use generated functions that retain source package
+references, initialization dependencies, and order.
 
 Connect through the driver. Format generated Go and type-check it.
