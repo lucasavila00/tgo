@@ -27,6 +27,11 @@ stops. Deferred calls run. A function literal has its own return target.
 Propagation works inside calls, assignments, literals, conditional expressions,
 loops, switches, ranges, selects, and arguments to `defer` and `go`.
 
+For now, `!` and `!!` are not allowed anywhere inside an operand of
+`unsafe.Sizeof`, `unsafe.Alignof`, or `unsafe.Offsetof`. This includes nested
+function bodies and generic operands. Import aliases do not change this rule.
+The diagnostic identifies the operator's source position and the builtin.
+
 ## Command
 
 Run from the repository root:

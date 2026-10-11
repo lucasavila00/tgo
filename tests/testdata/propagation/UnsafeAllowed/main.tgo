@@ -1,0 +1,20 @@
+package main
+
+import (
+	"fmt"
+	u "unsafe"
+)
+
+type utility struct{}
+
+func (utility) Sizeof(value int) int { return value }
+func next() (int, error)             { return 7, nil }
+func run() error {
+	value := struct{ X int }{next()!!}
+	fmt.Println(u.Sizeof(value) > 0, u.Alignof(value) > 0, u.Offsetof(value.X))
+	unsafe := utility{}
+	fmt.Println(unsafe.Sizeof(next()!!))
+	fmt.Println(min(next()!, 8), max(6, next()!!))
+	return nil
+}
+func main() { fmt.Println(run()) }

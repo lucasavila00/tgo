@@ -1,0 +1,1 @@
+alignof_closure_wrapped.tgo:10:42: ! is not allowed inside unsafe.Alignof operands

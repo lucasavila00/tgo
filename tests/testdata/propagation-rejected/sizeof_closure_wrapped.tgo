@@ -1,0 +1,12 @@
+package example
+
+import u "unsafe"
+
+type S[T any] struct{ X T }
+
+func next[T any]() (T, error) { var value T; return value, nil }
+
+func run[T any]() error {
+	_ = u.Sizeof(func() error { next[int]()!; return nil })
+	return nil
+}
