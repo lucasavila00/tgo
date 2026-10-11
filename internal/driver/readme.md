@@ -8,15 +8,66 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/driver"
 ```
 
-Package driver runs module compilation and writes generated Go.
+Package driver compiles a module's TGo files into ordinary Go.
 
-Compile finds the Go module for the supplied directory. It lists module paths, reads owned Go and TGo source, and excludes stale generated files. Assets, vendor dependencies, data directories, and nested modules are not source inputs for this driver.
+Start here to follow the compiler. The [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) reads added syntax, the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>) checks its types and scope, and [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>) emits equivalent Go. The [public API](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md>) calls this driver. The [user guide](<https://github.com/lucasavila00/tgo/blob/main/docs/guide/transpiler.md>) explains language use.
 
-The driver writes original TGo at each final generated Go path. Go's package tools then select files, imports, build constraints, and test variants. The private checker reads the selected source through the frontend. After all source checks pass, the lowerer builds ordinary Go and the driver writes it at the same generated paths. Excluded generated paths are removed. Stock Go checks the final module.
+### Compilation steps
 
-Compilation returns no file contents and creates no temporary module or separate temporary source files. Original TGo, ordinary Go, and assets stay at their paths. A failure can leave a source version or completed output at a generated path. The next compilation replaces it from the TGo input.
+Compile runs these steps from [compile.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/compile.go>):
 
-Start with compile.go for the steps. module.go handles ownership and disk writes. propagation.go coordinates selection, checking, and lowering for both propagation and if values. filename.go preserves test and platform suffixes. The unsafe operand check rejects propagation inside unsafe size and offset operands. Expression behavior belongs to the lowerer.
+```
+findModule -> readModule -> prepareModule -> selectSources
+    -> checkSources -> lowerModule -> checkGenerated
+```
+
+findModule asks Go for the go.mod selected from the supplied directory. Compilation starts at that module root, even for a subdirectory argument. A directory outside a module is an error.
+
+readModule lists paths and reads owned Go and TGo source. A TGo input owns its generated output; stale output contents cannot affect compilation. Nested modules, vendor, testdata, and directories starting with a dot or underscore are outside ownership. Unrelated asset contents are not read.
+
+prepareModule writes original TGo at each generated Go path. For example, service.tgo owns service\_tgo.go. Test and platform suffixes stay last, as in service\_tgo\_linux\_test.go. This first version still contains TGo syntax. Preparation also reserves source names and records original diagnostic paths.
+
+selectSources asks go/packages for files, imports, test variants, and compiled dependency information. Go applies build constraints and platform selection. This load requests metadata, not TGo type checking.
+
+checkSources checks selected source with the private checker. All source packages must pass before the final implementations are written.
+
+lowerModule builds equivalent Go and writes it only to owned output paths. An input with no added operations already contains Go and needs no rewrite. Owned outputs excluded from this build are removed; their TGo inputs remain.
+
+checkGenerated loads the final module with unmodified Go type checking. Compilation returns no file contents. Invalid source and compiler failures panic. Runtime [tests](<https://github.com/lucasavila00/tgo/blob/main/tests/readme.md>) check behavior that type checking cannot prove.
+
+### Files on disk
+
+Each generated path serves both stages: original TGo for source checking, then final Go. There is no module copy or separate temporary source file. Original TGo, ordinary Go, embedded assets, cgo headers, and dependencies stay at their paths. Relative replacements retain their meaning. Normal Go module commands can update go.mod and go.sum.
+
+A failed compilation can leave staged source or completed output at generated paths. Correct the TGo input and compile again to replace those files.
+
+### Code map
+
+[module.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/module.go>) handles ownership and disk stages. [propagation.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/propagation.go>) connects file selection, checking, and lowering for propagation and if values. [filename.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/filename.go>) preserves filename suffixes. The [unsafe operand check](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/unsafe_propagation.go>) rejects propagation in unsafe size and offset operands.
+
+### Glossary
+
+AST \(abstract syntax tree\): nodes for expressions, statements, and declarations.
+
+Binding: the declaration to which a name refers.
+
+Contextual type: a type supplied by an assignment, return, argument, or conversion.
+
+Export data: compiled information about dependency types and declarations.
+
+Lowering: replacing added expressions with equivalent Go statements.
+
+Marker: a syntax node that identifies a TGo operation, not a runtime helper.
+
+Overlay: Go tooling's map of file paths to replacement contents for a load. This compiler uses disk stages instead.
+
+Package ID: Go's identity for a package, including its test variant.
+
+Private checker: the compiler's patched copy of Go's type checker.
+
+Stock Go checker: the unmodified checker used on final output.
+
+Temporary variable: a generated local that saves a value, not a temporary file.
 
 ## func Compile
 

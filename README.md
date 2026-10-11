@@ -10,10 +10,14 @@ label := if value.Active { "active" } else { "inactive" }
 ```
 
 Start with the [user guide](docs/guide/transpiler.md) for syntax and commands.
-Read [how compilation works](docs/arch/transpiler/readme.md) for the complete
-process, from source files to generated Go.
+Read the [driver package](internal/driver/readme.md) for the complete compiler
+process and shared glossary. Package explanations come from their Go comments.
 
-- [Source checking](docs/arch/transpiler/source-checking.md): how TGo expressions get their types.
-- [Lowering](docs/arch/transpiler/correctness.md): how generated statements preserve execution.
-- [Tests](docs/guide/testing.md): fixtures, references, and CI checks.
+- [Frontend](internal/frontend/readme.md): parsing added syntax.
+- [Checker](internal/checker/readme.md): checking source types and scope.
+- [Lowering](internal/lowering/readme.md): preserving execution in generated Go.
+- [Public API](pkg/transpiler/readme.md): compilation and expression insertion.
+- [Tests](tests/readme.md): fixtures, references, and CI checks.
+- [Performance](docs/performance.md): historical measurements.
+- [Design decisions](docs/adr/): reasons, consequences, and validation plans.
 - [Language vision](docs/problem/vision.md): the intended language, including planned features.

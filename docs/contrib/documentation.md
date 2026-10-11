@@ -1,13 +1,17 @@
-# Keep code explanations and API docs in sync
+# Keep one source for each explanation
 
-Use architecture docs to explain the complete process. Use package comments to
-state each package's job, inputs, and outputs. Function comments explain caller
-behavior: what is read or written, what is returned, and how failure is reported.
-Define a compiler term before using it and show a small example when it helps.
+Put compiler explanations in package comments, normally `doc.go`. The
+[driver](../../internal/driver/readme.md) is the starting point and owns the
+shared glossary. Frontend, checker, control-flow, and lowering comments explain
+their own work. Link to another package instead of repeating its process.
+
+Function comments explain caller behavior: what is read or written, what is
+returned, and how failure is reported. Use plain words and small examples.
 
 ## Generated package READMEs
 
-Edit Go comments to change a package README. Then generate and check the result:
+Edit Go comments to change a package README. Where local Go work is permitted,
+generate and check the result:
 
 ```sh
 make docs
@@ -27,15 +31,18 @@ They omit changing line links and repeated symbol indexes, so unrelated code
 edits do not change generated docs. The pinned tool runs with `go run` and is
 not a compiler dependency.
 
-## Handwritten docs
+## Handwritten references
 
-The [architecture guide](../arch/transpiler/readme.md) explains compilation from
-start to finish. The user guide explains syntax and commands. Test docs explain
-inputs, snapshots, independent references, and CI. Design records explain a
-specific decision and its required checks; link to architecture details instead
-of repeating the whole process.
+The [user guide](../guide/transpiler.md) owns language syntax and commands; API
+details belong to `pkg/transpiler`. [Tests](../../tests/readme.md) owns fixture
+use, snapshots, references, and CI. Its README is handwritten because the package
+has only test files. The separate fuzz guide covers campaign commands and
+failure investigation.
 
-The `tests` package has only test files, so its README is handwritten. The
-language vision includes intended features and must not be presented as a list
-of features already implemented. When behavior changes, update every current-code
-explanation that depends on it.
+Keep one file per decision under `docs/adr/`: decision, reason, consequences,
+and validation. Link to current package explanations instead of copying them.
+[Performance](../performance.md) records historical measurements and conditions.
+The language vision describes intended features, not only implemented features.
+
+When behavior changes, update its owning comments or reference and any links
+that depend on it. Do not add another architecture overview or glossary.
