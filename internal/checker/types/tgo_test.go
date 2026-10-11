@@ -247,6 +247,7 @@ func TestSwitchExpressionTypes(t *testing.T) {
 		`func f(n int) int { return switch n {case 1: if n>0 {1} else {2}; default: 3} }`,
 		`func pick[T any](x,y T) T{return x}; func f(n int) any {return pick(switch n {case 1: 1; default: "two"},any(3))}`,
 		`var x = switch 1 {case 1: 2; default: 3}`,
+		`func f(v any) any {return switch x:=v.(type) {case int,string:x;case nil:x;default:x}}`,
 	} {
 		t.Run(source, func(t *testing.T) {
 			_, err := checkTGo(t, source)
@@ -273,6 +274,11 @@ func TestSwitchExpressionErrors(t *testing.T) {
 		{`func pair()(int,int){return 1,2}; func f(n int) { _=switch n {case 1: pair(); default: 2} }`, "multiple-value"},
 		{`func f(n int) int8 { return switch n {case 1: 128; default: 0} }`, "overflows"},
 		{`var x=switch 1 {case 1:unused:=1;2;default:3}`, "declared and not used"},
+		{`func f(x any) int {return switch v:=x.(type) {case int:v:=3;v;default:0}}`, "no new variables"},
+		{`func f(n int) {_=switch n {case 1:return;default:return}}`, "result type is unknown"},
+		{`func f(n int) {var x [switch n {case 1:2;default:3}]int;_=x}`, "must be constant"},
+		{`func f(n int) {_=switch n {case 1:x:=2;x;default:x}}`, "undefined: x"},
+		{`func f(v any) {_=switch v.(type) {case int:1;case int:2;default:3}}`, "duplicate case"},
 	} {
 		t.Run(test.source, func(t *testing.T) {
 			_, err := checkTGo(t, test.source)

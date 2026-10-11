@@ -153,7 +153,7 @@ func deleteKeyType(typ Type) Type {
 
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
 	// Branch statements can change state even without a call or receive.
-	// Array len, cap, and range must therefore evaluate an if value.
+	// Array len, cap, and range must therefore evaluate a conditional value.
 	check.hasCallOrRecv = true
 	x.expr = call
 	x.typ_ = Typ[Invalid]
@@ -290,6 +290,10 @@ func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) [
 func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*operand {
 	check.openScope(body, "conditional expression branch")
 	defer check.closeScope()
+	return check.conditionalBlockValues(body, context)
+}
+
+func (check *Checker) conditionalBlockValues(body *ast.BlockStmt, context Type) []*operand {
 	list := trimTrailingEmptyStmts(body.List)
 	if len(list) == 0 {
 		check.error(body, InvalidSyntaxTree, "conditional expression branch requires a final value")
@@ -652,7 +656,7 @@ func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*o
 	check.statementContext &^= breakOk | fallthroughOk | finalSwitchCase
 	defer func() { check.statementContext = previous }()
 	body := &ast.BlockStmt{Lbrace: clause.Colon, List: clause.Body, Rbrace: clause.End()}
-	values := check.conditionalBlock(body, context)
+	values := check.conditionalBlockValues(body, context)
 	if check.Info != nil {
 		if check.TGoCases == nil {
 			check.TGoCases = make(map[*ast.CaseClause]bool)

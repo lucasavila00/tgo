@@ -101,7 +101,7 @@ type conditionalEdit struct {
 // is prepared before its containing expression; ambiguous syntax uses AST recovery.
 func (s *mappedSource) prepareConditionals(filename string, original *token.File, used map[string]bool, conditionals map[string]token.Position) bool {
 	var starts []int
-	for offset, operand := range expressionIfTokens(s.text) {
+	for offset, operand := range expressionConditionalTokens(s.text) {
 		if operand {
 			starts = append(starts, offset)
 		}

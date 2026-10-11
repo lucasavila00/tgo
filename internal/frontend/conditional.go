@@ -8,10 +8,10 @@ import (
 )
 
 func conditionalStart(file *ast.File, temporary *token.FileSet, source string) int {
-	candidates := expressionIfTokens(source)
+	candidates := expressionConditionalTokens(source)
 	start := -1
-	// Prepare inner operands first. Parser recovery can truncate an outer if
-	// when another if value remains inside parentheses in its branch.
+	// Prepare inner operands first. Parser recovery can truncate an outer
+	// conditional when a nested value remains in its branch.
 	for offset, operand := range candidates {
 		if operand && offset > start {
 			start = offset
@@ -65,9 +65,9 @@ func (s *mappedSource) wrapConditional(filename string, original *token.File, st
 	return nil
 }
 
-// expressionIfTokens distinguishes operand tokens from ordinary if statements.
+// expressionConditionalTokens distinguishes operand tokens from conditional statements.
 // Parser recovery after a bad operand can report later statements as operands.
-func expressionIfTokens(source string) map[int]bool {
+func expressionConditionalTokens(source string) map[int]bool {
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, len(source))
 	var scan scanner.Scanner
