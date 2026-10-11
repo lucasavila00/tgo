@@ -200,6 +200,7 @@ func Compile(dir string) map[string][]byte {
 			continue
 		}
 		rejectUnsafePropagation(pkg, operations)
+		checkPropagationReturns(pkg, operations)
 		source, err := lowering.SourceFromPackage(pkg, work)
 		must(err)
 		output, err := source.LowerPropagations(loweredOperations)
