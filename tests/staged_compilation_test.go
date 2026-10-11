@@ -20,12 +20,10 @@ func TestCompileStagesUseEmbeddedAssets(t *testing.T) {
 		"main_tgo.go": []byte("invalid stale snapshot"),
 	}
 	writeFiles(t, root, files)
-	output := transpiler.Compile(root)
+	transpiler.Compile(root)
 	assertInputFiles(t, root, files)
-	out := t.TempDir()
-	writeFiles(t, out, output)
 	command := exec.Command("go", "run", ".")
-	command.Dir = out
+	command.Dir = root
 	got, err := command.CombinedOutput()
 	if err != nil || string(got) != "hello from embed\n" {
 		t.Fatalf("embedded output: %v, %s", err, got)
@@ -62,12 +60,10 @@ func TestCompileStagesUseCgoHeaders(t *testing.T) {
 		"main.tgo": []byte("package main\nimport \"fmt\"\nfunc run() error {fmt.Println(value()!);return nil}\nfunc main(){if err:=run();err!=nil {panic(err)}}\n"),
 	}
 	writeFiles(t, root, files)
-	output := transpiler.Compile(root)
+	transpiler.Compile(root)
 	assertInputFiles(t, root, files)
-	out := t.TempDir()
-	writeFiles(t, out, output)
 	command = exec.Command("go", "run", ".")
-	command.Dir = out
+	command.Dir = root
 	got, err := command.CombinedOutput()
 	if err != nil || string(got) != "7\n" {
 		t.Fatalf("cgo output: %v, %s", err, got)
@@ -84,7 +80,7 @@ func TestCompileStagesUseVendorSelection(t *testing.T) {
 		"main.tgo":                              []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n"),
 	}
 	writeFiles(t, root, files)
-	output := transpiler.Compile(root)
+	transpiler.Compile(root)
 	for name, want := range files {
 		if name == "main_tgo.go" {
 			continue
@@ -94,10 +90,8 @@ func TestCompileStagesUseVendorSelection(t *testing.T) {
 			t.Fatalf("changed source %s: %v", name, err)
 		}
 	}
-	out := t.TempDir()
-	writeFiles(t, out, output)
 	command := exec.Command("go", "run", ".")
-	command.Dir = out
+	command.Dir = root
 	got, err := command.CombinedOutput()
 	if err != nil || string(got) != "9\n" {
 		t.Fatalf("vendor output: %v, %s", err, got)
@@ -110,8 +104,9 @@ func TestCompileStagesUseWorkspaceDependency(t *testing.T) {
 	root := filepath.Join(base, "source")
 	files := map[string][]byte{"go.mod": []byte("module example.com/workspace\n\ngo 1.27.1\n\nrequire example.com/value v0.0.0\n"), "main.tgo": []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n")}
 	writeFiles(t, root, files)
-	output := transpiler.Compile(root)
-	if len(output["main_tgo.go"]) == 0 {
+	transpiler.Compile(root)
+	generated, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
+	if err != nil || len(generated) == 0 {
 		t.Fatal("missing module output")
 	}
 	command := exec.Command("go", "run", ".")

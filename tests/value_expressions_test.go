@@ -25,7 +25,8 @@ func TestValueExpressions(t *testing.T) {
 			saved := readFiles(t, dir)
 			work := t.TempDir()
 			writeFiles(t, work, saved)
-			files := transpiler.Compile(work)
+			transpiler.Compile(work)
+			files := readFiles(t, work)
 			for name, content := range files {
 				if !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "reference/") {
 					continue
@@ -36,13 +37,11 @@ func TestValueExpressions(t *testing.T) {
 					t.Errorf("generated %s differs from snapshot:\n%s", name, content)
 				}
 			}
-			output := t.TempDir()
-			writeFiles(t, output, files)
 			want, err := os.ReadFile(filepath.Join(dir, "stdout.txt"))
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, path := range []string{output, filepath.Join(output, "reference")} {
+			for _, path := range []string{work, filepath.Join(work, "reference")} {
 				command := exec.Command("go", "run", ".")
 				command.Dir = path
 				actual, err := command.CombinedOutput()

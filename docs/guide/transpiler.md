@@ -73,15 +73,13 @@ The source directory must be inside a Go module. The command writes generated
 Go beside its `.tgo` source. `name.tgo` produces `name_tgo.go`;
 `name_test.tgo` produces `name_tgo_test.go`. Target suffixes stay at the end:
 `name_linux_amd64_test.tgo` produces `name_tgo_linux_amd64_test.go`.
-Compilation writes generated files in the source module before returning output.
+Compilation writes and checks generated files in the source module.
 TGo inputs control these files. Selected files contain final Go after success.
 Generated files for excluded inputs are removed. Go can update module metadata.
 
-Use `-o /tmp/generated` to emit the module into another directory instead.
-Output includes module files,
-ordinary Go source, generated Go, and assets. Go build constraints select which
-TGo files to compile, including test packages. Excluded files retain their
-`.tgo` source. Relative module replacements keep their dependency paths.
+Go build constraints select which TGo files to compile, including test packages.
+Excluded files retain their `.tgo` source. Assets and local dependencies stay at
+their original paths. Relative module replacements remain unchanged.
 Invalid source and compiler failures cause a panic.
 
 ## Go API
@@ -90,7 +88,7 @@ Import `github.com/lucasavila00/tgo/pkg/transpiler`.
 
 | Operation | Result |
 | --- | --- |
-| `Compile(directory string) map[string][]byte` | Emitted module files keyed by relative path; panics on failure |
+| `Compile(directory string)` | Writes and checks generated Go in the source module; panics on failure |
 | `Load(directory, pattern string) (*Source, error)` | One Go package with syntax and type information |
 | `source.InsertAfter(site Site, after After) (map[string][]byte, error)` | Formatted Go files keyed by absolute path |
 

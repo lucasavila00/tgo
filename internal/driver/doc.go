@@ -10,10 +10,10 @@
 // generated paths, then replaces it with checked generated Go.
 //
 // Compilation passes data through these steps: read module files, prepare a
-// generated Go paths, select source with Go's build rules, check source
-// packages, lower expressions, check emitted Go, and collect output.
+// generated Go path for each TGo input, select source with Go's build rules,
+// check source packages, lower expressions, and check emitted Go.
 // Each step keeps the data required by the next step.
 //
-// The driver returns the emitted module as file contents. The caller can write
-// output elsewhere. Expression evaluation rules belong to the lowerer.
+// The driver writes generated Go in the source module. Expression evaluation
+// rules belong to the lowerer.
 package driver

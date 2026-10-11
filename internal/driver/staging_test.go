@@ -23,7 +23,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	output := Compile(root)
+	Compile(root)
 	for _, name := range []string{"main.tgo", "ordinary.go", "asset.bin"} {
 		got, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(got, files[name]) {
@@ -31,7 +31,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 		}
 	}
 	got, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
-	if err != nil || !bytes.Equal(got, output["main_tgo.go"]) || bytes.Equal(got, files["main.tgo"]) {
+	if err != nil || len(got) == 0 || bytes.Equal(got, files["main.tgo"]) {
 		t.Fatalf("generated disk output: %v, %s", err, got)
 	}
 }
@@ -53,17 +53,18 @@ func TestCompileReplacesFailedStage(t *testing.T) {
 	if err != nil || !bytes.Equal(got, input) {
 		t.Fatalf("failed source stage: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "main.tgo"), []byte("package p\nvar Value = 3\n"), 0600); err != nil {
+	corrected := []byte("package p\nvar Value = 3\n")
+	if err := os.WriteFile(filepath.Join(root, "main.tgo"), corrected, 0600); err != nil {
 		t.Fatal(err)
 	}
-	output := Compile(root)
+	Compile(root)
 	got, err = os.ReadFile(filepath.Join(root, "main_tgo.go"))
-	if err != nil || !bytes.Equal(got, output["main_tgo.go"]) {
+	if err != nil || !bytes.Equal(got, corrected) {
 		t.Fatalf("retry output: %v", err)
 	}
 }
 
-func TestCompileReturnsModuleUpdates(t *testing.T) {
+func TestCompileKeepsModuleUpdates(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("GOFLAGS", "-mod=mod")
 	for name, content := range map[string]string{"go.mod": "module example.com/metadata\n\ngo 1.27.1\n\nrequire golang.org/x/mod v0.42.0\n", "main.tgo": "package p\nimport \"golang.org/x/mod/modfile\"\nvar Value = modfile.File{}\n"} {
@@ -71,10 +72,10 @@ func TestCompileReturnsModuleUpdates(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	output := Compile(root)
+	Compile(root)
 	sums, err := os.ReadFile(filepath.Join(root, "go.sum"))
-	if err != nil || len(sums) == 0 || !bytes.Equal(sums, output["go.sum"]) {
-		t.Fatalf("returned module sums: %v", err)
+	if err != nil || len(sums) == 0 {
+		t.Fatalf("module sums: %v", err)
 	}
 }
 
@@ -105,13 +106,13 @@ func TestCompileKeepsDataAndNestedModuleFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	output := Compile(root)
+	Compile(root)
 	for name, want := range files {
 		if name == "go.mod" || name == "main.tgo" {
 			continue
 		}
 		got, err := os.ReadFile(filepath.Join(root, name))
-		if err != nil || !bytes.Equal(got, want) || !bytes.Equal(output[name], want) {
+		if err != nil || !bytes.Equal(got, want) {
 			t.Fatalf("changed asset file %s: %v", name, err)
 		}
 	}

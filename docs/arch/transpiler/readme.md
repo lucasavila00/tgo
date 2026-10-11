@@ -9,7 +9,7 @@ statements needed to implement them.
 
 | Package | Responsibility | Reason |
 | --- | --- | --- |
-| `cmd/tgo` | Choose paths and write returned output | The command chooses the output directory. |
+| `cmd/tgo` | Choose the source directory and call the compiler | The driver writes generated files in that module. |
 | `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
 | `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
 | `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
@@ -101,8 +101,8 @@ Generated files can be stale, so they do not participate in source checking.
 Compilation writes each TGo input at its generated Go path in the module.
 The private checker checks this source version. Lowering replaces selected
 files with ordinary Go and removes excluded generated files. Stock Go checking
-then reads the final files. The compiler also returns module contents for an
-output directory. Ordinary Go, assets, and dependencies stay at their paths.
+then reads the final files. Compilation returns no file contents. Ordinary Go,
+assets, and dependencies stay at their paths.
 
 `name.tgo` produces `name_tgo.go`. Test and platform suffixes stay last:
 `name_linux_test.tgo` produces `name_tgo_linux_test.go`. Physical paths decide

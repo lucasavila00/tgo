@@ -89,12 +89,10 @@ func FuzzPropagationBehavior(f *testing.F) {
 		want := fuzzRun(t, referenceDir, reference)
 		inputDir := t.TempDir()
 		writeFiles(t, inputDir, map[string][]byte{"go.mod": []byte(module), "main.tgo": []byte(input)})
-		files := fuzzCompile(t, inputDir, input)
-		outputDir := t.TempDir()
-		writeFiles(t, outputDir, files)
-		got := fuzzRun(t, outputDir, input)
+		fuzzCompile(t, inputDir, input)
+		got := fuzzRun(t, inputDir, input)
 		if !bytes.Equal(got, want) {
-			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input, reference, want, got, files["main_tgo.go"])
+			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input, reference, want, got, readFiles(t, inputDir)["main_tgo.go"])
 		}
 	})
 }
@@ -214,14 +212,14 @@ func run() (err error) {
 	return input, string(formatted)
 }
 
-func fuzzCompile(t *testing.T, dir, input string) (files map[string][]byte) {
+func fuzzCompile(t *testing.T, dir, input string) {
 	t.Helper()
 	defer func() {
 		if p := recover(); p != nil {
 			t.Fatalf("compiler panic: %v\nINPUT:\n%s", p, input)
 		}
 	}()
-	return transpiler.Compile(dir)
+	transpiler.Compile(dir)
 }
 
 func fuzzRun(t *testing.T, dir, input string) []byte {

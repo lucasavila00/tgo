@@ -30,10 +30,8 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	files["excluded_tgo_"+excludedOS+".go"] = []byte("invalid stale snapshot")
 
 	writeFiles(t, dir, files)
-	first := transpiler.Compile(dir)
-	if _, exists := first["excluded_tgo_"+excludedOS+".go"]; exists {
-		t.Fatal("excluded target generated output")
-	}
+	transpiler.Compile(dir)
+	first := readFiles(t, dir)
 	if _, err := os.Stat(filepath.Join(dir, "excluded_tgo_"+excludedOS+".go")); !os.IsNotExist(err) {
 		t.Fatalf("excluded generated file remains: %v", err)
 	}
@@ -50,16 +48,15 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "main_tgo.go"), []byte("package example\nvar _tgoValue0 = nonexistent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	second := transpiler.Compile(dir)
+	transpiler.Compile(dir)
+	second := readFiles(t, dir)
 	for name, content := range first {
 		if !bytes.Equal(second[name], content) {
 			t.Fatalf("snapshot changed compilation of %s", name)
 		}
 	}
-	output := t.TempDir()
-	writeFiles(t, output, second)
 	command := exec.Command("go", "test", "./...")
-	command.Dir = output
+	command.Dir = dir
 	if data, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("generated tests: %v\n%s", err, data)
 	}
