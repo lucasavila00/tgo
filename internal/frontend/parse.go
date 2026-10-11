@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-// Parsed contains Go syntax and records for the added TGo expressions.
+// Parsed contains Go syntax and records for added TGo forms.
 type Parsed struct {
 	File           *ast.File
 	Comprehensions map[string]*Comprehension

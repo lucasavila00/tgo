@@ -30,7 +30,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	return output, nil
 }
 
-// LowerPropagations replaces checked propagation, if values, and comprehensions with ordinary Go.
+// LowerPropagations replaces checked TGo operations with ordinary Go.
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {

@@ -64,3 +64,16 @@ func TestShortReturnTypeErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestShortReturnDiagnosticPositions(t *testing.T) {
+	cases := []struct{ source, position string }{
+		{"func f() (value int, err error) {\n\treturn 1 ..\n}", "main.tgo:3:2:"},
+		{"func f() (int8, error) {\n\treturn 128 ..\n}", "main.tgo:3:9:"},
+	}
+	for _, test := range cases {
+		_, err := checkTGo(t, test.source)
+		if err == nil || !strings.Contains(err.Error(), test.position) {
+			t.Fatalf("got %v, want position %s", err, test.position)
+		}
+	}
+}
