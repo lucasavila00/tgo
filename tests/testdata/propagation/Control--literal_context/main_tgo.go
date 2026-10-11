@@ -19,25 +19,24 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 
 	type S struct{ v int }
 	var tgo1 int
 	var tgo2 error
 	tgo1, tgo2 = step("A")
-	tgo4 = tgo2
-	if tgo4 != tgo5 {
+	if tgo2 != nil {
+		tgo4 = tgo2
 		return tgo4
 	}
-	var tgo8 S = ([]S{{tgo1}})[0]
-	var tgo6 int
-	var tgo7 error
-	tgo6, tgo7 = step("B")
-	tgo4 = tgo7
-	if tgo4 != tgo5 {
+	var tgo7 S = ([]S{{tgo1}})[0]
+	var tgo5 int
+	var tgo6 error
+	tgo5, tgo6 = step("B")
+	if tgo6 != nil {
+		tgo4 = tgo6
 		return tgo4
 	}
-	a := []S{tgo8, {tgo6}}
+	a := []S{tgo7, {tgo5}}
 	fmt.Print(a)
 	return nil
 }

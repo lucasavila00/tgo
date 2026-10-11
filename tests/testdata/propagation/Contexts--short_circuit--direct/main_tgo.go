@@ -39,36 +39,35 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	{
-		var tgo6 bool
-		tgo6 = false
-		if tgo6 {
+		var tgo5 bool
+		tgo5 = false
+		if tgo5 {
 			var tgo1 bool
 			var tgo2 error
 			tgo1, tgo2 = predicate("B")
-			tgo4 = tgo2
-			if tgo4 != tgo5 {
+			if tgo2 != nil {
+				tgo4 = tgo2
 				return tgo4
 			}
-			tgo6 = tgo1
+			tgo5 = tgo1
 		}
-		fmt.Print(tgo6)
+		fmt.Print(tgo5)
 	}
 	{
-		var tgo9 bool
-		tgo9 = true
-		if tgo9 {
-			var tgo7 bool
-			var tgo8 error
-			tgo7, tgo8 = predicate("C")
-			tgo4 = tgo8
-			if tgo4 != tgo5 {
+		var tgo8 bool
+		tgo8 = true
+		if tgo8 {
+			var tgo6 bool
+			var tgo7 error
+			tgo6, tgo7 = predicate("C")
+			if tgo7 != nil {
+				tgo4 = tgo7
 				return tgo4
 			}
-			tgo9 = tgo7
+			tgo8 = tgo6
 		}
-		fmt.Print(tgo9)
+		fmt.Print(tgo8)
 	}
 	return nil
 }

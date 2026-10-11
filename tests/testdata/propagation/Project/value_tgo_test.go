@@ -6,19 +6,18 @@ import (
 	"example.com/program/library"
 )
 
-func testRead() (tgo8 int, tgo10 error) {
-	var tgo9 int = tgo8
-	var tgo11 error = tgo10
-	var tgo12 error = tgo11
+func testRead() (tgo7 int, tgo9 error) {
+	var tgo8 int = tgo7
+	var tgo10 error = tgo9
 	{
-		var tgo6 int
-		var tgo7 error
-		tgo6, tgo7 = library.Read()
-		tgo11 = tgo7
-		if tgo11 != tgo12 {
-			return tgo9, tgo11
+		var tgo5 int
+		var tgo6 error
+		tgo5, tgo6 = library.Read()
+		if tgo6 != nil {
+			tgo10 = tgo6
+			return tgo8, tgo10
 		}
-		return tgo6, nil
+		return tgo5, nil
 	}
 }
 

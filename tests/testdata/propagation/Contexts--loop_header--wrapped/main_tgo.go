@@ -1,6 +1,6 @@
 package main
 
-import tgo6 "fmt"
+import tgo5 "fmt"
 
 import (
 	"errors"
@@ -41,34 +41,33 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	{
-		var tgo8 int
-		var tgo9 error
-		tgo8, tgo9 = step("I")
-		tgo4 = tgo9
-		if tgo4 != tgo5 {
-			tgo4 = tgo6.Errorf("%s: %w", "step", tgo4)
+		var tgo7 int
+		var tgo8 error
+		tgo7, tgo8 = step("I")
+		if tgo8 != nil {
+			tgo4 = tgo8
+			tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
 			return tgo4
 		}
-		var tgo10 bool = 0 == 0
+		var tgo9 bool = 0 == 0
 
-		for i := tgo8; ; {
-			if tgo10 {
-				tgo10 = 0 != 0
+		for i := tgo7; ; {
+			if tgo9 {
+				tgo9 = 0 != 0
 			} else {
 				i++
 			}
-			var tgo7 int = i
+			var tgo6 int = i
 			var tgo1 int
 			var tgo2 error
 			tgo1, tgo2 = step("C")
-			tgo4 = tgo2
-			if tgo4 != tgo5 {
-				tgo4 = tgo6.Errorf("%s: %w", "step", tgo4)
+			if tgo2 != nil {
+				tgo4 = tgo2
+				tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
 				return tgo4
 			}
-			if !(tgo7 < tgo1+1) {
+			if !(tgo6 < tgo1+1) {
 				break
 			}
 			{

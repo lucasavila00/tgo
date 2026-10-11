@@ -35,6 +35,14 @@ participate in source type checking. See the API guide for module output rules.
 `call()!` wraps that error once with the source call name. On failure, later
 statements do not run. Deferred calls still run.
 
+The failure check uses the call's final result before return conversion. A nil
+pointer, slice, map, channel, or function is success. A nil error interface is
+success, but an interface that contains a nil pointer is failure. A result
+whose type cannot be nil is failure, including a zero-valued concrete error.
+A generic result follows these rules for its instantiated type. The compiler
+uses reflection when Go cannot compare that result directly with nil. It checks
+the result's declared type without extracting an interface's dynamic value.
+
 Lowering visits named functions and function expressions, including functions
 inside package variable initializers and collections. Each function has its
 own return target. The surrounding package initializer keeps its order.

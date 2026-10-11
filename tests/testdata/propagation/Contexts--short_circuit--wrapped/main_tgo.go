@@ -1,6 +1,6 @@
 package main
 
-import tgo6 "fmt"
+import tgo5 "fmt"
 
 import (
 	"errors"
@@ -41,38 +41,37 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	{
-		var tgo7 bool
-		tgo7 = false
-		if tgo7 {
+		var tgo6 bool
+		tgo6 = false
+		if tgo6 {
 			var tgo1 bool
 			var tgo2 error
 			tgo1, tgo2 = predicate("B")
-			tgo4 = tgo2
-			if tgo4 != tgo5 {
-				tgo4 = tgo6.Errorf("%s: %w", "predicate", tgo4)
+			if tgo2 != nil {
+				tgo4 = tgo2
+				tgo4 = tgo5.Errorf("%s: %w", "predicate", tgo4)
 				return tgo4
 			}
-			tgo7 = tgo1
+			tgo6 = tgo1
 		}
-		fmt.Print(tgo7)
+		fmt.Print(tgo6)
 	}
 	{
-		var tgo10 bool
-		tgo10 = true
-		if tgo10 {
-			var tgo8 bool
-			var tgo9 error
-			tgo8, tgo9 = predicate("C")
-			tgo4 = tgo9
-			if tgo4 != tgo5 {
-				tgo4 = tgo6.Errorf("%s: %w", "predicate", tgo4)
+		var tgo9 bool
+		tgo9 = true
+		if tgo9 {
+			var tgo7 bool
+			var tgo8 error
+			tgo7, tgo8 = predicate("C")
+			if tgo8 != nil {
+				tgo4 = tgo8
+				tgo4 = tgo5.Errorf("%s: %w", "predicate", tgo4)
 				return tgo4
 			}
-			tgo10 = tgo8
+			tgo9 = tgo7
 		}
-		fmt.Print(tgo10)
+		fmt.Print(tgo9)
 	}
 	return nil
 }
