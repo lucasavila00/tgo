@@ -1,13 +1,10 @@
 GOMARKDOC = go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0
 DOC_PACKAGES = ./cmd/tgo ./pkg/transpiler ./internal/driver ./internal/checker ./internal/frontend ./internal/lowering ./internal/controlflow
 
-.PHONY: prepare build docs docs-check lint
+.PHONY: prepare docs docs-check lint
 
 prepare:
-	@sh scripts/prepare-checker.sh
-
-build: prepare
-	go build ./...
+	sh scripts/prepare-checker.sh
 
 docs: prepare
 	@set -e; for package in $(DOC_PACKAGES); do $(GOMARKDOC) "$$package"; done
