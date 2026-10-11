@@ -149,7 +149,7 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		}
 		alias := r.typeImports[pkg]
 		if alias == nil {
-			alias = r.name()
+			alias = r.nameFor(pkg.Name())
 			r.typeImports[pkg] = alias
 			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
 		}
@@ -157,7 +157,7 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	})
 	var unsafeAlias *ast.Ident
 	if unsafePointer {
-		unsafeAlias = r.name()
+		unsafeAlias = r.nameFor("unsafe")
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
 	}
 	result, err := parser.ParseExpr(text)

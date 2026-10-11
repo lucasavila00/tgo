@@ -1,6 +1,6 @@
 package main
 
-import tgo10 "fmt"
+import fmt_tgo10 "fmt"
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func run() (tgo3 error) {
 		tgo8, tgo9 = next()
 		if tgo9 != nil {
 			tgo4 = tgo9
-			tgo4 = tgo10.Errorf("%s: %w", "next", tgo4)
+			tgo4 = fmt_tgo10.Errorf("%s: %w", "next", tgo4)
 			return tgo4
 		}
 		var tgo13 int = min(tgo8, 8)

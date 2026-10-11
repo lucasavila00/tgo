@@ -1,6 +1,6 @@
 package main
 
-import tgo9 "fmt"
+import fmt_tgo9 "fmt"
 
 import (
 	"errors"
@@ -42,7 +42,7 @@ var wrapped = func(fail bool) (tgo7 error) {
 	tgo5, tgo6 = next(fail)
 	if tgo6 != nil {
 		tgo8 = tgo6
-		tgo8 = tgo9.Errorf("%s: %w", "next", tgo8)
+		tgo8 = fmt_tgo9.Errorf("%s: %w", "next", tgo8)
 		return tgo8
 	}
 	value := tgo5

@@ -17,7 +17,7 @@ func (r *rewrite) pointerZero(place ast.Expr) ast.Expr {
 
 func (r *rewrite) sequenceZero(sequence ast.Expr) ast.Expr {
 	if r.zeroSequence == nil {
-		r.zeroSequence, r.iterAlias = r.name(), r.name()
+		r.zeroSequence, r.iterAlias = r.name(), r.nameFor("iter")
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.iterAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"iter"`}})
 		parameter, argument, zero := r.name(), r.name(), r.name()
 		typ := &ast.IndexExpr{X: &ast.SelectorExpr{X: r.iterAlias, Sel: ast.NewIdent("Seq")}, Index: parameter}
