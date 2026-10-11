@@ -4,45 +4,17 @@
 
 This repository is mothballed while we develop the compiler spikes in
 [#248](https://github.com/lucasavila00/tgo/issues/248) and
-[#247](https://github.com/lucasavila00/tgo/issues/247). Only documentation and
-the specification remain. The code, tests, build tools, CI, and architecture
+[#247](https://github.com/lucasavila00/tgo/issues/247). Only the README syntax
+examples and project documentation remain. The code, tests, build tools, CI, and architecture
 documents have been removed. Git history retains them.
 
-The guides below describe the removed implementation. Their build and test
-commands are not available in this checkout.
+TGo is Go with extra compile-time checks and shorter error handling. Its
+`.tgo` syntax uses normal Go packages, imports, types, and calls.
 
-TGo is Go with extra compile-time checks and shorter error handling. You write
-`.tgo` files. `tgo build` creates ordinary `.go` files that the Go toolchain can
-build and test.
+The examples below describe the language syntax. This checkout has no compiler
+or installation procedure.
 
-TGo uses normal Go packages, imports, types, and calls. It does not require a
-runtime library or replace the Go toolchain.
-
-## Build TGo
-
-TGo requires Go 1.27.
-
-```sh
-git clone https://github.com/lucasavila00/tgo.git
-cd tgo
-make build
-export PATH="$PWD/bin:$PATH"
-```
-
-The command builds `tgo`, `tgofmt`, `tgolint`, and `tgonav` in `bin/`.
-
-## Try it
-
-Create a separate Go module:
-
-```sh
-cd ..
-mkdir tgo-example
-cd tgo-example
-go mod init example.com/greeting
-```
-
-Save this file as `greeting.tgo`:
+## Return success or failure
 
 ```text
 package greeting
@@ -58,19 +30,6 @@ func Greeting(name string) (string, error) {
 	return "Hello, " + name,
 }
 ```
-
-Build the TGo source, then use the normal Go tools:
-
-```sh
-tgo build ./...
-go test ./...
-tgolint ./...
-```
-
-`tgo build` writes `greeting_tgo.go` beside `greeting.tgo`. Commit generated Go
-files with their TGo source. Do not edit generated files. Write TGo package
-tests in `_test.tgo` files; `tgo build` writes `_tgo_test.go` files for the Go
-tool.
 
 ## Return and propagate errors
 
@@ -107,7 +66,7 @@ func OwnerName(account Account) string {
 ```
 
 `%User` means a pointer that must not be nil. Generated Go uses `*User`.
-`tgolint` reports code that might supply nil to `%User`.
+A value supplied to `%User` must be proven non-nil.
 
 ## List every allowed form
 
@@ -150,6 +109,27 @@ string, or another checked struct by value. Named types and aliases follow the
 same rule. Pointers, collections, arrays, functions, channels, interfaces,
 enums, and ordinary structs are not valid checked fields.
 
+## Build slices and maps with comprehensions
+
+A slice comprehension produces a list of values. An `if` filters the input:
+
+```text
+names := []string{for _, account := range accounts {
+    if account.Active { account.Name }
+}}
+```
+
+A map comprehension produces a key and value for each input:
+
+```text
+byID := map[ID]Account{for _, account := range accounts {
+    account.ID: account
+}}
+```
+
+Use one expression for a slice result and `key: value` for a map result. A later
+entry with the same map key replaces the earlier value.
+
 ## Use TGo with Go
 
 Each package is either TGo or Go. Do not mix handwritten `.tgo` and `.go`
@@ -157,27 +137,8 @@ files in one package.
 
 TGo emits normal Go types. A Go package can import a TGo package and use its
 generated API. TGo adds no automatic runtime guard at the Go boundary. Go code
-can bypass generated constructors and other TGo checks. Run `tgolint` on TGo
-source and Go callers.
+can bypass generated constructors and other TGo checks.
 
-See the [user guide](docs/guide/README.md) and the
-[Go caller guide](docs/guide/GO-CALLERS.md) for the complete workflow.
+## Project direction
 
-## Tools
-
-- `tgo build` checks TGo source and writes Go output.
-- `tgofmt` formats `.tgo` files.
-- `tgolint` checks TGo rules in TGo source and Go callers.
-- The [VS Code extension](docs/guide/VSCODE.md) provides syntax highlighting,
-  hover information, navigation, and symbols.
-
-## Contribute
-
-Use the specification and user guides to define language behavior. Keep
-compiler experiments separate from the removed implementation.
-
-## Learn more
-
-- [User guide](docs/guide/README.md)
-- [Language reference](docs/spec/README.md)
-- [`tgolint` reference](docs/spec/TGOLINT.md)
+See the [project problem](docs/problem/README.md) for the language design goals.
