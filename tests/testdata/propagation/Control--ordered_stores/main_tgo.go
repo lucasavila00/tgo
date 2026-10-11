@@ -17,8 +17,7 @@ func step(name string) (int, error) {
 	return 1, nil
 }
 
-func run() (tgo3 error) {
-	var tgo4 error = tgo3
+func run() error {
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
@@ -30,24 +29,21 @@ func run() (tgo3 error) {
 		var tgo2 error
 		tgo1, tgo2 = step("I")
 		if tgo2 != nil {
-			tgo4 = tgo2
+			return tgo2
+		}
+		var tgo3 int
+		var tgo4 error
+		tgo3, tgo4 = step("V")
+		if tgo4 != nil {
 			return tgo4
 		}
 		var tgo5 int
 		var tgo6 error
-		tgo5, tgo6 = step("V")
+		tgo5, tgo6 = step("W")
 		if tgo6 != nil {
-			tgo4 = tgo6
-			return tgo4
+			return tgo6
 		}
-		var tgo7 int
-		var tgo8 error
-		tgo7, tgo8 = step("W")
-		if tgo8 != nil {
-			tgo4 = tgo8
-			return tgo4
-		}
-		a[tgo1], a[0] = tgo5, tgo7
+		a[tgo1], a[0] = tgo3, tgo5
 	}
 	return nil
 }

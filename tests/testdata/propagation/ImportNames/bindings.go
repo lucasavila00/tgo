@@ -1,3 +1,3 @@
 package main
 
-const fmt_tgo5 = "source"
+const fmt_tgo3 = "source"

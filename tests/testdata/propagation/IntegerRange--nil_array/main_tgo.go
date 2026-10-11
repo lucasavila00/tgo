@@ -19,8 +19,7 @@ func step(name string) (int, error) {
 	return 1, nil
 }
 
-func run() (tgo4 error) {
-	var tgo5 error = tgo4
+func run() error {
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
@@ -33,23 +32,21 @@ func run() (tgo4 error) {
 		var tgo3 error
 		tgo2, tgo3 = step("I")
 		if tgo3 != nil {
-			tgo5 = tgo3
-			return tgo5
+			return tgo3
 		}
-		var tgo10 N = tgo6(&tgo1[tgo2])
-		var tgo11 bool = 0 == 0
-		for tgo10 = range 2 {
-			if tgo11 {
-				tgo11 = 0 != 0
+		var tgo8 N = tgo4(&tgo1[tgo2])
+		var tgo9 bool = 0 == 0
+		for tgo8 = range 2 {
+			if tgo9 {
+				tgo9 = 0 != 0
 			} else {
 				tgo1 = a
 				tgo2, tgo3 = step("I")
 				if tgo3 != nil {
-					tgo5 = tgo3
-					return tgo5
+					return tgo3
 				}
 			}
-			tgo1[tgo2] = tgo10
+			tgo1[tgo2] = tgo8
 			{
 
 			}
@@ -73,7 +70,7 @@ func main() {
 	}
 }
 
-func tgo6[tgo7 interface {
-}](tgo8 *tgo7) (tgo9 tgo7) {
+func tgo4[tgo5 interface {
+}](tgo6 *tgo5) (tgo7 tgo5) {
 	return
 }

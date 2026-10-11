@@ -4,9 +4,13 @@ type Failure interface{ Error() string }
 
 func next() (int, Failure) { return 7, nil }
 
-func run(error int) error {
+func run() (error error) {
 	_ = next()!
 	return nil
 }
 
-func main() {}
+func main() {
+	if run() != nil {
+		panic("unexpected error")
+	}
+}

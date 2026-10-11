@@ -65,6 +65,9 @@ Their type objects stay separate from stock `go/types` objects. Public `Load`
 keeps its stock package and checks the same syntax separately for lowering.
 After lowering, stock Go checking checks the emitted module.
 
+The function keeps its source result names. Failure returns use saved zero
+values for results before the error. Deferred calls still run.
+
 ## Source controls output
 
 Generated files can be stale, so they do not participate in source checking.

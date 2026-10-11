@@ -10,13 +10,11 @@ var failure = errors.New("bad")
 
 func fail() error { return failure }
 
-func direct() (tgo2 error) {
-	var tgo3 error = tgo2
+func direct() error {
 	{
 		var tgo1 error = fail()
 		if tgo1 != nil {
-			tgo3 = tgo1
-			return tgo3
+			return tgo1
 		}
 	}
 	fmt.Println("continued direct")

@@ -8,19 +8,18 @@ import (
 )
 
 type returnFrame struct {
-	function   ast.Node
-	typ        *ast.FuncType
-	outputType *ast.FuncType
-	prefix     []ast.Stmt
-	values     []ast.Expr
+	function ast.Node
+	typ      *ast.FuncType
+	prepared bool
+	prefix   []ast.Stmt
+	values   []ast.Expr
 }
 
 func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType, *ast.BlockStmt) {
 	parent := r.frame
 	r.frame = &returnFrame{function: node, typ: typ}
 	output := r.block(body)
-	if r.frame.outputType != nil {
-		typ = r.frame.outputType
+	if r.frame.prepared {
 		output.List = append(r.frame.prefix, output.List...)
 	}
 	if aliases := r.aliasStatements[node]; len(aliases) != 0 {
@@ -30,34 +29,27 @@ func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 	return typ, output
 }
 
-// prepareReturns saves zero results at function entry.
-func (r *rewrite) prepareReturns(original *ast.FuncType) (*ast.FuncType, []ast.Stmt) {
+// prepareReturns saves zero values for the results before the error.
+func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 	if original.Results == nil {
 		panic("propagation requires an error return")
 	}
-	copy := *original
-	results := *original.Results
-	results.List = make([]*ast.Field, len(original.Results.List))
 	var prefix []ast.Stmt
 	for i, field := range original.Results.List {
-		clone := *field
-		clone.Names = append([]*ast.Ident(nil), field.Names...)
-		if len(clone.Names) == 0 {
-			clone.Names = []*ast.Ident{r.name()}
+		count := len(field.Names)
+		if count == 0 {
+			count = 1
 		}
-		for j, name := range clone.Names {
-			if name.Name == "_" {
-				name = r.name()
-				clone.Names[j] = name
+		for j := 0; j < count; j++ {
+			if i == len(original.Results.List)-1 && j == count-1 {
+				break
 			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), name))
+			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
 			r.frame.values = append(r.frame.values, value)
 		}
-		results.List[i] = &clone
 	}
-	copy.Results = &results
-	return &copy, prefix
+	return prefix
 }
 
 func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([]ast.Stmt, []ast.Expr) {
@@ -80,14 +72,14 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 	if _, ok := last.Underlying().(*types.Interface); !ok || !types.AssignableTo(last, types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
-	if r.frame.outputType == nil {
-		r.frame.outputType, r.frame.prefix = r.prepareReturns(r.frame.typ)
+	if !r.frame.prepared {
+		r.frame.prefix = r.prepareReturns(r.frame.typ)
+		r.frame.prepared = true
 	}
-	errorValue := r.frame.values[len(r.frame.values)-1]
 	callError := values[len(values)-1]
 	check, failed := r.callFailure(callError, raw)
 	before = append(before, check...)
-	failure := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{errorValue}, Tok: token.ASSIGN, Rhs: []ast.Expr{callError}}}
+	var errorValue ast.Expr = callError
 	if operation.Wrap {
 		if !types.AssignableTo(types.Universe.Lookup("error").Type(), last) {
 			panic("wrapped errors do not fit the function return type")
@@ -96,10 +88,10 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 			r.formatAlias = r.nameFor("fmt")
 			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 		}
-		wrapped := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("%s: %w")}, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(operation.CallName)}, errorValue}}
-		failure = append(failure, &ast.AssignStmt{Lhs: []ast.Expr{errorValue}, Tok: token.ASSIGN, Rhs: []ast.Expr{wrapped}})
+		errorValue = &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("%s: %w")}, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(operation.CallName)}, errorValue}}
 	}
-	failure = append(failure, &ast.ReturnStmt{Results: r.frame.values})
+	results := append(append([]ast.Expr(nil), r.frame.values...), errorValue)
+	failure := []ast.Stmt{&ast.ReturnStmt{Results: results}}
 	before = append(before, &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: failure}})
 	r.inserted = true
 	r.lowered[marker] = true

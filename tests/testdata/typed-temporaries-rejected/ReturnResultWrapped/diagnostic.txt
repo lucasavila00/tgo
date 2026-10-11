@@ -1,1 +1,0 @@
-TGo: main.tgo:8:12: cannot name type error in a generated typed temporary: the source hides the type name error; expose the type with an accessible name
