@@ -1,9 +1,10 @@
 # HOW
 
-Keep standard `go/parser` and `go/types`. Add a TGo extension parser in
-`internal/frontend`; do not copy Go's parser. Scan tokens, parse the added `if`
-forms recursively, and keep their headers, branches, final expressions, and
-original source positions in frontend records.
+Extend the existing frontend: it already marks `!` and `!!` before Go parsing
+and uses marker calls for type checking. Add recursive parsing of `if` headers
+and branches in `internal/frontend`. Keep standard `go/parser` and `go/types`.
+Store the added syntax and original source positions in frontend records.
+Do not copy Go's parser.
 
 Replace each candidate with a fresh marker call in a Go-only parsing copy.
 Parse the complete copy and each header/body fragment with `go/parser`. Use
