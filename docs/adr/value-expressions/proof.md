@@ -11,7 +11,7 @@ Cover:
 - Package dependencies, declaration order, selected effects, compiled imports.
 - Named types, interfaces, constants, nil, generics, contextual types, shifts.
 - Return, panic, all branches terminating, continue, break, labels, goto.
-- `!` error text, `!!` identity, skipped propagation, deferred calls.
+- `!` identity, `!!` error text, skipped propagation, deferred calls.
 - Comments, newlines, nested literals, adjacent statements, generated-name collisions.
 - Generic calls with several conditional arguments; public `Load` stock-package identity.
 - Runtime `int8` overflow (-128 when `ok=true`) in int8 context: `(if ok {127} else {0})+1`, without false constant-overflow errors.

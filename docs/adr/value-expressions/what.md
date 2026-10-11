@@ -1,5 +1,7 @@
 # WHAT
 
+Automatic conversion from Go is optional for this feature.
+
 An `if` expression produces one value:
 
 ```text
