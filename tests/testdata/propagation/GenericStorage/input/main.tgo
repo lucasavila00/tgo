@@ -1,0 +1,20 @@
+package main
+import("fmt";"errors")
+var sentinel=errors.New("failure")
+var visit,failAt int
+func step(name string)(int,error){fmt.Print(name);visit++;if visit==failAt{return 0,sentinel};return 1,nil}
+func set[T interface{~[2]int|~[]int}](a,b T)error{
+ index:=func()(int,error){a=b;return step("I")}
+ {T:=3;_ =T;a[index()!!]=step("V")!!}
+ fmt.Print(a);return nil
+}
+func arrays[T interface{~[2]int|~[3]int}](a,b T)error{index:=func()(int,error){a=b;return step("I")};a[index()!!]=step("V")!!;fmt.Print(a);return nil}
+type Box[T interface{~[2]int|~[]int}] struct{Value T}
+func(b *Box[T]) Set()error{defer func(){if recover()!=nil{fmt.Print("r")}}();b.Value[step("I")!!]=step("V")!!;fmt.Print(b.Value);return nil}
+func show(err error){if err==nil{fmt.Print("S|")}else if err==sentinel{fmt.Print("E|")}else{panic(err)}}
+func main(){for _,failure:=range []int{0,1,2}{
+ visit=0;failAt=failure;show(set([2]int{},[2]int{7,8}))
+ visit=0;failAt=failure;a:=[]int{0,0};show(set(a,[]int{7,8}));fmt.Print(a,"|")
+ visit=0;failAt=failure;show(arrays([2]int{},[2]int{7,8}))
+ visit=0;failAt=failure;var b *Box[[2]int];show(b.Set())
+}}

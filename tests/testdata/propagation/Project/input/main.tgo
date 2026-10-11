@@ -1,0 +1,7 @@
+package main
+import("fmt";"embed";"example.com/program/library")
+//go:embed message.txt
+var message string
+var _ embed.FS
+func run()error{v:=library.Read()!!;fmt.Print(v,message);return nil}
+func main(){if err:=run();err!=nil{panic(err)}}

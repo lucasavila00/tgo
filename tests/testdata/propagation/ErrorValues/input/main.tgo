@@ -1,0 +1,11 @@
+package main
+import("fmt";"errors")
+type Failure struct{}
+func(*Failure)Error()string{return "failure"}
+var sentinel=&Failure{}
+var any=7
+func target(typedNil bool)error{if typedNil{var p *Failure;return p};return sentinel}
+func direct()error{target(true)!!;panic("not reached")}
+func wrapped()error{target(false)!;panic("not reached")}
+func shadow(nil,true,false int)error{fmt.Print(nil,true,false);target(0!=0)!!;var success error;return success}
+func main(){var p *Failure;e:=direct();fmt.Print(e==p,"|");e=wrapped();var caught *Failure;fmt.Print(e.Error(),"|",errors.Is(e,sentinel),"|",errors.As(e,&caught),caught==sentinel,"|");fmt.Print(shadow(0,1,2)==sentinel)}

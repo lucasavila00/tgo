@@ -1,9 +1,9 @@
 # Transpiler architecture
 
-This package implements [the expression-lowering plan](../adr/expression-lowering/what.md)
-for [#248](https://github.com/lucasavila00/tgo/issues/248).
-It reads ordinary Go. The `!` and `!!` frontend uses this engine for
-[#247](https://github.com/lucasavila00/tgo/issues/247).
+The transpiler lowers postfix error propagation and supports statement insertion
+after a typed Go expression. See [transpiler use and API](../transpiler.md) for
+commands and public operations, and the
+[expression-lowering plan](../adr/expression-lowering/what.md) for its semantics.
 
 `Load(directory, pattern)` loads one package with Go syntax and type information.
 `Source.Sites` lists every expression by file, byte offsets, and syntax kind.
@@ -45,7 +45,7 @@ is skipped. Normal deferred calls still run.
 
 ```mermaid
 graph TD
-    CLI[cmd/tgo] --> API[transpiler]
+    CLI[cmd/tgo] --> API[pkg/transpiler]
     API --> Driver[internal/driver]
     API --> Lowering[internal/lowering]
     Driver --> Frontend[internal/frontend]
@@ -54,7 +54,7 @@ graph TD
 
 | Package | Responsibility |
 | --- | --- |
-| `transpiler` | Public `Compile`, `Load`, `Source`, `Site`, and `After` API |
+| `pkg/transpiler` | Public `Compile`, `Load`, `Source`, `Site`, and `After` API |
 | `cmd/tgo` | CLI arguments and output files |
 | `internal/driver` | Module files, Go build selection, type checking, and compilation order |
 | `internal/frontend` | Postfix operators and marker calls for the Go type checker |
@@ -65,14 +65,17 @@ driver. The driver converts frontend marker records to lowering operations
 after type checking. The lowering package receives typed Go syntax and the
 error action for each marker call; it does not read TGo tokens or module files.
 
-Integration tests and the proof corpus remain at the module root. They use the
+Integration tests and the proof corpus are in `tests/`. They use the
 public API and check the complete compilation path. The expression unit test
 lives with the lowering implementation. No test depends on driver internals.
+Propagation cases use fixture directories
+and compare generated output with committed snapshots before execution. See the
+[integration test guide](../../tests/README.md).
 
 # Verification
 
 ```sh
-go -C transpiler test ./... -run '^TestProof' -count=1
+go test ./tests -run '^TestProof' -count=1
 ```
 
 The manifest records expression sites, including excluded syntax and incompatible
@@ -92,7 +95,7 @@ The frontend reads `.tgo` files in a Go module. Use this command to emit a Go
 module into another directory:
 
 ```sh
-go -C transpiler run ./cmd/tgo -o /tmp/generated /path/to/source
+go run ./cmd/tgo -o /tmp/generated /path/to/source
 go -C /tmp/generated build ./...
 ```
 
@@ -133,7 +136,7 @@ keep their original dependency paths in the emitted module.
 Focused propagation checks:
 
 ```sh
-go -C transpiler test ./... -run '^TestPropagation' -count=1
+go test ./tests -run '^TestPropagation' -count=1
 ```
 
 Literal tests cover nested omitted types, map values, pointer keys, and array
