@@ -33,8 +33,10 @@ func TestPropagationFixtures(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			files := transpiler.Compile(input)
 			source := readFiles(t, input)
+			work := t.TempDir()
+			writeFiles(t, work, source)
+			files := transpiler.Compile(work)
 			inputs := 0
 			for name := range source {
 				if strings.HasSuffix(name, ".tgo") {
@@ -131,7 +133,7 @@ func readFiles(t *testing.T, dir string) map[string][]byte {
 func TestPropagationSnapshotDeterminism(t *testing.T) {
 	for _, name := range []string{"Contexts--short_circuit--direct", "Contexts--short_circuit--wrapped"} {
 		t.Run(name, func(t *testing.T) {
-			dir := filepath.Join("testdata/propagation", name)
+			dir := copyFixture(t, filepath.Join("testdata/propagation", name))
 			first := transpiler.Compile(dir)
 			for i := 0; i < 3; i++ {
 				next := transpiler.Compile(dir)
@@ -146,4 +148,11 @@ func TestPropagationSnapshotDeterminism(t *testing.T) {
 			}
 		})
 	}
+}
+
+func copyFixture(t *testing.T, dir string) string {
+	t.Helper()
+	work := t.TempDir()
+	writeFiles(t, work, readFiles(t, dir))
+	return work
 }

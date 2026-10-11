@@ -22,8 +22,10 @@ func TestValueExpressions(t *testing.T) {
 		}
 		t.Run(fixture.Name(), func(t *testing.T) {
 			dir := filepath.Join("testdata/value-expressions", fixture.Name())
-			files := transpiler.Compile(dir)
 			saved := readFiles(t, dir)
+			work := t.TempDir()
+			writeFiles(t, work, saved)
+			files := transpiler.Compile(work)
 			for name, content := range files {
 				if !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "reference/") {
 					continue

@@ -1,26 +1,27 @@
 # PROOF
 
-Required checks; no results are claimed here.
+Run the source-checking tests and handwritten runtime references. Check:
 
-Retain the [source-checking tests](../source-checking/proof.md) and handwritten
-runtime references. Check:
-
-- Mixed and TGo-only packages, subdirectories, imports, build constraints,
+- Data directories, nested modules, and vendor dependencies with invalid TGo
+  and snapshots unchanged on disk and retained in output.
+- TGo-only and mixed packages, subdirectories, imports, build constraints,
   platform suffixes, and internal/external test variants.
-- New generated paths, invalid stale snapshots, and excluded invalid inputs.
-- Embedded files, package-local cgo headers, local replacements, dependency
-  exports, module configuration, and output written elsewhere.
-- Positions, name collisions, type identity, deterministic output, retained
-  source/assets, and absence of excluded generated files.
-- Unchanged original files and directories, including snapshots and module
-  files, after source or generated-Go failures. Temporary files are removed.
+- Invalid stale snapshots, new generated paths, excluded invalid inputs, and
+  removal of excluded generated files from disk and returned output.
+- Embed assets, cgo headers, vendor selection, local replacements, module
+  metadata updates, and output written elsewhere.
+- Source positions, fresh names, type identity, repeated compilation, and
+  unchanged TGo inputs, ordinary Go, and assets.
+- Generated files on disk match returned generated contents. Final checking
+  reads generated Go. Correcting an error and recompiling replaces staged files.
 
-Final checking must use generated Go. Run programs after writing output.
+Read expected snapshots before compilation. Compile fixture copies so normal
+checks leave committed snapshots intact. Compare runtime output with independent
+Go references after writing the returned output.
 
-Compare elapsed time, allocations, temporary bytes, and package loads with the
-copy-based implementation. Use identical inputs/toolchains; state cache conditions.
-Include multiple packages, propagation, conditionals, and large unrelated assets.
-Asset size must not increase temporary writes. Retain one metadata load and one
-final Go load. Run focused local tests and the full suite in hosted CI.
+Compare elapsed time and allocations with the copy-based compiler using the
+same toolchain and warm caches. Include multiple packages, propagation, if
+values, and large unrelated assets. Assets add no compiler write step. Keep one
+metadata load and one final Go load.
 
 [WHAT](what.md) records scope. [HOW](how.md) defines the stages.

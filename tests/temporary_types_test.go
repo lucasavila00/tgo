@@ -33,13 +33,13 @@ func TestTypedTemporaryRejected(t *testing.T) {
 					t.Fatalf("diagnostic: %v, want %s", actual, expected)
 				}
 			}()
-			transpiler.Compile(dir)
+			transpiler.Compile(copyFixture(t, dir))
 		})
 	}
 }
 
 func TestTypedTemporaryDiagnosticStable(t *testing.T) {
-	fixture := "testdata/typed-temporaries-rejected/Imports--returned_function"
+	fixture := copyFixture(t, "testdata/typed-temporaries-rejected/Imports--returned_function")
 	expected, err := os.ReadFile(filepath.Join(fixture, "diagnostic.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +69,7 @@ func TestTypeNameIdentityOutputStable(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4; i++ {
-		actual := transpiler.Compile(fixture)["main_tgo.go"]
+		actual := transpiler.Compile(copyFixture(t, fixture))["main_tgo.go"]
 		if !bytes.Equal(actual, want) {
 			t.Fatalf("compilation %d differs from the snapshot", i+1)
 		}
@@ -80,7 +80,7 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 	t.Helper()
 	fixture := filepath.Join("testdata/propagation", name)
 	generated := t.TempDir()
-	files := transpiler.Compile(fixture)
+	files := transpiler.Compile(copyFixture(t, fixture))
 	file, err := parser.ParseFile(token.NewFileSet(), "main_tgo.go", files["main_tgo.go"], 0)
 	if err != nil {
 		t.Fatal(err)

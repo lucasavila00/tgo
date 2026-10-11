@@ -2,21 +2,16 @@ package driver
 
 import (
 	"fmt"
-	"os"
 
 	"golang.org/x/tools/go/packages"
 )
 
 // Compile translates the module's TGo files and returns file contents by module-relative path.
-// It keeps other module files in the result and panics on invalid source or compiler failures.
+// It writes generated Go into the module, keeps other files in the result, and panics on failure.
 func Compile(dir string) map[string][]byte {
 	root := findModule(dir)
-	work, err := os.MkdirTemp("", "tgo-transpiler-")
-	must(err)
-	defer func() { _ = os.RemoveAll(work) }()
-
 	source := readModule(root)
-	prepared := prepareModule(source, work)
+	prepared := prepareModule(source)
 	selected := selectSources(prepared)
 	checked := checkSources(selected)
 	lowerModule(checked)

@@ -34,6 +34,9 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	if _, exists := first["excluded_tgo_"+excludedOS+".go"]; exists {
 		t.Fatal("excluded target generated output")
 	}
+	if _, err := os.Stat(filepath.Join(dir, "excluded_tgo_"+excludedOS+".go")); !os.IsNotExist(err) {
+		t.Fatalf("excluded generated file remains: %v", err)
+	}
 	for _, name := range []string{"main_tgo.go", "selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + ".go", "selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + "_test.go"} {
 		if len(first[name]) == 0 {
 			t.Fatalf("missing %s", name)

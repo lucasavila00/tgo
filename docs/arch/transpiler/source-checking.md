@@ -46,3 +46,40 @@ go test ./internal/driver -run '^$' -bench 'BenchmarkCompile.*Propagations' -ben
 
 The baseline is main commit `8d80a62` with the same benchmark file. These results
 show this workload's cost; future changes can use the same cases for comparison.
+
+
+## Compile in the source module
+
+The driver first writes original TGo at its generated Go paths. Go selects
+packages from these files, and the private checker checks their TGo meaning.
+Lowering replaces selected generated files with ordinary Go. The driver removes
+excluded generated paths before stock Go checks the final files on disk.
+
+Only paths owned by TGo inputs in the selected module are compiler outputs.
+Data directories, nested modules, and vendor dependencies retain their inputs
+and snapshots as assets. Go excludes `testdata` and directories whose names
+start with `.` or `_` from package discovery. Ordinary Go and assets
+stay at their original paths. Go uses normal module loading and can update
+module metadata. Returned output includes current sums and makes local
+replacement paths absolute so it can be written elsewhere.
+
+Warm-cache comparison with copy-based commit `8ba19b9`: Go 1.27.1, Linux amd64,
+`GOMAXPROCS=4`, three one-call samples after a warm-up. The table shows medians.
+Allocations exclude child processes.
+
+| Input | Module copy | Disk stages | Allocated bytes copy / stages |
+| --- | ---: | ---: | ---: |
+| 32 propagation calls | 35 ms | 31 ms | 1.47 MB / 1.50 MB |
+| Two packages and a test file | 684 ms | 415 ms | 191 MB / 191 MB |
+| If value with propagation, no asset | 39 ms | 29 ms | 427 KB / 414 KB |
+| Same source with a 32 MiB asset | 164 ms | 135 ms | 67.5 MB / 67.5 MB |
+
+Assets add no compiler write step. The API still reads and returns their bytes,
+so allocation cost remains. Both paths use one metadata load and one final Go
+load. These short samples describe this workload; they do not establish a
+speed guarantee. `BenchmarkCompileAssets` retains the asset comparison.
+
+Fixture checks compile temporary copies and read committed snapshots before
+compilation. The compiler itself works in place. Tests compare final disk files
+with returned bytes, exercise failure followed by correction, and check embed,
+cgo headers, vendor selection, workspace dependencies, and module updates.
