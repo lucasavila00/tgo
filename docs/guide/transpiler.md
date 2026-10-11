@@ -114,8 +114,8 @@ defers, and propagation belong to the enclosing function.
 
 Switch values use the same type rules as if values. A use or conversion can
 supply the result type. Otherwise, typed branch values must have the same type,
-with Go's rules for untyped constants. `nil` needs a type from context. If every
-branch exits, context or conversion must supply the type. A switch value is
+with Go's rules for untyped constants. `nil` cannot establish a type on its own.
+If every branch exits, context or conversion must supply the type. A switch value is
 not a constant and cannot be a `const` initializer or an array length.
 
 A switch value currently requires `default`. Verified enum coverage with
