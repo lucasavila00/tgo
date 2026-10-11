@@ -112,9 +112,13 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		if deferred {
 			var refs []ast.Expr
 			for _, value := range values {
-				setup, saved := r.capture(value)
+				if tv := r.source.Package.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+					refs = append(refs, value)
+					continue
+				}
+				setup, saved := r.save(value)
 				before = append(before, setup...)
-				refs = append(refs, saved)
+				refs = append(refs, saved...)
 			}
 			return append(before, r.orderedStores(copy.Lhs, refs, copy.Tok)...)
 		}
