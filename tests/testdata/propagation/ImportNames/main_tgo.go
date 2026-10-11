@@ -14,7 +14,7 @@ func run() error {
 		var tgo2 error
 		tgo1, tgo2 = target()
 		if tgo2 != nil {
-			return fmt_tgo4.Errorf("%s: %w", "target", tgo2)
+			return fmt_tgo4.Errorf("target: %w", tgo2)
 		}
 		_ = tgo1
 	}

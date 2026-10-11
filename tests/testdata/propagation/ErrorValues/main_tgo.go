@@ -38,7 +38,7 @@ func wrapped() error {
 	{
 		var tgo2 error = target(false)
 		if tgo2 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "target", tgo2)
+			return fmt_tgo3.Errorf("target: %w", tgo2)
 		}
 	}
 	panic("not reached")

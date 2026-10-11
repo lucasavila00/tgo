@@ -46,13 +46,13 @@ func run() error {
 		var tgo2 error
 		tgo1, tgo2 = step("I")
 		if tgo2 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "step", tgo2)
+			return fmt_tgo3.Errorf("step: %w", tgo2)
 		}
 		var tgo4 int
 		var tgo5 error
 		tgo4, tgo5 = step("V")
 		if tgo5 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "step", tgo5)
+			return fmt_tgo3.Errorf("step: %w", tgo5)
 		}
 		a[tgo1] = tgo4
 	}

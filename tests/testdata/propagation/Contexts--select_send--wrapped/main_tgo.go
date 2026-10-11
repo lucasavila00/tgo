@@ -47,7 +47,7 @@ func run() error {
 		var tgo3 error
 		tgo2, tgo3 = step("V")
 		if tgo3 != nil {
-			return fmt_tgo4.Errorf("%s: %w", "step", tgo3)
+			return fmt_tgo4.Errorf("step: %w", tgo3)
 		}
 		select {
 		case tgo1 <- tgo2:

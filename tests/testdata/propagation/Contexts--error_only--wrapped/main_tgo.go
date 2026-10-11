@@ -43,7 +43,7 @@ func run() error {
 	{
 		var tgo1 error = only()
 		if tgo1 != nil {
-			return fmt_tgo2.Errorf("%s: %w", "only", tgo1)
+			return fmt_tgo2.Errorf("only: %w", tgo1)
 		}
 	}
 	fmt.Print("b")
