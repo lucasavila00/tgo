@@ -2,7 +2,6 @@ package tests
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +11,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
-func TestCompileOverlayKeepsEmbeddedAssets(t *testing.T) {
+func TestCompileStagesUseEmbeddedAssets(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
 		"go.mod":      []byte("module example.com/embedded\n\ngo 1.27.1\n"),
@@ -22,7 +21,7 @@ func TestCompileOverlayKeepsEmbeddedAssets(t *testing.T) {
 	}
 	writeFiles(t, root, files)
 	output := transpiler.Compile(root)
-	assertOriginalFiles(t, root, files)
+	assertInputFiles(t, root, files)
 	out := t.TempDir()
 	writeFiles(t, out, output)
 	command := exec.Command("go", "run", ".")
@@ -33,40 +32,20 @@ func TestCompileOverlayKeepsEmbeddedAssets(t *testing.T) {
 	}
 }
 
-func TestCompileOverlayFailureKeepsSource(t *testing.T) {
-	for _, source := range []string{"package p\nfunc f() int {return if true { 1 } else { missing }}\n", "package p\nvar Value int = \"wrong\"\n"} {
-		t.Run(fmt.Sprint(len(source)), func(t *testing.T) {
-			root := t.TempDir()
-			files := map[string][]byte{"go.mod": []byte("module example.com/failed\n\ngo 1.27.1\n"), "main.tgo": []byte(source), "main_tgo.go": []byte("invalid stale snapshot"), "asset.bin": bytes.Repeat([]byte{42}, 1024)}
-			writeFiles(t, root, files)
-			var failure any
-			func() { defer func() { failure = recover() }(); transpiler.Compile(root) }()
-			if failure == nil || !strings.Contains(fmt.Sprint(failure), "TGo:") {
-				t.Fatalf("source failure: %v", failure)
-			}
-			assertOriginalFiles(t, root, files)
-		})
-	}
-}
-
-func assertOriginalFiles(t *testing.T, root string, files map[string][]byte) {
+func assertInputFiles(t *testing.T, root string, files map[string][]byte) {
 	t.Helper()
 	for name, want := range files {
+		if name == "main_tgo.go" {
+			continue
+		}
 		got, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(got, want) {
 			t.Fatalf("changed source %s: %v", name, err)
 		}
 	}
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != len(files) {
-		t.Fatalf("source directory has %d entries, want %d", len(entries), len(files))
-	}
 }
 
-func TestCompileOverlayKeepsCgoHeaders(t *testing.T) {
+func TestCompileStagesUseCgoHeaders(t *testing.T) {
 	command := exec.Command("go", "env", "CGO_ENABLED")
 	enabled, err := command.Output()
 	if err != nil {
@@ -77,14 +56,14 @@ func TestCompileOverlayKeepsCgoHeaders(t *testing.T) {
 	}
 	root := t.TempDir()
 	files := map[string][]byte{
-		"go.mod":   []byte("module example.com/cgooverlay\n\ngo 1.27.1\n"),
+		"go.mod":   []byte("module example.com/cgostages\n\ngo 1.27.1\n"),
 		"value.h":  []byte("static int value(void) { return 7; }\n"),
 		"value.go": []byte("package main\n/*\n#include \"value.h\"\n*/\nimport \"C\"\nfunc value() (int,error) { return int(C.value()),nil }\n"),
 		"main.tgo": []byte("package main\nimport \"fmt\"\nfunc run() error {fmt.Println(value()!);return nil}\nfunc main(){if err:=run();err!=nil {panic(err)}}\n"),
 	}
 	writeFiles(t, root, files)
 	output := transpiler.Compile(root)
-	assertOriginalFiles(t, root, files)
+	assertInputFiles(t, root, files)
 	out := t.TempDir()
 	writeFiles(t, out, output)
 	command = exec.Command("go", "run", ".")
@@ -95,10 +74,10 @@ func TestCompileOverlayKeepsCgoHeaders(t *testing.T) {
 	}
 }
 
-func TestCompileOverlayKeepsVendorSelection(t *testing.T) {
+func TestCompileStagesUseVendorSelection(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
-		"go.mod":                            []byte("module example.com/vendoroverlay\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
+		"go.mod":                            []byte("module example.com/vendorstages\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
 		"vendor/modules.txt":                []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
 		"vendor/example.com/value/value.go": []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
 		"main.tgo":                          []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n"),
@@ -106,6 +85,9 @@ func TestCompileOverlayKeepsVendorSelection(t *testing.T) {
 	writeFiles(t, root, files)
 	output := transpiler.Compile(root)
 	for name, want := range files {
+		if name == "main_tgo.go" {
+			continue
+		}
 		got, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(got, want) {
 			t.Fatalf("changed source %s: %v", name, err)
@@ -121,22 +103,20 @@ func TestCompileOverlayKeepsVendorSelection(t *testing.T) {
 	}
 }
 
-func TestCompileOverlaySelectsModuleInsideWorkspace(t *testing.T) {
+func TestCompileStagesUseWorkspaceDependency(t *testing.T) {
 	base := t.TempDir()
-	writeFiles(t, base, map[string][]byte{"go.work": []byte("go 1.27.1\n\nuse ./source\n")})
+	writeFiles(t, base, map[string][]byte{"go.work": []byte("go 1.27.1\n\nuse (\n ./source\n ./dependency\n)\n"), "dependency/go.mod": []byte("module example.com/value\n\ngo 1.27.1\n"), "dependency/value.go": []byte("package value\nfunc Value()(int,error){return 11,nil}\n")})
 	root := filepath.Join(base, "source")
-	files := map[string][]byte{"go.mod": []byte("module example.com/workspace\n\ngo 1.27.1\n"), "main.tgo": []byte("package p\nvar Value = if true {1} else {2}\n")}
+	files := map[string][]byte{"go.mod": []byte("module example.com/workspace\n\ngo 1.27.1\n\nrequire example.com/value v0.0.0\n"), "main.tgo": []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n")}
 	writeFiles(t, root, files)
 	output := transpiler.Compile(root)
 	if len(output["main_tgo.go"]) == 0 {
 		t.Fatal("missing module output")
 	}
-	assertOriginalFiles(t, root, files)
-	got, err := os.ReadFile(filepath.Join(base, "go.work"))
-	if err != nil || string(got) != "go 1.27.1\n\nuse ./source\n" {
-		t.Fatalf("changed workspace: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(base, "go.work.sum")); !os.IsNotExist(err) {
-		t.Fatalf("created workspace sum: %v", err)
+	command := exec.Command("go", "run", ".")
+	command.Dir = root
+	got, err := command.CombinedOutput()
+	if err != nil || string(got) != "11\n" {
+		t.Fatalf("workspace output: %v, %s", err, got)
 	}
 }

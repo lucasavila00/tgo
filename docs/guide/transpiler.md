@@ -73,7 +73,9 @@ The source directory must be inside a Go module. The command writes generated
 Go beside its `.tgo` source. `name.tgo` produces `name_tgo.go`;
 `name_test.tgo` produces `name_tgo_test.go`. Target suffixes stay at the end:
 `name_linux_amd64_test.tgo` produces `name_tgo_linux_amd64_test.go`.
-Source files stay unchanged. Existing generated files do not affect compilation.
+Compilation writes generated files in the source module before returning output.
+TGo inputs control these files. Selected files contain final Go after success.
+Generated files for excluded inputs are removed. Go can update module metadata.
 
 Use `-o /tmp/generated` to emit the module into another directory instead.
 Output includes module files,

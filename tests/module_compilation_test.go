@@ -65,6 +65,9 @@ func main() {
 		t.Fatalf("replacement does not refer to source dependency: %s", output["go.mod"])
 	}
 	for name, want := range input {
+		if name == "cmd/app/main_tgo.go" {
+			want = output[name]
+		}
 		actual, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(actual, want) {
 			t.Fatalf("compilation changed source file %s: %v", name, err)

@@ -24,22 +24,18 @@ type checkedModule struct {
 }
 
 func selectSources(module *preparedModule) *selectedSources {
-	roots, err := packages.Load(&packages.Config{Dir: module.dir, Env: append(os.Environ(), "GOWORK=off"), Overlay: module.overlay, BuildFlags: module.buildFlags, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
+	roots, err := packages.Load(&packages.Config{Dir: module.dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
 	must(err)
 	var selected []*packages.Package
 	packages.Visit(roots, nil, func(pkg *packages.Package) { selected = append(selected, pkg) })
 	return &selectedSources{module: module, packages: selected}
 }
 
-// checkSources checks all selected source packages before output changes any file.
+// checkSources checks selected source packages before lowering.
 func checkSources(sources *selectedSources) *checkedModule {
 	module := sources.module
 	loader, err := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used)
 	must(err)
-	loader.Inputs = make(map[string][]byte)
-	for name, sourceName := range module.tgoFiles {
-		loader.Inputs[filepath.Join(module.dir, name)] = module.source.files[sourceName]
-	}
 	checked := &checkedModule{sources: sources, activeFiles: make(map[string]bool)}
 	for _, metadata := range sources.packages {
 		if metadata.Module == nil || !metadata.Module.Main {
@@ -77,22 +73,22 @@ func lowerModule(module *checkedModule) {
 		output, err := source.LowerPropagations(operations)
 		must(err)
 		for name, content := range output {
-			module.sources.module.overlay[name] = content
+			relative, err := filepath.Rel(module.sources.module.dir, name)
+			must(err)
+			if module.sources.module.tgoFiles[relative] != "" {
+				must(os.WriteFile(name, content, 0600))
+			}
 		}
 	}
 	for name := range module.sources.module.tgoFiles {
 		if !module.activeFiles[name] {
-			module.sources.module.overlay[filepath.Join(module.sources.module.dir, name)] = []byte("//go:build ignore\n\npackage ignored\n")
+			must(os.Remove(filepath.Join(module.sources.module.dir, name)))
 		}
 	}
 }
 
 func checkGenerated(dir string) {
-	checkGeneratedOverlay(dir, nil, nil)
-}
-
-func checkGeneratedOverlay(dir string, overlay map[string][]byte, buildFlags []string) {
-	for _, pkg := range loadProjectOverlay(dir, overlay, buildFlags) {
+	for _, pkg := range loadProject(dir) {
 		if len(pkg.Errors) != 0 {
 			panic(fmt.Sprintf("TGo: generated Go: %s", pkg.Errors[0]))
 		}

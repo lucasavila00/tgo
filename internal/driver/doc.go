@@ -6,15 +6,14 @@
 // rules so TGo files belong to the same packages as their Go equivalents.
 //
 // Source files are authoritative. Existing generated files can be stale and
-// must not affect source checking. Two overlays replace checking contents at original paths without editing
-// the caller's files. Ordinary Go and assets stay on disk. Small temporary
-// module metadata keeps Go dependency updates away from source files.
+// must not affect source checking. The driver first writes original TGo at
+// generated paths, then replaces it with checked generated Go.
 //
 // Compilation passes data through these steps: read module files, prepare a
-// source overlay, select source with Go's build rules, check source packages,
-// lower expressions into the output overlay, check emitted Go, and collect output.
+// generated Go paths, select source with Go's build rules, check source
+// packages, lower expressions, check emitted Go, and collect output.
 // Each step keeps the data required by the next step.
 //
-// The driver returns the emitted module as file contents. Writing those files
-// belongs to the caller. Expression evaluation rules belong to the lowerer.
+// The driver returns the emitted module as file contents. The caller can write
+// output elsewhere. Expression evaluation rules belong to the lowerer.
 package driver

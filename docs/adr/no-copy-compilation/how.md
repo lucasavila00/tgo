@@ -1,23 +1,20 @@
 # HOW
 
-1. Query Go packages from the original module root with
-   [`go/packages` overlays](https://pkg.go.dev/golang.org/x/tools/go/packages#Config).
-   Map each TGo input to its absolute generated Go path, including new paths.
-   Preserve package declarations, imports, build constraints, suffixes, test
-   variants, and dependency exports. Replace matching stale snapshots.
-2. Have the private loader read original TGo from the input map and ordinary Go
-   from disk. Parse TGo through the frontend; check actual source, not stubs.
-   Retain positions and cache checked packages by package identity.
-3. After source checking, lower selected packages into memory. Build the final
-   overlay from generated Go. Hide matching snapshots for excluded TGo inputs.
-   Run stock Go checking against this overlay.
-4. Return generated contents with original TGo and other module files. Keep
-   `.git`, `.worktrees`, and snapshot exclusions. Adjust returned replacement
-   paths where needed for output written elsewhere; leave module files on disk
-   unchanged.
+1. Read module files. Record TGo inputs and their generated paths. Exclude
+   matching stale generated files from the returned input set.
+2. Write each original TGo input at its generated path in the module. Run
+   `go/packages` there to select files, dependencies, exports, and test variants.
+3. Have the private checker read these staged source files through the frontend.
+   Check each package identity once and keep its checked types and positions.
+4. Lower selected source packages. Write generated Go only to paths owned by TGo
+   inputs. Remove generated paths for excluded inputs.
+5. Run stock Go checking against the final files on disk. Collect selected
+   generated files, original inputs, assets, and current module metadata.
+   Make relative local replacement paths absolute in returned `go.mod`.
 
-Assets, headers, ordinary Go, and dependencies stay at original paths. Preserve
-embed and supported cgo behavior. Remove temporary backing files on success or
-failure. Write returned output before running generated programs.
+Go performs normal module loading and metadata updates in the source directory.
+Keep filename suffixes and build constraints. The caller can write the returned
+files to another directory. The compiler stages and replaces generated files;
+Go reads ordinary Go, embed assets, and cgo headers at their original paths.
 
 [WHAT](what.md) records the decision. [PROOF](proof.md) defines the checks.

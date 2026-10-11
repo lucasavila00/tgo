@@ -48,39 +48,35 @@ The baseline is main commit `8d80a62` with the same benchmark file. These result
 show this workload's cost; future changes can use the same cases for comparison.
 
 
-## Compile without a module copy
+## Compile in the source module
 
-Both package loads run in the original module. The first overlay maps each
-TGo input to its generated Go path. The private checker reads those TGo bytes
-from memory and ordinary Go from disk. The second overlay supplies emitted Go
-for the final check. A file excluded by build rules has an ignored overlay,
-so its stale snapshot cannot become source. Source files stay unchanged.
+The driver first writes original TGo at its generated Go paths. Go selects
+packages from these files, and the private checker checks their TGo meaning.
+Lowering replaces selected generated files with ordinary Go. The driver removes
+excluded generated paths before stock Go checks the final files on disk.
 
-Go writes each overlay entry to a temporary backing file and removes it after
-loading. Assets and ordinary input files are not copied. Both loads use a small
-temporary `go.mod` and `go.sum` through `-modfile`. This keeps Go from writing
-module metadata into the source directory, including with `-mod=mod`. Local
-replacement paths become absolute in this metadata and in returned `go.mod`.
-The caller can therefore write output elsewhere. The driver removes temporary
-metadata on success or failure. `GOWORK=off` keeps both loads within the selected
-module, as compilation in the separate directory did.
+Only paths owned by TGo inputs are compiler outputs. Ordinary Go and assets
+stay at their original paths. Go uses normal module loading and can update
+module metadata. Returned output includes current sums and makes local
+replacement paths absolute so it can be written elsewhere.
 
 Warm-cache comparison with copy-based commit `8ba19b9`: Go 1.27.1, Linux amd64,
 `GOMAXPROCS=4`, three one-call samples after a warm-up. The table shows medians.
 Allocations exclude child processes.
 
-| Input | Copy | Overlay | Allocated bytes copy / overlay |
+| Input | Module copy | Disk stages | Allocated bytes copy / stages |
 | --- | ---: | ---: | ---: |
-| 32 propagation calls | 35 ms | 38 ms | 1.47 MB / 1.50 MB |
-| Two packages and a test file | 684 ms | 588 ms | 191 MB / 191 MB |
-| If value with propagation, no asset | 39 ms | 37 ms | 427 KB / 418 KB |
-| Same source with a 32 MiB asset | 164 ms | 150 ms | 67.5 MB / 67.6 MB |
+| 32 propagation calls | 35 ms | 31 ms | 1.47 MB / 1.50 MB |
+| Two packages and a test file | 684 ms | 415 ms | 191 MB / 191 MB |
+| If value with propagation, no asset | 39 ms | 29 ms | 427 KB / 414 KB |
+| Same source with a 32 MiB asset | 164 ms | 135 ms | 67.5 MB / 67.5 MB |
 
-This removes asset writes, not the API's asset reads. The overlay test checks
-that a 1 MiB asset adds no overlay entry. Thus its temporary payload is zero;
-the copy wrote the full asset. Both paths use one metadata load and one final
-Go load. Small-input times vary and show no general speed increase.
+Assets add no compiler write step. The API still reads and returns their bytes,
+so allocation cost remains. Both paths use one metadata load and one final Go
+load. These short samples describe this workload; they do not establish a
+speed guarantee. `BenchmarkCompileAssets` retains the asset comparison.
 
-`BenchmarkCompileAssets` keeps the asset comparison reproducible. Tests check
-embed and cgo headers after output is written, excluded snapshots, relative
-replacements, unchanged source on failure, and temporary-file cleanup.
+Fixture checks compile temporary copies and read committed snapshots before
+compilation. The compiler itself works in place. Tests compare final disk files
+with returned bytes, exercise failure followed by correction, and check embed,
+cgo headers, vendor selection, workspace dependencies, and module updates.
