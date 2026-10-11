@@ -8,7 +8,7 @@ GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
 ```
 
 The `loweringfuzz` build tag keeps this campaign out of the normal test suite.
-No CI change is needed. Go saves a failing input in
+No CI change is needed. Go saves a failing mutation in
 `tests/testdata/fuzz/FuzzPropagationBehavior/` and prints a command to replay it.
 
 ## What the test checks
@@ -22,8 +22,9 @@ Each input has a separate Go reference. The reference uses a helper that stops
 the enclosing function on an error. It uses a private panic value and catches
 only that value at the function boundary. Ordinary panics still reach the
 program's outer panic handler. Source deferred calls run before the boundary
-handler. The generated programs do not use `recover`, goroutines, or nested
-functions that propagate errors.
+handler. The test bodies do not use `recover`, goroutines, or nested functions that
+propagate errors. The reference and outer harness use `recover` only to report
+the function result and ordinary panics.
 
 The test compares call traces, values, final storage, error text, error identity,
 error chains, and panic types. The reference does not use TGo or compiler
