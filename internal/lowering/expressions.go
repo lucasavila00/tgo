@@ -42,9 +42,17 @@ type rewrite struct {
 }
 
 func (r *rewrite) name() *ast.Ident {
+	return r.nameFor("")
+}
+
+// nameFor adds the source name to a fresh generated identifier.
+func (r *rewrite) nameFor(sourceName string) *ast.Ident {
 	for {
 		r.next++
 		name := fmt.Sprintf("tgo%d", r.next)
+		if sourceName != "" {
+			name = sourceName + "_" + name
+		}
 		if !r.names[name] {
 			r.names[name] = true
 			return ast.NewIdent(name)

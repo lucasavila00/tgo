@@ -1,6 +1,6 @@
 package main
 
-import tgo8 "fmt"
+import fmt_tgo8 "fmt"
 
 import "fmt"
 
@@ -94,7 +94,7 @@ func run[T any](x T) (tgo4 error) {
 		tgo6, tgo7 = pair(x, T("local"))
 		if tgo7 != nil {
 			tgo5 = tgo7
-			tgo5 = tgo8.Errorf("%s: %w", "pair", tgo5)
+			tgo5 = fmt_tgo8.Errorf("%s: %w", "pair", tgo5)
 			return tgo5
 		}
 		wrapped := tgo6

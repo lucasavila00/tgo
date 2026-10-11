@@ -1,6 +1,6 @@
 package main
 
-import tgo5 "fmt"
+import fmt_tgo5 "fmt"
 
 import (
 	"errors"
@@ -47,7 +47,7 @@ func run() (tgo3 error) {
 		tgo1, tgo2 = step("T")
 		if tgo2 != nil {
 			tgo4 = tgo2
-			tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
+			tgo4 = fmt_tgo5.Errorf("%s: %w", "step", tgo4)
 			return tgo4
 		}
 		var tgo6 int = tgo1
@@ -58,7 +58,7 @@ func run() (tgo3 error) {
 			tgo8, tgo9 = step("C")
 			if tgo9 != nil {
 				tgo4 = tgo9
-				tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
+				tgo4 = fmt_tgo5.Errorf("%s: %w", "step", tgo4)
 				return tgo4
 			}
 			if tgo6 == tgo8 {

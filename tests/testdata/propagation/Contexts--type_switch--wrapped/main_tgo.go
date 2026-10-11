@@ -1,6 +1,6 @@
 package main
 
-import tgo5 "fmt"
+import fmt_tgo5 "fmt"
 
 import (
 	"errors"
@@ -47,7 +47,7 @@ func run() (tgo3 error) {
 		tgo1, tgo2 = step("T")
 		if tgo2 != nil {
 			tgo4 = tgo2
-			tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
+			tgo4 = fmt_tgo5.Errorf("%s: %w", "step", tgo4)
 			return tgo4
 		}
 		switch any(tgo1).(type) {

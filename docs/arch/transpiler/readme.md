@@ -44,7 +44,9 @@ Each source function therefore keeps its own return target.
 Temporary variables use checked source types. In a `uint64` context,
 `var saved uint64 = 1 << n` preserves the required conversion; an inferred
 `int` temporary would change the program. Fresh names prevent collisions with
-source bindings. Required types must be nameable in the generated scope.
+source bindings. Added import aliases include the package name, such as
+`fmt_tgo3`; source import names stay unchanged. Required types must be nameable
+in the generated scope.
 
 The error check uses the call's result before conversion to the caller's return
 type. A nil pointer can become a non-nil interface during that conversion.
