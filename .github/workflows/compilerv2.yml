@@ -20,6 +20,7 @@ jobs:
           go-version-file: compilerv2/go.mod
           cache-dependency-path: compilerv2/go.sum
       - name: Check compiler v2
+        shell: bash
         run: go -C compilerv2 test ./... -count=1 -json | tee proof-results.json
       - name: Keep expression-site results
         if: always()

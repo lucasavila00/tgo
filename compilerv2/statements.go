@@ -3,6 +3,7 @@ package compilerv2
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 )
 
 func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
@@ -63,6 +64,14 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 	case *ast.ExprStmt:
 		before, refs := r.expression(s.X)
 		if len(refs) == 0 {
+			if call, ok := s.X.(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok {
+					if object := r.source.Package.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
+						// Keep the terminating statement after unreachable inserted code.
+						return append(before, s)
+					}
+				}
+			}
 			return before
 		}
 		copy := *s
