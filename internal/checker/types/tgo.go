@@ -50,9 +50,13 @@ func (check *Checker) expressionType(e ast.Expr, typ Type) {
 	}
 }
 
-// builtinArguments supplies the slice element type to append values.
+// builtinArguments supplies declared parameter types to added expressions.
 func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*operand {
-	if id != _Append || len(call.Args) < 2 || hasDots(call) {
+	if id == _Panic && len(call.Args) == 1 {
+		check.expressionType(call.Args[0], &emptyInterface)
+		return check.exprList(call.Args)
+	}
+	if (id != _Append && id != _Delete) || len(call.Args) < 2 || hasDots(call) {
 		return check.exprList(call.Args)
 	}
 	args := make([]*operand, len(call.Args))
@@ -60,14 +64,33 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 		args[i] = new(operand)
 		check.expr(nil, args[i], expression)
 		if i == 0 && args[i].isValid() {
-			if element, err := sliceElem(args[i]); err == nil {
-				for _, value := range call.Args[1:] {
-					check.expressionType(value, element)
-				}
+			var typ Type
+			if id == _Append {
+				typ, _ = sliceElem(args[i])
+			} else {
+				typ = deleteKeyType(args[i].typ())
+			}
+			for _, value := range call.Args[1:] {
+				check.expressionType(value, typ)
 			}
 		}
 	}
 	return args
+}
+
+func deleteKeyType(typ Type) Type {
+	var key Type
+	if !underIs(typ, func(underlying Type) bool {
+		mapping, ok := underlying.(*Map)
+		if !ok || (key != nil && !Identical(key, mapping.key)) {
+			return false
+		}
+		key = mapping.key
+		return true
+	}) {
+		return nil
+	}
+	return key
 }
 
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {

@@ -10,7 +10,27 @@ func identity[T any](value T) T {
 	return value
 }
 
+func checkPanic(value any) {
+	defer func() {
+		if recover() != value {
+			panic("wrong panic value")
+		}
+	}()
+	panic(value)
+}
+
+func remove[M ~map[*int]int](mapping M) {
+	delete(mapping, nil)
+}
+
 func main() {
+	checkPanic(30)
+	checkPanic("other")
+	mappingWithNil := map[*int]int{nil: 30}
+	remove(mappingWithNil)
+	mappingWithNil[nil] = 31
+	remove(mappingWithNil)
+	fmt.Println("delete", len(mappingWithNil))
 	ok := true
 	var text any
 	var keyed, positional record

@@ -10,108 +10,142 @@ func identity[T any](value T) T {
 	return value
 }
 
+func checkPanic(ok bool) {
+	defer func() {
+		var want any = 30
+		if !ok {
+			want = "other"
+		}
+		if recover() != want {
+			panic("wrong panic value")
+		}
+	}()
+	{
+		var tgo1 interface {
+		}
+		if ok {
+			tgo1 = 30
+		} else {
+			tgo1 = "other"
+		}
+		panic(tgo1)
+	}
+}
+
+func remove[M ~map[*int]int](mapping M, ok bool) {
+	{
+		var tgo3 M = mapping
+		var tgo2 *int
+		if ok {
+			tgo2 = nil
+		} else {
+			tgo2 = nil
+		}
+		delete(tgo3, tgo2)
+	}
+}
+
 func main() {
+	checkPanic(true)
+	checkPanic(false)
+	mappingWithNil := map[*int]int{nil: 30}
+	remove(mappingWithNil, true)
+	mappingWithNil[nil] = 31
+	remove(mappingWithNil, false)
+	fmt.Println("delete", len(mappingWithNil))
 	ok := true
-	var tgo1 any
+	var tgo4 any
 	if ok {
-		tgo1 = "text"
+		tgo4 = "text"
 	} else {
-		tgo1 = 1
+		tgo4 = 1
 	}
-	var text any = tgo1
-	var tgo2 any
-	if ok {
-		tgo2 = 1
-	} else {
-		tgo2 = "two"
-	}
-	keyed := record{value: tgo2}
-	var tgo3 any
-	if ok {
-		tgo3 = "three"
-	} else {
-		tgo3 = 4
-	}
-	positional := record{tgo3}
-	var tgo4 string
-	if ok {
-		tgo4 = "key"
-	} else {
-		tgo4 = "other"
-	}
+	var text any = tgo4
 	var tgo5 any
 	if ok {
-		tgo5 = 5
+		tgo5 = 1
 	} else {
-		tgo5 = "six"
+		tgo5 = "two"
 	}
-	mapping := map[string]any{tgo4: tgo5}
+	keyed := record{value: tgo5}
 	var tgo6 any
 	if ok {
-		tgo6 = 7
+		tgo6 = "three"
 	} else {
-		tgo6 = "eight"
+		tgo6 = 4
 	}
-	values := []any{tgo6}
-	var tgo7 int
+	positional := record{tgo6}
+	var tgo7 string
 	if ok {
-		tgo7 = 9
+		tgo7 = "key"
 	} else {
-		tgo7 = 10
+		tgo7 = "other"
 	}
-	array := [2]int{tgo7, 11}
-	var tgo8 *record
+	var tgo8 any
 	if ok {
-		tgo8 = &record{12}
+		tgo8 = 5
 	} else {
-		tgo8 = &record{13}
+		tgo8 = "six"
 	}
-	pointer := tgo8
+	mapping := map[string]any{tgo7: tgo8}
+	var tgo9 any
+	if ok {
+		tgo9 = 7
+	} else {
+		tgo9 = "eight"
+	}
+	values := []any{tgo9}
+	var tgo10 int
+	if ok {
+		tgo10 = 9
+	} else {
+		tgo10 = 10
+	}
+	array := [2]int{tgo10, 11}
+	var tgo11 *record
+	if ok {
+		tgo11 = &record{12}
+	} else {
+		tgo11 = &record{13}
+	}
+	pointer := tgo11
 	fmt.Println(text, keyed.value, positional.value, mapping["key"], values[0], array, pointer.value)
 
 	numbers := []int{10, 20, 30}
 	{
-		var tgo9 []int = numbers
-		var tgo10 int
-		if ok {
-			tgo10 = 1
-		} else {
-			tgo10 = 0
-		}
-		var tgo11 int
-		if ok {
-			tgo11 = 21
-		} else {
-			tgo11 = 22
-		}
-		tgo9[tgo10] = tgo11
-	}
-	{
 		var tgo12 []int = numbers
 		var tgo13 int
 		if ok {
-			tgo13 = 2
+			tgo13 = 1
 		} else {
 			tgo13 = 0
 		}
-		tgo12[tgo13]++
-	}
-	{
 		var tgo14 int
 		if ok {
-			tgo14 = 3
+			tgo14 = 21
 		} else {
-			tgo14 = 4
+			tgo14 = 22
 		}
-		var tgo17 int = -(tgo14)
-		var tgo16 []int = numbers
-		var tgo15 int
+		tgo12[tgo13] = tgo14
+	}
+	{
+		var tgo15 []int = numbers
+		var tgo16 int
 		if ok {
-			tgo15 = 1
+			tgo16 = 2
 		} else {
-			tgo15 = 0
+			tgo16 = 0
 		}
-		var tgo21 int = tgo16[tgo15]
+		tgo15[tgo16]++
+	}
+	{
+		var tgo17 int
+		if ok {
+			tgo17 = 3
+		} else {
+			tgo17 = 4
+		}
+		var tgo20 int = -(tgo17)
 		var tgo19 []int = numbers
 		var tgo18 int
 		if ok {
@@ -119,100 +153,108 @@ func main() {
 		} else {
 			tgo18 = 0
 		}
-		var tgo20 int
+		var tgo24 int = tgo19[tgo18]
+		var tgo22 []int = numbers
+		var tgo21 int
 		if ok {
-			tgo20 = 3
+			tgo21 = 1
 		} else {
-			tgo20 = 2
+			tgo21 = 0
 		}
-		fmt.Println(tgo17, tgo21, tgo19[tgo18:tgo20])
+		var tgo23 int
+		if ok {
+			tgo23 = 3
+		} else {
+			tgo23 = 2
+		}
+		fmt.Println(tgo20, tgo24, tgo22[tgo21:tgo23])
 	}
 	{
-		var tgo22 int
+		var tgo25 int
 		if ok {
-			tgo22 = 14
+			tgo25 = 14
 		} else {
-			tgo22 = 15
+			tgo25 = 15
 		}
-		var tgo24 int = identity(tgo22)
-		var tgo23 int8
+		var tgo27 int = identity(tgo25)
+		var tgo26 int8
 		if ok {
-			tgo23 = 16
+			tgo26 = 16
 		} else {
-			tgo23 = 17
+			tgo26 = 17
 		}
-		fmt.Println(tgo24, int8(tgo23))
+		fmt.Println(tgo27, int8(tgo26))
 	}
-	var tgo25 func(value int) int
+	var tgo28 func(value int) int
 	if ok {
-		tgo25 = func(value int) int { return value + 1 }
+		tgo28 = func(value int) int { return value + 1 }
 	} else {
-		tgo25 = func(value int) int { return value + 2 }
+		tgo28 = func(value int) int { return value + 2 }
 	}
-	call := tgo25
+	call := tgo28
 	{
-		var tgo27 func(value int) int = call
-		var tgo26 int
+		var tgo30 func(value int) int = call
+		var tgo29 int
 		if ok {
-			tgo26 = 18
+			tgo29 = 18
 		} else {
-			tgo26 = 19
+			tgo29 = 19
 		}
-		var tgo29 int = tgo27(tgo26)
-		var tgo28 any
+		var tgo32 int = tgo30(tgo29)
+		var tgo31 any
 		if ok {
-			tgo28 = text
+			tgo31 = text
 		} else {
-			tgo28 = any(1)
+			tgo31 = any(1)
 		}
-		fmt.Println(tgo29, (tgo28).(string))
+		fmt.Println(tgo32, (tgo31).(string))
 	}
 	{
-		var tgo30 int
+		var tgo33 int
 
 		if ok {
-			tgo30 = 20
+			tgo33 = 20
 		} else {
-			tgo30 = 0
+			tgo33 = 0
 		}
-		value := tgo30
-		var tgo31 bool
+		value := tgo33
+		var tgo34 bool
 		if ok {
-			tgo31 = value > 0
+			tgo34 = value > 0
 		} else {
-			tgo31 = false
+			tgo34 = false
 		}
-		if tgo31 {
+		if tgo34 {
 			fmt.Println("if", value)
 		}
 	}
 	{
-		var tgo34 int
+		var tgo37 int
 		if ok {
-			tgo34 = 0
+			tgo37 = 0
 		} else {
-			tgo34 = 2
+			tgo37 = 2
 		}
-		var tgo35 bool = 0 == 0
-		for i := tgo34; ; {
-			if tgo35 {
-				tgo35 = 0 != 0
+		var tgo38 bool = 0 == 0
+		for i := tgo37; ; {
+			if tgo38 {
+				tgo38 = 0 != 0
 			} else {
-				var tgo33 int
+				var tgo36 int
 				if ok {
-					tgo33 = 1
+					tgo36 = 1
 				} else {
-					tgo33 = 2
+					tgo36 = 2
 				}
-				i += tgo33
+				i += tgo36
 			}
-			var tgo32 bool
+			var tgo35 bool
 			if ok {
-				tgo32 = i < 2
+				tgo35 = i < 2
 			} else {
-				tgo32 = false
+				tgo35 = false
 			}
-			if !tgo32 {
+			if !tgo35 {
 				break
 			}
 			{
@@ -221,47 +263,47 @@ func main() {
 		}
 	}
 	{
-		var tgo36 []int
+		var tgo39 []int
 		if ok {
-			tgo36 = []int{22, 23}
+			tgo39 = []int{22, 23}
 		} else {
-			tgo36 = []int{}
+			tgo39 = []int{}
 		}
-		for _, value := range tgo36 {
+		for _, value := range tgo39 {
 			fmt.Println("range", value)
 		}
 	}
 	{
-		var tgo37 int
+		var tgo40 int
 		if ok {
-			tgo37 = 24
+			tgo40 = 24
 		} else {
-			tgo37 = 0
+			tgo40 = 0
 		}
-		value := tgo37
-		var tgo38 int
+		value := tgo40
+		var tgo41 int
 		if ok {
-			tgo38 = value
+			tgo41 = value
 		} else {
-			tgo38 = 0
+			tgo41 = 0
 		}
-		var tgo39 int = tgo38
-		var tgo40 int = -1
-		if tgo40 == -1 {
-			var tgo41 int
+		var tgo42 int = tgo41
+		var tgo43 int = -1
+		if tgo43 == -1 {
+			var tgo44 int
 			if ok {
-				tgo41 = 24
+				tgo44 = 24
 			} else {
-				tgo41 = 25
+				tgo44 = 25
 			}
-			if tgo39 == tgo41 {
-				tgo40 = 0
+			if tgo42 == tgo44 {
+				tgo43 = 0
 			}
 		}
-		if tgo40 == -1 {
-			tgo40 = 1
+		if tgo43 == -1 {
+			tgo43 = 1
 		}
-		switch tgo40 {
+		switch tgo43 {
 		case 0:
 			fmt.Println("switch", value)
 		case 1:
@@ -269,14 +311,14 @@ func main() {
 		}
 	}
 	{
-		var tgo42 any
+		var tgo45 any
 
 		if ok {
-			tgo42 = text
+			tgo45 = text
 		} else {
-			tgo42 = any(1)
+			tgo45 = any(1)
 		}
-		switch value := (tgo42).(type) {
+		switch value := (tgo45).(type) {
 		case string:
 			fmt.Println("type", value)
 		default:
@@ -286,49 +328,49 @@ func main() {
 
 	channel := make(chan any, 1)
 	{
-		var tgo44 chan any = channel
-		var tgo43 any
-		if ok {
-			tgo43 = 26
-		} else {
-			tgo43 = "other"
-		}
-		tgo44 <- tgo43
-	}
-	fmt.Println("send", <-channel)
-	{
-		var tgo45 chan any = channel
+		var tgo47 chan any = channel
 		var tgo46 any
 		if ok {
-			tgo46 = 27
+			tgo46 = 26
 		} else {
 			tgo46 = "other"
 		}
+		tgo47 <- tgo46
+	}
+	fmt.Println("send", <-channel)
+	{
+		var tgo48 chan any = channel
+		var tgo49 any
+		if ok {
+			tgo49 = 27
+		} else {
+			tgo49 = "other"
+		}
 		select {
-		case tgo45 <- tgo46:
+		case tgo48 <- tgo49:
 			fmt.Println("select", <-channel)
 		default:
 			panic("blocked send")
 		}
 	}
 	{
-		var tgo48 func(value any) = func(value any) { channel <- value }
-		var tgo47 any
+		var tgo51 func(value any) = func(value any) { channel <- value }
+		var tgo50 any
 		if ok {
-			tgo47 = 28
+			tgo50 = 28
 		} else {
-			tgo47 = "other"
+			tgo50 = "other"
 		}
-		go tgo48(tgo47)
+		go tgo51(tgo50)
 	}
 	fmt.Println("go", <-channel)
 	{
-		var tgo49 any
+		var tgo52 any
 		if ok {
-			tgo49 = 29
+			tgo52 = 29
 		} else {
-			tgo49 = "other"
+			tgo52 = "other"
 		}
-		defer fmt.Println("defer", tgo49)
+		defer fmt.Println("defer", tgo52)
 	}
 }
