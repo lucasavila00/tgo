@@ -9,4 +9,8 @@ func run() (error error) {
 	return nil
 }
 
-func main() {}
+func main() {
+	if run() != nil {
+		panic("unexpected error")
+	}
+}
