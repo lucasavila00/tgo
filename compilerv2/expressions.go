@@ -56,7 +56,9 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	count := r.resultCount(original)
 	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil {
 		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
-			return r.snapshotLiteral(expr.(*ast.CompositeLit), original)
+			if _, pointer := r.source.Package.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
+				return r.materializeKey(expr.(*ast.CompositeLit), literal)
+			}
 		}
 	}
 	expr = r.contextLiteral(expr, original)
@@ -68,7 +70,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		refs[i] = r.name()
 	}
 	statement := &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}
-	if count == 1 && r.untypedBoolean(expr) {
+	if count == 1 && r.untypedBoolean(original) {
 		return []ast.Stmt{statement}, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
 	}
 	return []ast.Stmt{statement}, refs
@@ -365,7 +367,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{r.contextLiteral(result, expr)}})
 		}
 		before = append(before, r.after(refs)...)
-		if count == 1 && r.untypedBoolean(expr) {
+		if count == 1 && r.untypedBoolean(original) {
 			refs = []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
 		}
 		return before, refs

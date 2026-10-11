@@ -44,6 +44,7 @@ is skipped. Normal deferred calls still run.
 | --- | --- |
 | `source.go` | Load types and inventory source expressions |
 | `expressions.go` | Save values and keep conditional evaluation |
+| `literals.go`, `zero_types.go` | Keep omitted literal types and map key timing |
 | `places.go` | Save assignment operands without reading the destination |
 | `statements.go`, `control.go`, `select.go` | Keep scope, branches, loop control, and communication timing |
 | `insert.go` | Build and format new files |
@@ -117,3 +118,8 @@ go -C compilerv2 test ./... -run '^TestPropagation' -count=1
 ```
 
 The propagation PR remains a draft while its full runtime matrix is completed.
+
+Literal tests cover nested omitted types, map values, pointer keys, and array
+keys. A key with an unhashable interface field fails when the map is built,
+after its value expression runs. The engine infers the key type from an empty
+map and assigns its fields or elements to a fresh value.
