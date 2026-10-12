@@ -34,7 +34,9 @@ func (check *Checker) shortReturn(statement *ast.ReturnStmt) bool {
 			return true
 		}
 	}
-	if !AssignableTo(results.At(results.Len()-1).typ, Universe.Lookup("error").Type()) {
+	errorResultIndex := results.Len() - 1
+	errorResultType := results.At(errorResultIndex).typ
+	if !AssignableTo(errorResultType, Universe.Lookup("error").Type()) {
 		check.error(statement, IncompatibleAssign, "short return requires a final result that implements error")
 		return true
 	}
@@ -42,15 +44,14 @@ func (check *Checker) shortReturn(statement *ast.ReturnStmt) bool {
 		check.errorf(atPos(call.Ellipsis), InvalidSyntaxTree, "short return operands cannot end with ...")
 		return true
 	}
-	last := results.Len() - 1
 	if operation.ZeroSuccess {
-		check.initVars(results.vars[last:], call.Args, statement)
+		check.initVars(results.vars[errorResultIndex:], call.Args, statement)
 	} else {
-		if !AssignableTo(Typ[UntypedNil], results.At(last).typ) {
+		if !AssignableTo(Typ[UntypedNil], errorResultType) {
 			check.error(statement, IncompatibleAssign, "short return requires nil to fit the final result type")
 			return true
 		}
-		check.initVars(results.vars[:last], call.Args, statement)
+		check.initVars(results.vars[:errorResultIndex], call.Args, statement)
 	}
 	return true
 }

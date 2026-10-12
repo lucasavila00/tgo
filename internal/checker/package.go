@@ -213,14 +213,21 @@ func (pkg *Package) recordShortReturns(file *ast.File, records map[string]fronte
 		pkg.Operations[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess, Position: record.Position}
 	}
 	ast.Inspect(file, func(node ast.Node) bool {
-		if statement, ok := node.(*ast.ReturnStmt); ok && len(statement.Results) == 1 {
-			if call, ok := statement.Results[0].(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok {
-					if record, found := records[id.Name]; found {
-						pkg.ShortReturns[statement] = record
-					}
-				}
-			}
+		statement, isReturn := node.(*ast.ReturnStmt)
+		if !isReturn || len(statement.Results) != 1 {
+			return true
+		}
+		markerCall, isCall := statement.Results[0].(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		markerIdentifier, isIdentifier := markerCall.Fun.(*ast.Ident)
+		if !isIdentifier {
+			return true
+		}
+		record, found := records[markerIdentifier.Name]
+		if found {
+			pkg.ShortReturns[statement] = record
 		}
 		return true
 	})

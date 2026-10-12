@@ -16,103 +16,110 @@ type ShortReturn struct {
 // prepareShortReturn wraps one operand list without adding a source function.
 func (s *mappedSource) prepareShortReturn(original *token.File, used map[string]bool, records map[string]ShortReturn) (bool, error) {
 	tokens := sourceTokens(s.text)
-	for i := len(tokens) - 1; i >= 0; i-- {
-		if tokens[i].kind != token.RETURN {
+	for returnIndex := len(tokens) - 1; returnIndex >= 0; returnIndex-- {
+		if tokens[returnIndex].kind != token.RETURN {
 			continue
 		}
-		dots, end, err := s.shortReturnSpan(tokens, i)
+		operatorOffset, returnEnd, err := s.shortReturnSpan(tokens, returnIndex)
 		if err != nil {
-			return false, fmt.Errorf("%s: %w", original.Position(original.Pos(s.offsets[dots])), err)
+			return false, fmt.Errorf("%s: %w", original.Position(original.Pos(s.offsets[operatorOffset])), err)
 		}
-		if dots < 0 {
+		if operatorOffset < 0 {
 			continue
 		}
-		if tokens[i+1].offset == dots {
-			end = s.shortReturnCommentStart(tokens, end)
+		if tokens[returnIndex+1].offset == operatorOffset {
+			returnEnd = s.shortReturnCommentStart(tokens, returnEnd)
 		}
-		first := i + 1
-		leading := tokens[first].offset == dots
-		start := tokens[first].offset
-		operandEnd := end
-		if leading {
-			start = dots + 2
+		operandIndex := returnIndex + 1
+		leadingOperator := tokens[operandIndex].offset == operatorOffset
+		operandStart := tokens[operandIndex].offset
+		operandEnd := returnEnd
+		if leadingOperator {
+			operandStart = operatorOffset + 2
 		} else {
-			operandEnd = dots
+			operandEnd = operatorOffset
 		}
-		name := ""
-		for next := 1; ; next++ {
-			name = fmt.Sprintf("tgoShortReturn%d", next)
-			if !used[name] {
-				used[name] = true
+		markerName := ""
+		for markerNumber := 1; ; markerNumber++ {
+			markerName = fmt.Sprintf("tgoShortReturn%d", markerNumber)
+			if !used[markerName] {
+				used[markerName] = true
 				break
 			}
 		}
-		position := original.Position(original.Pos(s.offsets[dots]))
-		records[name] = ShortReturn{ZeroSuccess: leading, Position: position}
-		before, after := name+"(", ");"
-		text := before + s.text[start:operandEnd] + after
-		offsets := insertedOffsets(len(before), s.offsets[tokens[first].offset])
-		offsets = append(offsets, s.offsets[start:operandEnd]...)
-		offsets = append(offsets, insertedOffsets(len(after), s.offsets[end-1])...)
-		s.replace(tokens[first].offset, end, text, offsets)
+		position := original.Position(original.Pos(s.offsets[operatorOffset]))
+		records[markerName] = ShortReturn{ZeroSuccess: leadingOperator, Position: position}
+		markerPrefix, markerSuffix := markerName+"(", ");"
+		replacementText := markerPrefix + s.text[operandStart:operandEnd] + markerSuffix
+		replacementOffsets := insertedOffsets(len(markerPrefix), s.offsets[tokens[operandIndex].offset])
+		replacementOffsets = append(replacementOffsets, s.offsets[operandStart:operandEnd]...)
+		replacementOffsets = append(replacementOffsets, insertedOffsets(len(markerSuffix), s.offsets[returnEnd-1])...)
+		s.replace(tokens[operandIndex].offset, returnEnd, replacementText, replacementOffsets)
 		return true, nil
 	}
 	return false, nil
 }
 
-func (s *mappedSource) shortReturnSpan(tokens []sourceToken, start int) (int, int, error) {
-	dots := -1
-	depth := tokens[start].depth
-	leading := false
-	for i := start + 1; i < len(tokens); i++ {
-		tok := tokens[i]
-		if tok.kind == token.EOF || tok.depth == depth && (tok.kind == token.SEMICOLON || tok.kind == token.RBRACE) {
-			if leading && i == start+3 {
-				return dots, 0, fmt.Errorf("short return requires an error operand")
+func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (int, int, error) {
+	operatorOffset := -1
+	returnDepth := tokens[returnIndex].depth
+	leadingOperator := false
+	for i := returnIndex + 1; i < len(tokens); i++ {
+		currentToken := tokens[i]
+		atStatementEnd := currentToken.depth == returnDepth && (currentToken.kind == token.SEMICOLON || currentToken.kind == token.RBRACE)
+		if currentToken.kind == token.EOF || atStatementEnd {
+			if leadingOperator && i == returnIndex+3 {
+				return operatorOffset, 0, fmt.Errorf("short return requires an error operand")
 			}
-			return dots, tok.offset, nil
+			return operatorOffset, currentToken.offset, nil
 		}
-		if tok.depth != depth || tok.kind != token.PERIOD || i+1 >= len(tokens) || tokens[i+1].kind != token.PERIOD || tokens[i+1].offset != tok.offset+1 {
+		if currentToken.depth != returnDepth || currentToken.kind != token.PERIOD || i+1 >= len(tokens) {
 			continue
 		}
-		if dots >= 0 {
-			return tok.offset, 0, fmt.Errorf("short return permits .. only before or after its operands")
+		secondDot := tokens[i+1]
+		if secondDot.kind != token.PERIOD || secondDot.offset != currentToken.offset+1 {
+			continue
 		}
-		dots = tok.offset
-		leading = i == start+1
+		if operatorOffset >= 0 {
+			return currentToken.offset, 0, fmt.Errorf("short return permits .. only before or after its operands")
+		}
+		operatorOffset = currentToken.offset
+		leadingOperator = i == returnIndex+1
 		i++
-		if leading {
+		if leadingOperator {
 			continue
 		}
-		next := tokens[i+1]
-		if next.kind == token.EOF || next.kind == token.SEMICOLON || next.kind == token.RBRACE || strings.Contains(s.text[tokens[i].end:next.offset], "\n") {
-			return dots, tokens[i].end, nil
+		nextToken := tokens[i+1]
+		atNextStatement := nextToken.kind == token.EOF || nextToken.kind == token.SEMICOLON || nextToken.kind == token.RBRACE
+		hasNewline := strings.Contains(s.text[secondDot.end:nextToken.offset], "\n")
+		if atNextStatement || hasNewline {
+			return operatorOffset, tokens[i].end, nil
 		}
-		return dots, 0, fmt.Errorf("short return permits .. only before or after its operands")
+		return operatorOffset, 0, fmt.Errorf("short return permits .. only before or after its operands")
 	}
-	return dots, len(s.text), nil
+	return operatorOffset, len(s.text), nil
 }
 
 // shortReturnCommentStart leaves a final line comment outside the marker call.
-func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, end int) int {
-	last := 0
-	for _, tok := range tokens {
-		if tok.offset >= end {
+func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, returnEnd int) int {
+	operandEnd := 0
+	for _, currentToken := range tokens {
+		if currentToken.offset >= returnEnd {
 			break
 		}
-		last = tok.end
+		operandEnd = currentToken.end
 	}
-	set := token.NewFileSet()
-	file := set.AddFile("", -1, end-last)
-	var scan scanner.Scanner
-	scan.Init(file, []byte(s.text[last:end]), nil, scanner.ScanComments)
+	positions := token.NewFileSet()
+	commentFile := positions.AddFile("", -1, returnEnd-operandEnd)
+	var commentScanner scanner.Scanner
+	commentScanner.Init(commentFile, []byte(s.text[operandEnd:returnEnd]), nil, scanner.ScanComments)
 	for {
-		pos, kind, literal := scan.Scan()
-		if kind == token.COMMENT && strings.HasPrefix(literal, "//") {
-			return last + file.Offset(pos)
+		position, tokenKind, literal := commentScanner.Scan()
+		if tokenKind == token.COMMENT && strings.HasPrefix(literal, "//") {
+			return operandEnd + commentFile.Offset(position)
 		}
-		if kind == token.EOF {
-			return end
+		if tokenKind == token.EOF {
+			return returnEnd
 		}
 	}
 }
