@@ -7,6 +7,9 @@ import (
 )
 
 func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
+	if statements, ok := r.discardedPropagation(s.X); ok {
+		return statements
+	}
 	statements, values := r.expression(s.X)
 	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
@@ -32,7 +35,38 @@ func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	return append(statements, &output)
 }
 
+// discardedPropagation keeps the call and its error check without success storage.
+func (r *rewrite) discardedPropagation(expression ast.Expr) ([]ast.Stmt, bool) {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
+	if operation, ok := r.input.propagations[expression]; ok && !r.functionState.suppressed {
+		statements, _ := r.propagatedCall(expression.(*ast.CallExpr), operation, true)
+		return statements, true
+	}
+	return nil, false
+}
+
+func blankDestinations(expressions []ast.Expr) bool {
+	for _, expression := range expressions {
+		identifier, ok := expression.(*ast.Ident)
+		if !ok || identifier.Name != "_" {
+			return false
+		}
+	}
+	return len(expressions) != 0
+}
+
 func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
+	if s.Tok == token.ASSIGN && len(s.Rhs) == 1 && blankDestinations(s.Lhs) {
+		if statements, ok := r.discardedPropagation(s.Rhs[0]); ok {
+			return statements
+		}
+	}
 	output := *s
 	var statements []ast.Stmt
 	output.Lhs = make([]ast.Expr, len(s.Lhs))
@@ -137,7 +171,7 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 			attachControlLabel(statements, target, label)
 		}
 		if jump {
-			output.Stmt = &ast.BlockStmt{List: statements}
+			output.Stmt = scopedBlock(statements)
 			return []ast.Stmt{&output}
 		}
 		return statements
@@ -176,6 +210,15 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 	if inner != nil {
 		attachLabel(statements, inner)
 	}
-	output.Stmt = &ast.BlockStmt{List: statements}
+	output.Stmt = scopedBlock(statements)
 	return []ast.Stmt{&output}
+}
+
+func scopedBlock(statements []ast.Stmt) *ast.BlockStmt {
+	if len(statements) == 1 {
+		if block, ok := statements[0].(*ast.BlockStmt); ok {
+			return block
+		}
+	}
+	return &ast.BlockStmt{List: statements}
 }

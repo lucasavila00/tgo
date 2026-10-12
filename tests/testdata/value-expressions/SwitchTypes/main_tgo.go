@@ -47,111 +47,97 @@ func main() {
 	}
 	var a any = tgo4
 	fmt.Println(a)
-	{
-		var tgo5 any
-		switch 1 {
-		case 1:
-			tgo5 = 4
-		default:
-			tgo5 = "text"
-		}
-		fmt.Println(pick(tgo5, any(5)))
+	var tgo5 any
+	switch 1 {
+	case 1:
+		tgo5 = 4
+	default:
+		tgo5 = "text"
 	}
-	{
-		var tgo6 func(int) int
-		switch 1 {
-		case 1:
-			tgo6 = identity
-		default:
-			tgo6 = identity
-		}
-		fmt.Println(use(1, tgo6))
+	fmt.Println(pick(tgo5, any(5)))
+	var tgo6 func(int) int
+	switch 1 {
+	case 1:
+		tgo6 = identity
+	default:
+		tgo6 = identity
 	}
+	fmt.Println(use(1, tgo6))
 	fmt.Println(exits(0), exits(1))
-	{
-		var tgo7 any
-		switch 1 {
-		case 1:
-			switch 2 {
-			case 2:
-				tgo7 = 7
-			default:
-				tgo7 = 8
-			}
+	var tgo7 any
+	switch 1 {
+	case 1:
+		switch 2 {
+		case 2:
+			tgo7 = 7
 		default:
-			tgo7 = 9
+			tgo7 = 8
 		}
-		fmt.Println(tgo7)
+	default:
+		tgo7 = 9
 	}
-	{
-		var tgo8 any
-		if true {
-			switch 2 {
-			case 2:
-				tgo8 = 8
-			default:
-				tgo8 = 9
-			}
-		} else {
-			tgo8 = 10
+	fmt.Println(tgo7)
+	var tgo8 any
+	if true {
+		switch 2 {
+		case 2:
+			tgo8 = 8
+		default:
+			tgo8 = 9
 		}
-		fmt.Println(tgo8)
+	} else {
+		tgo8 = 10
 	}
+	fmt.Println(tgo8)
 	xs := []int{0, 0}
-	{
-		var tgo9 []int = xs
-		var tgo10 int
-		switch 1 {
-		case 1:
-			tgo10 = 0
-		default:
-			tgo10 = 1
-		}
-		var tgo11 []int = xs
-		var tgo12 int
-		switch 1 {
-		case 1:
-			tgo12 = 11
-		default:
-			tgo12 = 0
-		}
-		var tgo13 int
-		switch 1 {
-		case 1:
-			tgo13 = 12
-		default:
-			tgo13 = 0
-		}
-		tgo9[tgo10], tgo11[1] = tgo12, tgo13
+	var value_tgo9 []int = xs
+	var tgo10 int
+	switch 1 {
+	case 1:
+		tgo10 = 0
+	default:
+		tgo10 = 1
 	}
+	var value_tgo11 []int = xs
+	var tgo12 int
+	switch 1 {
+	case 1:
+		tgo12 = 11
+	default:
+		tgo12 = 0
+	}
+	var tgo13 int
+	switch 1 {
+	case 1:
+		tgo13 = 12
+	default:
+		tgo13 = 0
+	}
+	value_tgo9[tgo10], value_tgo11[1] = tgo12, tgo13
 	fmt.Println(xs)
 	ch := make(chan int, 1)
-	{
-		var tgo14 chan int = ch
-		var tgo15 int
-		switch 1 {
-		case 1:
-			tgo15 = 13
-		default:
-			tgo15 = 0
-		}
-		select {
-		case tgo14 <- tgo15:
-		}
+	var value_tgo14 chan int = ch
+	var tgo15 int
+	switch 1 {
+	case 1:
+		tgo15 = 13
+	default:
+		tgo15 = 0
+	}
+	select {
+	case value_tgo14 <- tgo15:
 	}
 	fmt.Println(<-ch)
 	i := 0
-	{
-		var tgo16 []int
-		switch 1 {
-		case 1:
-			tgo16 = []int{1, 2}
-		default:
-			tgo16 = nil
-		}
-		for range tgo16 {
-			i++
-		}
+	var tgo16 []int
+	switch 1 {
+	case 1:
+		tgo16 = []int{1, 2}
+	default:
+		tgo16 = nil
+	}
+	for range tgo16 {
+		i++
 	}
 	fmt.Println(i)
 	switch 1 {

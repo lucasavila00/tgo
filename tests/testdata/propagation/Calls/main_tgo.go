@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo6 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -27,28 +25,22 @@ func consume(a, b, c int) {
 }
 
 func run(fail bool) error {
-	{
-		var tgo3 int = effect("L")
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = target(fail)
-		if tgo2 != nil {
-			return tgo2
-		}
-		consume(tgo3, tgo1, effect("R"))
+	var value_tgo3 int = effect("L")
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = target(fail)
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
+	consume(value_tgo3, value_tgo1, effect("R"))
 	return nil
 }
 
 func wrapped() error {
-	{
-		var tgo4 int
-		var tgo5 error
-		tgo4, tgo5 = target(true)
-		if tgo5 != nil {
-			return fmt_tgo6.Errorf("target: %w", tgo5)
-		}
-		_ = tgo4
+	var error_tgo4 error
+	_, error_tgo4 = target(true)
+	if error_tgo4 != nil {
+		return fmt.Errorf("target: %w", error_tgo4)
 	}
 	return nil
 }

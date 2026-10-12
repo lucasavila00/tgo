@@ -1,7 +1,6 @@
 package main
 
-import reflect_tgo53 "reflect"
-import fmt_tgo7 "fmt"
+import reflect_tgo52 "reflect"
 
 import "fmt"
 
@@ -40,248 +39,248 @@ func use(value int) int            { trace += "U"; return value }
 func done()                        { trace += "D" }
 
 func pointerDirect(err *PointerError) (int, error) {
-	var tgo3 int
+	var zero_tgo3 int
 	defer done()
-	var tgo1 int
-	var tgo2 *PointerError
-	tgo1, tgo2 = next(err)
-	if tgo2 != nil {
-		return tgo3, tgo2
+	var value_tgo1 int
+	var error_tgo2 *PointerError
+	value_tgo1, error_tgo2 = next(err)
+	if error_tgo2 != nil {
+		return zero_tgo3, error_tgo2
 	}
-	value := use(tgo1)
+	value := use(value_tgo1)
 	return value, nil
 }
 
 func pointerWrapped(err *PointerError) (int, error) {
-	var tgo6 int
+	var zero_tgo6 int
 	defer done()
-	var tgo4 int
-	var tgo5 *PointerError
-	tgo4, tgo5 = next(err)
-	if tgo5 != nil {
-		return tgo6, fmt_tgo7.Errorf("next: %w", tgo5)
+	var value_tgo4 int
+	var error_tgo5 *PointerError
+	value_tgo4, error_tgo5 = next(err)
+	if error_tgo5 != nil {
+		return zero_tgo6, fmt.Errorf("next: %w", error_tgo5)
 	}
-	value := use(tgo4)
+	value := use(value_tgo4)
 	return value, nil
 }
 
 func ifaceDirect(err error) (int, error) {
-	var tgo10 int
+	var zero_tgo9 int
 	defer done()
-	var tgo8 int
-	var tgo9 error
-	tgo8, tgo9 = next(err)
-	if tgo9 != nil {
-		return tgo10, tgo9
+	var value_tgo7 int
+	var error_tgo8 error
+	value_tgo7, error_tgo8 = next(err)
+	if error_tgo8 != nil {
+		return zero_tgo9, error_tgo8
 	}
-	value := use(tgo8)
+	value := use(value_tgo7)
 	return value, nil
 }
 
 func ifaceWrapped(err error) (int, error) {
-	var tgo13 int
+	var zero_tgo12 int
 	defer done()
-	var tgo11 int
-	var tgo12 error
-	tgo11, tgo12 = next(err)
-	if tgo12 != nil {
-		return tgo13, fmt_tgo7.Errorf("next: %w", tgo12)
+	var value_tgo10 int
+	var error_tgo11 error
+	value_tgo10, error_tgo11 = next(err)
+	if error_tgo11 != nil {
+		return zero_tgo12, fmt.Errorf("next: %w", error_tgo11)
 	}
-	value := use(tgo11)
+	value := use(value_tgo10)
 	return value, nil
 }
 
 func numberDirect(err NumberError) (int, error) {
-	var tgo16 int
+	var zero_tgo15 int
 	defer done()
-	var tgo14 int
-	var tgo15 NumberError
-	tgo14, tgo15 = next(err)
+	var value_tgo13 int
+	var error_tgo14 NumberError
+	value_tgo13, error_tgo14 = next(err)
 	if 0 == 0 {
-		return tgo16, tgo15
+		return zero_tgo15, error_tgo14
 	}
-	value := use(tgo14)
+	value := use(value_tgo13)
 	return value, nil
 }
 
 func numberWrapped(err NumberError) (int, error) {
-	var tgo19 int
+	var zero_tgo18 int
 	defer done()
-	var tgo17 int
-	var tgo18 NumberError
-	tgo17, tgo18 = next(err)
+	var value_tgo16 int
+	var error_tgo17 NumberError
+	value_tgo16, error_tgo17 = next(err)
 	if 0 == 0 {
-		return tgo19, fmt_tgo7.Errorf("next: %w", tgo18)
+		return zero_tgo18, fmt.Errorf("next: %w", error_tgo17)
 	}
-	value := use(tgo17)
+	value := use(value_tgo16)
 	return value, nil
 }
 
 func sliceDirect(err SliceError) (int, error) {
-	var tgo22 int
+	var zero_tgo21 int
 	defer done()
-	var tgo20 int
-	var tgo21 SliceError
-	tgo20, tgo21 = next(err)
-	if tgo21 != nil {
-		return tgo22, tgo21
+	var value_tgo19 int
+	var error_tgo20 SliceError
+	value_tgo19, error_tgo20 = next(err)
+	if error_tgo20 != nil {
+		return zero_tgo21, error_tgo20
 	}
-	value := use(tgo20)
+	value := use(value_tgo19)
 	return value, nil
 }
 
 func sliceWrapped(err SliceError) (int, error) {
-	var tgo25 int
+	var zero_tgo24 int
 	defer done()
-	var tgo23 int
-	var tgo24 SliceError
-	tgo23, tgo24 = next(err)
-	if tgo24 != nil {
-		return tgo25, fmt_tgo7.Errorf("next: %w", tgo24)
+	var value_tgo22 int
+	var error_tgo23 SliceError
+	value_tgo22, error_tgo23 = next(err)
+	if error_tgo23 != nil {
+		return zero_tgo24, fmt.Errorf("next: %w", error_tgo23)
 	}
-	value := use(tgo23)
+	value := use(value_tgo22)
 	return value, nil
 }
 
 func mappedDirect(err MapError) (int, error) {
-	var tgo28 int
+	var zero_tgo27 int
 	defer done()
-	var tgo26 int
-	var tgo27 MapError
-	tgo26, tgo27 = next(err)
-	if tgo27 != nil {
-		return tgo28, tgo27
+	var value_tgo25 int
+	var error_tgo26 MapError
+	value_tgo25, error_tgo26 = next(err)
+	if error_tgo26 != nil {
+		return zero_tgo27, error_tgo26
 	}
-	value := use(tgo26)
+	value := use(value_tgo25)
 	return value, nil
 }
 
 func mappedWrapped(err MapError) (int, error) {
-	var tgo31 int
+	var zero_tgo30 int
 	defer done()
-	var tgo29 int
-	var tgo30 MapError
-	tgo29, tgo30 = next(err)
-	if tgo30 != nil {
-		return tgo31, fmt_tgo7.Errorf("next: %w", tgo30)
+	var value_tgo28 int
+	var error_tgo29 MapError
+	value_tgo28, error_tgo29 = next(err)
+	if error_tgo29 != nil {
+		return zero_tgo30, fmt.Errorf("next: %w", error_tgo29)
 	}
-	value := use(tgo29)
+	value := use(value_tgo28)
 	return value, nil
 }
 
 func channelDirect(err ChanError) (int, error) {
-	var tgo34 int
+	var zero_tgo33 int
 	defer done()
-	var tgo32 int
-	var tgo33 ChanError
-	tgo32, tgo33 = next(err)
-	if tgo33 != nil {
-		return tgo34, tgo33
+	var value_tgo31 int
+	var error_tgo32 ChanError
+	value_tgo31, error_tgo32 = next(err)
+	if error_tgo32 != nil {
+		return zero_tgo33, error_tgo32
 	}
-	value := use(tgo32)
+	value := use(value_tgo31)
 	return value, nil
 }
 
 func channelWrapped(err ChanError) (int, error) {
-	var tgo37 int
+	var zero_tgo36 int
 	defer done()
-	var tgo35 int
-	var tgo36 ChanError
-	tgo35, tgo36 = next(err)
-	if tgo36 != nil {
-		return tgo37, fmt_tgo7.Errorf("next: %w", tgo36)
+	var value_tgo34 int
+	var error_tgo35 ChanError
+	value_tgo34, error_tgo35 = next(err)
+	if error_tgo35 != nil {
+		return zero_tgo36, fmt.Errorf("next: %w", error_tgo35)
 	}
-	value := use(tgo35)
+	value := use(value_tgo34)
 	return value, nil
 }
 
 func functionDirect(err FuncError) (int, error) {
-	var tgo40 int
+	var zero_tgo39 int
 	defer done()
-	var tgo38 int
-	var tgo39 FuncError
-	tgo38, tgo39 = next(err)
-	if tgo39 != nil {
-		return tgo40, tgo39
+	var value_tgo37 int
+	var error_tgo38 FuncError
+	value_tgo37, error_tgo38 = next(err)
+	if error_tgo38 != nil {
+		return zero_tgo39, error_tgo38
 	}
-	value := use(tgo38)
+	value := use(value_tgo37)
 	return value, nil
 }
 
 func functionWrapped(err FuncError) (int, error) {
-	var tgo43 int
+	var zero_tgo42 int
 	defer done()
-	var tgo41 int
-	var tgo42 FuncError
-	tgo41, tgo42 = next(err)
-	if tgo42 != nil {
-		return tgo43, fmt_tgo7.Errorf("next: %w", tgo42)
+	var value_tgo40 int
+	var error_tgo41 FuncError
+	value_tgo40, error_tgo41 = next(err)
+	if error_tgo41 != nil {
+		return zero_tgo42, fmt.Errorf("next: %w", error_tgo41)
 	}
-	value := use(tgo41)
+	value := use(value_tgo40)
 	return value, nil
 }
 
 func structureDirect(err StructError) (int, error) {
-	var tgo46 int
+	var zero_tgo45 int
 	defer done()
-	var tgo44 int
-	var tgo45 StructError
-	tgo44, tgo45 = next(err)
+	var value_tgo43 int
+	var error_tgo44 StructError
+	value_tgo43, error_tgo44 = next(err)
 	if 0 == 0 {
-		return tgo46, tgo45
+		return zero_tgo45, error_tgo44
 	}
-	value := use(tgo44)
+	value := use(value_tgo43)
 	return value, nil
 }
 
 func structureWrapped(err StructError) (int, error) {
-	var tgo49 int
+	var zero_tgo48 int
 	defer done()
-	var tgo47 int
-	var tgo48 StructError
-	tgo47, tgo48 = next(err)
+	var value_tgo46 int
+	var error_tgo47 StructError
+	value_tgo46, error_tgo47 = next(err)
 	if 0 == 0 {
-		return tgo49, fmt_tgo7.Errorf("next: %w", tgo48)
+		return zero_tgo48, fmt.Errorf("next: %w", error_tgo47)
 	}
-	value := use(tgo47)
+	value := use(value_tgo46)
 	return value, nil
 }
 
 func genericDirect[E error](err E) (int, error) {
-	var tgo52 int
+	var zero_tgo51 int
 	defer done()
-	var tgo50 int
-	var tgo51 E
-	tgo50, tgo51 = next(err)
-	var tgo54 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo51).Elem()
-	var tgo55 bool = 0 == 0
-	switch tgo54.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo55 = !tgo54.IsNil()
+	var value_tgo49 int
+	var error_tgo50 E
+	value_tgo49, error_tgo50 = next(err)
+	var reflected_tgo53 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo50).Elem()
+	var failed_tgo54 bool = 0 == 0
+	switch reflected_tgo53.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo54 = !reflected_tgo53.IsNil()
 	}
-	if tgo55 {
-		return tgo52, tgo51
+	if failed_tgo54 {
+		return zero_tgo51, error_tgo50
 	}
-	value := use(tgo50)
+	value := use(value_tgo49)
 	return value, nil
 }
 
 func genericWrapped[E error](err E) (int, error) {
-	var tgo58 int
+	var zero_tgo57 int
 	defer done()
-	var tgo56 int
-	var tgo57 E
-	tgo56, tgo57 = next(err)
-	var tgo59 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo57).Elem()
-	var tgo60 bool = 0 == 0
-	switch tgo59.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo60 = !tgo59.IsNil()
+	var value_tgo55 int
+	var error_tgo56 E
+	value_tgo55, error_tgo56 = next(err)
+	var reflected_tgo58 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo56).Elem()
+	var failed_tgo59 bool = 0 == 0
+	switch reflected_tgo58.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo59 = !reflected_tgo58.IsNil()
 	}
-	if tgo60 {
-		return tgo58, fmt_tgo7.Errorf("next: %w", tgo57)
+	if failed_tgo59 {
+		return zero_tgo57, fmt.Errorf("next: %w", error_tgo56)
 	}
-	value := use(tgo56)
+	value := use(value_tgo55)
 	return value, nil
 }
 
@@ -289,134 +288,126 @@ func comparableResult[E interface {
 	error
 	comparable
 }](err E) (int, E) {
-	var tgo63 int
+	var zero_tgo62 int
 	defer done()
-	var tgo61 int
-	var tgo62 E
-	tgo61, tgo62 = next(err)
-	var tgo64 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo62).Elem()
-	var tgo65 bool = 0 == 0
-	switch tgo64.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo65 = !tgo64.IsNil()
+	var value_tgo60 int
+	var error_tgo61 E
+	value_tgo60, error_tgo61 = next(err)
+	var reflected_tgo63 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo61).Elem()
+	var failed_tgo64 bool = 0 == 0
+	switch reflected_tgo63.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo64 = !reflected_tgo63.IsNil()
 	}
-	if tgo65 {
-		return tgo63, tgo62
+	if failed_tgo64 {
+		return zero_tgo62, error_tgo61
 	}
-	value := use(tgo61)
+	value := use(value_tgo60)
 	var success E
 	return value, success
 }
 func shadow(nil int, err SliceError) (int, error) {
-	var tgo68 int
+	var zero_tgo67 int
 	defer done()
-	var tgo66 int
-	var tgo67 SliceError
-	tgo66, tgo67 = next(err)
-	var tgo69 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo67).Elem()
-	var tgo70 bool = 0 == 0
-	switch tgo69.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo70 = !tgo69.IsNil()
+	var value_tgo65 int
+	var error_tgo66 SliceError
+	value_tgo65, error_tgo66 = next(err)
+	var reflected_tgo68 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo66).Elem()
+	var failed_tgo69 bool = 0 == 0
+	switch reflected_tgo68.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo69 = !reflected_tgo68.IsNil()
 	}
-	if tgo70 {
-		return tgo68, tgo67
+	if failed_tgo69 {
+		return zero_tgo67, error_tgo66
 	}
-	value := use(tgo66)
+	value := use(value_tgo65)
 	var success error
 	return value + nil, success
 }
 func genericReturn[E error](err E) (int, E) {
-	var tgo73 int
+	var zero_tgo72 int
 	defer done()
-	var tgo71 int
-	var tgo72 E
-	tgo71, tgo72 = next(err)
-	var tgo74 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo72).Elem()
-	var tgo75 bool = 0 == 0
-	switch tgo74.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo75 = !tgo74.IsNil()
+	var value_tgo70 int
+	var error_tgo71 E
+	value_tgo70, error_tgo71 = next(err)
+	var reflected_tgo73 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo71).Elem()
+	var failed_tgo74 bool = 0 == 0
+	switch reflected_tgo73.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo74 = !reflected_tgo73.IsNil()
 	}
-	if tgo75 {
-		return tgo73, tgo72
+	if failed_tgo74 {
+		return zero_tgo72, error_tgo71
 	}
-	value := use(tgo71)
+	value := use(value_tgo70)
 	var success E
 	return value, success
 }
 func contextassignDirect(err *PointerError) (int, error) {
-	var tgo78 int
+	var zero_tgo77 int
 	defer done()
 	value := 0
-	{
-		var tgo76 int
-		var tgo77 *PointerError
-		tgo76, tgo77 = next(err)
-		if tgo77 != nil {
-			return tgo78, tgo77
-		}
-		value = tgo76
+	var value_tgo75 int
+	var error_tgo76 *PointerError
+	value_tgo75, error_tgo76 = next(err)
+	if error_tgo76 != nil {
+		return zero_tgo77, error_tgo76
 	}
+	value = value_tgo75
 	use(value)
 	return 7, nil
 }
 func contextassignWrapped(err *PointerError) (int, error) {
-	var tgo81 int
+	var zero_tgo80 int
 	defer done()
 	value := 0
-	{
-		var tgo79 int
-		var tgo80 *PointerError
-		tgo79, tgo80 = next(err)
-		if tgo80 != nil {
-			return tgo81, fmt_tgo7.Errorf("next: %w", tgo80)
-		}
-		value = tgo79
+	var value_tgo78 int
+	var error_tgo79 *PointerError
+	value_tgo78, error_tgo79 = next(err)
+	if error_tgo79 != nil {
+		return zero_tgo80, fmt.Errorf("next: %w", error_tgo79)
 	}
+	value = value_tgo78
 	use(value)
 	return 7, nil
 }
 func contextreturnDirect(err *PointerError) (int, error) {
-	var tgo84 int
+	var zero_tgo83 int
 	defer done()
-	{
-		var tgo82 int
-		var tgo83 *PointerError
-		tgo82, tgo83 = next(err)
-		if tgo83 != nil {
-			return tgo84, tgo83
-		}
-		return use(tgo82), nil
+	var value_tgo81 int
+	var error_tgo82 *PointerError
+	value_tgo81, error_tgo82 = next(err)
+	if error_tgo82 != nil {
+		return zero_tgo83, error_tgo82
 	}
+	return use(value_tgo81), nil
 }
 func contextreturnWrapped(err *PointerError) (int, error) {
-	var tgo87 int
+	var zero_tgo86 int
 	defer done()
-	{
-		var tgo85 int
-		var tgo86 *PointerError
-		tgo85, tgo86 = next(err)
-		if tgo86 != nil {
-			return tgo87, fmt_tgo7.Errorf("next: %w", tgo86)
-		}
-		return use(tgo85), nil
+	var value_tgo84 int
+	var error_tgo85 *PointerError
+	value_tgo84, error_tgo85 = next(err)
+	if error_tgo85 != nil {
+		return zero_tgo86, fmt.Errorf("next: %w", error_tgo85)
 	}
+	return use(value_tgo84), nil
 }
 func contextloopInitDirect(err *PointerError) (int, error) {
-	var tgo90 int
+	var zero_tgo89 int
 	defer done()
 	{
-		var tgo88 int
-		var tgo89 *PointerError
-		tgo88, tgo89 = next(err)
-		if tgo89 != nil {
-			return tgo90, tgo89
+		var value_tgo87 int
+		var error_tgo88 *PointerError
+		value_tgo87, error_tgo88 = next(err)
+		if error_tgo88 != nil {
+			return zero_tgo89, error_tgo88
 		}
-		var tgo91 bool = 0 == 0
-		for value := tgo88; ; {
-			if tgo91 {
-				tgo91 = 0 != 0
+		var tgo90 bool = 0 == 0
+		for value := value_tgo87; ; {
+			if tgo90 {
+				tgo90 = 0 != 0
 			} else {
 				value++
 			}
@@ -431,19 +422,19 @@ func contextloopInitDirect(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextloopInitWrapped(err *PointerError) (int, error) {
-	var tgo94 int
+	var zero_tgo93 int
 	defer done()
 	{
-		var tgo92 int
-		var tgo93 *PointerError
-		tgo92, tgo93 = next(err)
-		if tgo93 != nil {
-			return tgo94, fmt_tgo7.Errorf("next: %w", tgo93)
+		var value_tgo91 int
+		var error_tgo92 *PointerError
+		value_tgo91, error_tgo92 = next(err)
+		if error_tgo92 != nil {
+			return zero_tgo93, fmt.Errorf("next: %w", error_tgo92)
 		}
-		var tgo95 bool = 0 == 0
-		for value := tgo92; ; {
-			if tgo95 {
-				tgo95 = 0 != 0
+		var tgo94 bool = 0 == 0
+		for value := value_tgo91; ; {
+			if tgo94 {
+				tgo94 = 0 != 0
 			} else {
 				value++
 			}
@@ -458,21 +449,21 @@ func contextloopInitWrapped(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextloopPostDirect(err *PointerError) (int, error) {
-	var tgo98 int
+	var zero_tgo97 int
 	defer done()
 	{
-		var tgo99 bool = 0 == 0
+		var tgo98 bool = 0 == 0
 		for value := 0; ; {
-			if tgo99 {
-				tgo99 = 0 != 0
+			if tgo98 {
+				tgo98 = 0 != 0
 			} else {
-				var tgo96 int
-				var tgo97 *PointerError
-				tgo96, tgo97 = next(err)
-				if tgo97 != nil {
-					return tgo98, tgo97
+				var value_tgo95 int
+				var error_tgo96 *PointerError
+				value_tgo95, error_tgo96 = next(err)
+				if error_tgo96 != nil {
+					return zero_tgo97, error_tgo96
 				}
-				value = tgo96
+				value = value_tgo95
 			}
 			if !(value < 1) {
 				break
@@ -485,21 +476,21 @@ func contextloopPostDirect(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextloopPostWrapped(err *PointerError) (int, error) {
-	var tgo102 int
+	var zero_tgo101 int
 	defer done()
 	{
-		var tgo103 bool = 0 == 0
+		var tgo102 bool = 0 == 0
 		for value := 0; ; {
-			if tgo103 {
-				tgo103 = 0 != 0
+			if tgo102 {
+				tgo102 = 0 != 0
 			} else {
-				var tgo100 int
-				var tgo101 *PointerError
-				tgo100, tgo101 = next(err)
-				if tgo101 != nil {
-					return tgo102, fmt_tgo7.Errorf("next: %w", tgo101)
+				var value_tgo99 int
+				var error_tgo100 *PointerError
+				value_tgo99, error_tgo100 = next(err)
+				if error_tgo100 != nil {
+					return zero_tgo101, fmt.Errorf("next: %w", error_tgo100)
 				}
-				value = tgo100
+				value = value_tgo99
 			}
 			if !(value < 1) {
 				break
@@ -512,16 +503,16 @@ func contextloopPostWrapped(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextswitchDirect(err *PointerError) (int, error) {
-	var tgo106 int
+	var zero_tgo105 int
 	defer done()
 	{
-		var tgo104 int
-		var tgo105 *PointerError
-		tgo104, tgo105 = next(err)
-		if tgo105 != nil {
-			return tgo106, tgo105
+		var value_tgo103 int
+		var error_tgo104 *PointerError
+		value_tgo103, error_tgo104 = next(err)
+		if error_tgo104 != nil {
+			return zero_tgo105, error_tgo104
 		}
-		switch tgo104 {
+		switch value_tgo103 {
 		case 7:
 			use(7)
 		}
@@ -529,16 +520,16 @@ func contextswitchDirect(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextswitchWrapped(err *PointerError) (int, error) {
-	var tgo109 int
+	var zero_tgo108 int
 	defer done()
 	{
-		var tgo107 int
-		var tgo108 *PointerError
-		tgo107, tgo108 = next(err)
-		if tgo108 != nil {
-			return tgo109, fmt_tgo7.Errorf("next: %w", tgo108)
+		var value_tgo106 int
+		var error_tgo107 *PointerError
+		value_tgo106, error_tgo107 = next(err)
+		if error_tgo107 != nil {
+			return zero_tgo108, fmt.Errorf("next: %w", error_tgo107)
 		}
-		switch tgo107 {
+		switch value_tgo106 {
 		case 7:
 			use(7)
 		}
@@ -546,22 +537,22 @@ func contextswitchWrapped(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextcaseExprDirect(err *PointerError) (int, error) {
-	var tgo113 int
+	var zero_tgo112 int
 	defer done()
 	{
-		var tgo110 int = -1
-		if tgo110 == -1 {
-			var tgo111 int
-			var tgo112 *PointerError
-			tgo111, tgo112 = next(err)
-			if tgo112 != nil {
-				return tgo113, tgo112
+		var tgo109 int = -1
+		if tgo109 == -1 {
+			var value_tgo110 int
+			var error_tgo111 *PointerError
+			value_tgo110, error_tgo111 = next(err)
+			if error_tgo111 != nil {
+				return zero_tgo112, error_tgo111
 			}
-			if 7 == tgo111 {
-				tgo110 = 0
+			if 7 == value_tgo110 {
+				tgo109 = 0
 			}
 		}
-		switch tgo110 {
+		switch tgo109 {
 		case 0:
 			use(7)
 		}
@@ -569,22 +560,22 @@ func contextcaseExprDirect(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextcaseExprWrapped(err *PointerError) (int, error) {
-	var tgo117 int
+	var zero_tgo116 int
 	defer done()
 	{
-		var tgo114 int = -1
-		if tgo114 == -1 {
-			var tgo115 int
-			var tgo116 *PointerError
-			tgo115, tgo116 = next(err)
-			if tgo116 != nil {
-				return tgo117, fmt_tgo7.Errorf("next: %w", tgo116)
+		var tgo113 int = -1
+		if tgo113 == -1 {
+			var value_tgo114 int
+			var error_tgo115 *PointerError
+			value_tgo114, error_tgo115 = next(err)
+			if error_tgo115 != nil {
+				return zero_tgo116, fmt.Errorf("next: %w", error_tgo115)
 			}
-			if 7 == tgo115 {
-				tgo114 = 0
+			if 7 == value_tgo114 {
+				tgo113 = 0
 			}
 		}
-		switch tgo114 {
+		switch tgo113 {
 		case 0:
 			use(7)
 		}
@@ -592,21 +583,21 @@ func contextcaseExprWrapped(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextshortCircuitDirect(err *PointerError) (int, error) {
-	var tgo120 int
+	var zero_tgo119 int
 	defer done()
 	{
-		var tgo121 bool
-		tgo121 = false
-		if tgo121 {
-			var tgo118 int
-			var tgo119 *PointerError
-			tgo118, tgo119 = next(err)
-			if tgo119 != nil {
-				return tgo120, tgo119
+		var tgo120 bool
+		tgo120 = false
+		if tgo120 {
+			var value_tgo117 int
+			var error_tgo118 *PointerError
+			value_tgo117, error_tgo118 = next(err)
+			if error_tgo118 != nil {
+				return zero_tgo119, error_tgo118
 			}
-			tgo121 = tgo118 == 7
+			tgo120 = value_tgo117 == 7
 		}
-		if tgo121 == (0 == 0) {
+		if tgo120 == (0 == 0) {
 			panic("skipped")
 		}
 	}
@@ -614,21 +605,21 @@ func contextshortCircuitDirect(err *PointerError) (int, error) {
 	return 7, nil
 }
 func contextshortCircuitWrapped(err *PointerError) (int, error) {
-	var tgo124 int
+	var zero_tgo123 int
 	defer done()
 	{
-		var tgo125 bool
-		tgo125 = false
-		if tgo125 {
-			var tgo122 int
-			var tgo123 *PointerError
-			tgo122, tgo123 = next(err)
-			if tgo123 != nil {
-				return tgo124, fmt_tgo7.Errorf("next: %w", tgo123)
+		var tgo124 bool
+		tgo124 = false
+		if tgo124 {
+			var value_tgo121 int
+			var error_tgo122 *PointerError
+			value_tgo121, error_tgo122 = next(err)
+			if error_tgo122 != nil {
+				return zero_tgo123, fmt.Errorf("next: %w", error_tgo122)
 			}
-			tgo125 = tgo122 == 7
+			tgo124 = value_tgo121 == 7
 		}
-		if tgo125 == (0 == 0) {
+		if tgo124 == (0 == 0) {
 			panic("skipped")
 		}
 	}
@@ -638,15 +629,13 @@ func contextshortCircuitWrapped(err *PointerError) (int, error) {
 func contextliteralDirect(err *PointerError) (int, error) {
 	defer done()
 	run := func() error {
-		{
-			var tgo126 int
-			var tgo127 *PointerError
-			tgo126, tgo127 = next(err)
-			if tgo127 != nil {
-				return tgo127
-			}
-			use(tgo126)
+		var value_tgo125 int
+		var error_tgo126 *PointerError
+		value_tgo125, error_tgo126 = next(err)
+		if error_tgo126 != nil {
+			return error_tgo126
 		}
+		use(value_tgo125)
 		return nil
 	}
 	return 0, run()
@@ -654,15 +643,13 @@ func contextliteralDirect(err *PointerError) (int, error) {
 func contextliteralWrapped(err *PointerError) (int, error) {
 	defer done()
 	run := func() error {
-		{
-			var tgo128 int
-			var tgo129 *PointerError
-			tgo128, tgo129 = next(err)
-			if tgo129 != nil {
-				return fmt_tgo7.Errorf("next: %w", tgo129)
-			}
-			use(tgo128)
+		var value_tgo127 int
+		var error_tgo128 *PointerError
+		value_tgo127, error_tgo128 = next(err)
+		if error_tgo128 != nil {
+			return fmt.Errorf("next: %w", error_tgo128)
 		}
+		use(value_tgo127)
 		return nil
 	}
 	return 0, run()
@@ -671,115 +658,115 @@ func constrainedPointerDirect[E interface {
 	error
 	*PointerError
 }](err E) (int, error) {
-	var tgo132 int
+	var zero_tgo131 int
 	defer done()
-	var tgo130 int
-	var tgo131 E
-	tgo130, tgo131 = next(err)
-	if tgo131 != nil {
-		return tgo132, tgo131
+	var value_tgo129 int
+	var error_tgo130 E
+	value_tgo129, error_tgo130 = next(err)
+	if error_tgo130 != nil {
+		return zero_tgo131, error_tgo130
 	}
-	value := use(tgo130)
+	value := use(value_tgo129)
 	return value, nil
 }
 func constrainedPointerWrapped[E interface {
 	error
 	*PointerError
 }](err E) (int, error) {
-	var tgo135 int
+	var zero_tgo134 int
 	defer done()
-	var tgo133 int
-	var tgo134 E
-	tgo133, tgo134 = next(err)
-	if tgo134 != nil {
-		return tgo135, fmt_tgo7.Errorf("next: %w", tgo134)
+	var value_tgo132 int
+	var error_tgo133 E
+	value_tgo132, error_tgo133 = next(err)
+	if error_tgo133 != nil {
+		return zero_tgo134, fmt.Errorf("next: %w", error_tgo133)
 	}
-	value := use(tgo133)
+	value := use(value_tgo132)
 	return value, nil
 }
 func constrainedNilableDirect[E interface {
 	error
 	~[]int | ~map[int]int
 }](err E) (int, error) {
-	var tgo138 int
+	var zero_tgo137 int
 	defer done()
-	var tgo136 int
-	var tgo137 E
-	tgo136, tgo137 = next(err)
-	if tgo137 != nil {
-		return tgo138, tgo137
+	var value_tgo135 int
+	var error_tgo136 E
+	value_tgo135, error_tgo136 = next(err)
+	if error_tgo136 != nil {
+		return zero_tgo137, error_tgo136
 	}
-	value := use(tgo136)
+	value := use(value_tgo135)
 	return value, nil
 }
 func constrainedNilableWrapped[E interface {
 	error
 	~[]int | ~map[int]int
 }](err E) (int, error) {
-	var tgo141 int
+	var zero_tgo140 int
 	defer done()
-	var tgo139 int
-	var tgo140 E
-	tgo139, tgo140 = next(err)
-	if tgo140 != nil {
-		return tgo141, fmt_tgo7.Errorf("next: %w", tgo140)
+	var value_tgo138 int
+	var error_tgo139 E
+	value_tgo138, error_tgo139 = next(err)
+	if error_tgo139 != nil {
+		return zero_tgo140, fmt.Errorf("next: %w", error_tgo139)
 	}
-	value := use(tgo139)
+	value := use(value_tgo138)
 	return value, nil
 }
 func constrainedMixedDirect[E interface {
 	error
 	*PointerError | NumberError
 }](err E) (int, error) {
-	var tgo144 int
+	var zero_tgo143 int
 	defer done()
-	var tgo142 int
-	var tgo143 E
-	tgo142, tgo143 = next(err)
-	var tgo145 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo143).Elem()
-	var tgo146 bool = 0 == 0
-	switch tgo145.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo146 = !tgo145.IsNil()
+	var value_tgo141 int
+	var error_tgo142 E
+	value_tgo141, error_tgo142 = next(err)
+	var reflected_tgo144 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo142).Elem()
+	var failed_tgo145 bool = 0 == 0
+	switch reflected_tgo144.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo145 = !reflected_tgo144.IsNil()
 	}
-	if tgo146 {
-		return tgo144, tgo143
+	if failed_tgo145 {
+		return zero_tgo143, error_tgo142
 	}
-	value := use(tgo142)
+	value := use(value_tgo141)
 	return value, nil
 }
 func constrainedMixedWrapped[E interface {
 	error
 	*PointerError | NumberError
 }](err E) (int, error) {
-	var tgo149 int
+	var zero_tgo148 int
 	defer done()
-	var tgo147 int
-	var tgo148 E
-	tgo147, tgo148 = next(err)
-	var tgo150 reflect_tgo53.Value = reflect_tgo53.ValueOf(&tgo148).Elem()
-	var tgo151 bool = 0 == 0
-	switch tgo150.Kind() {
-	case reflect_tgo53.Chan, reflect_tgo53.Func, reflect_tgo53.Interface, reflect_tgo53.Map, reflect_tgo53.Pointer, reflect_tgo53.Slice:
-		tgo151 = !tgo150.IsNil()
+	var value_tgo146 int
+	var error_tgo147 E
+	value_tgo146, error_tgo147 = next(err)
+	var reflected_tgo149 reflect_tgo52.Value = reflect_tgo52.ValueOf(&error_tgo147).Elem()
+	var failed_tgo150 bool = 0 == 0
+	switch reflected_tgo149.Kind() {
+	case reflect_tgo52.Chan, reflect_tgo52.Func, reflect_tgo52.Interface, reflect_tgo52.Map, reflect_tgo52.Pointer, reflect_tgo52.Slice:
+		failed_tgo150 = !reflected_tgo149.IsNil()
 	}
-	if tgo151 {
-		return tgo149, fmt_tgo7.Errorf("next: %w", tgo148)
+	if failed_tgo150 {
+		return zero_tgo148, fmt.Errorf("next: %w", error_tgo147)
 	}
-	value := use(tgo147)
+	value := use(value_tgo146)
 	return value, nil
 }
 func shadowPointer(nil int, err *PointerError) (int, error) {
-	var tgo154 int
+	var zero_tgo153 int
 	defer done()
-	var tgo152 int
-	var tgo153 *PointerError
-	tgo152, tgo153 = next(err)
-	var tgo155 *PointerError
-	if tgo153 != tgo155 {
-		return tgo154, tgo153
+	var value_tgo151 int
+	var error_tgo152 *PointerError
+	value_tgo151, error_tgo152 = next(err)
+	var zero_tgo154 *PointerError
+	if error_tgo152 != zero_tgo154 {
+		return zero_tgo153, error_tgo152
 	}
-	value := use(tgo152)
+	value := use(value_tgo151)
 	var success error
 	return value + nil, success
 }

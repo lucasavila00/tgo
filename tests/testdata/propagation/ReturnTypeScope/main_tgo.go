@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo5 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -21,33 +19,25 @@ func next(fail bool) (int, Failure) {
 }
 
 func generic[T any](value T, fail, wrap bool) (T, Failure) {
-	type tgo4 = T
+	type tgo3 = T
 	if wrap {
 		run := func(T int) (T, Failure) {
-			var tgo3 tgo4
-			{
-				var tgo1 int
-				var tgo2 Failure
-				tgo1, tgo2 = next(fail)
-				if tgo2 != nil {
-					return tgo3, fmt_tgo5.Errorf("next: %w", tgo2)
-				}
-				_ = tgo1
+			var zero_tgo2 tgo3
+			var error_tgo1 Failure
+			_, error_tgo1 = next(fail)
+			if error_tgo1 != nil {
+				return zero_tgo2, fmt.Errorf("next: %w", error_tgo1)
 			}
 			return value, nil
 		}
 		return run(0)
 	}
 	run := func(T int) (T, Failure) {
-		var tgo8 tgo4
-		{
-			var tgo6 int
-			var tgo7 Failure
-			tgo6, tgo7 = next(fail)
-			if tgo7 != nil {
-				return tgo8, tgo7
-			}
-			_ = tgo6
+		var zero_tgo5 tgo3
+		var error_tgo4 Failure
+		_, error_tgo4 = next(fail)
+		if error_tgo4 != nil {
+			return zero_tgo5, error_tgo4
 		}
 		return value, nil
 	}
@@ -55,33 +45,25 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 }
 
 func named[T any](value T, fail, wrap bool) (T, Failure) {
-	type tgo12 = T
+	type tgo8 = T
 	if wrap {
 		run := func() (T T, err Failure) {
-			var tgo11 tgo12
-			{
-				var tgo9 int
-				var tgo10 Failure
-				tgo9, tgo10 = next(fail)
-				if tgo10 != nil {
-					return tgo11, fmt_tgo5.Errorf("next: %w", tgo10)
-				}
-				_ = tgo9
+			var zero_tgo7 tgo8
+			var error_tgo6 Failure
+			_, error_tgo6 = next(fail)
+			if error_tgo6 != nil {
+				return zero_tgo7, fmt.Errorf("next: %w", error_tgo6)
 			}
 			return value, nil
 		}
 		return run()
 	}
 	run := func() (T T, err Failure) {
-		var tgo15 tgo12
-		{
-			var tgo13 int
-			var tgo14 Failure
-			tgo13, tgo14 = next(fail)
-			if tgo14 != nil {
-				return tgo15, tgo14
-			}
-			_ = tgo13
+		var zero_tgo10 tgo8
+		var error_tgo9 Failure
+		_, error_tgo9 = next(fail)
+		if error_tgo9 != nil {
+			return zero_tgo10, error_tgo9
 		}
 		return value, nil
 	}
@@ -89,53 +71,37 @@ func named[T any](value T, fail, wrap bool) (T, Failure) {
 }
 
 func annotated(Result int, fail, wrap bool) (Visible, Failure) {
-	var tgo18 Visible
+	var zero_tgo12 Visible
 	if wrap {
-		{
-			var tgo16 int
-			var tgo17 Failure
-			tgo16, tgo17 = next(fail)
-			if tgo17 != nil {
-				return tgo18, fmt_tgo5.Errorf("next: %w", tgo17)
-			}
-			_ = tgo16
+		var error_tgo11 Failure
+		_, error_tgo11 = next(fail)
+		if error_tgo11 != nil {
+			return zero_tgo12, fmt.Errorf("next: %w", error_tgo11)
 		}
 	} else {
-		{
-			var tgo19 int
-			var tgo20 Failure
-			tgo19, tgo20 = next(fail)
-			if tgo20 != nil {
-				return tgo18, tgo20
-			}
-			_ = tgo19
+		var error_tgo13 Failure
+		_, error_tgo13 = next(fail)
+		if error_tgo13 != nil {
+			return zero_tgo12, error_tgo13
 		}
 	}
 	return Visible{Value: Result}, nil
 }
 
 func local(fail, wrap bool) (int, error) {
-	var tgo23 int
+	var zero_tgo15 int
 	error := 1
 	if wrap {
-		{
-			var tgo21 int
-			var tgo22 Failure
-			tgo21, tgo22 = next(fail)
-			if tgo22 != nil {
-				return tgo23, fmt_tgo5.Errorf("next: %w", tgo22)
-			}
-			_ = tgo21
+		var error_tgo14 Failure
+		_, error_tgo14 = next(fail)
+		if error_tgo14 != nil {
+			return zero_tgo15, fmt.Errorf("next: %w", error_tgo14)
 		}
 	} else {
-		{
-			var tgo24 int
-			var tgo25 Failure
-			tgo24, tgo25 = next(fail)
-			if tgo25 != nil {
-				return tgo23, tgo25
-			}
-			_ = tgo24
+		var error_tgo16 Failure
+		_, error_tgo16 = next(fail)
+		if error_tgo16 != nil {
+			return zero_tgo15, error_tgo16
 		}
 	}
 	return error, nil

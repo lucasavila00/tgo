@@ -20,36 +20,32 @@ func checkPanic(ok bool) {
 			panic("wrong panic value")
 		}
 	}()
-	{
-		var tgo1 interface {
-		}
-		if ok {
-			tgo1 = 30
-		} else {
-			tgo1 = "other"
-		}
-		panic(tgo1)
+	var tgo1 interface {
 	}
+	if ok {
+		tgo1 = 30
+	} else {
+		tgo1 = "other"
+	}
+	panic(tgo1)
 }
 
 func remove[M ~map[*int]int](mapping M, ok bool) {
-	{
-		var tgo3 M = mapping
-		var tgo2 *int
-		if ok {
-			tgo2 = nil
-		} else {
-			tgo2 = nil
-		}
-		delete(tgo3, tgo2)
+	var value_tgo3 M = mapping
+	var tgo2 *int
+	if ok {
+		tgo2 = nil
+	} else {
+		tgo2 = nil
 	}
+	delete(value_tgo3, tgo2)
 }
 
 func checkCopy(ok bool) {
 	type integers []int
 	dst := integers{1, 2}
 	calls := 0
-	var tgo5 integers = dst
+	var value_tgo5 integers = dst
 	var tgo4 []int
 	if ok {
 		calls++
@@ -58,8 +54,8 @@ func checkCopy(ok bool) {
 		calls++
 		tgo4 = nil
 	}
-	n := copy(tgo5, tgo4)
-	var tgo7 integers = dst
+	n := copy(value_tgo5, tgo4)
+	var value_tgo7 integers = dst
 	var tgo6 []int
 	if ok {
 		calls++
@@ -68,36 +64,36 @@ func checkCopy(ok bool) {
 		calls++
 		tgo6 = nil
 	}
-	values := append(tgo7, (tgo6)...)
+	values := append(value_tgo7, (tgo6)...)
 	bytes := []byte{0, 0, 0}
-	var tgo9 []byte = bytes
+	var value_tgo9 []byte = bytes
 	var tgo8 string
 	if ok {
 		tgo8 = "one"
 	} else {
 		tgo8 = "two"
 	}
-	copied := copy(tgo9, tgo8)
-	var tgo11 []byte = bytes
+	copied := copy(value_tgo9, tgo8)
+	var value_tgo11 []byte = bytes
 	var tgo10 []byte
 	if ok {
 		tgo10 = nil
 	} else {
 		tgo10 = nil
 	}
-	unchanged := append(tgo11, (tgo10)...)
+	unchanged := append(value_tgo11, (tgo10)...)
 	{
 		var tgo14 bool
 		tgo14 = copied != 3 || len(unchanged) != 3
 		if !tgo14 {
-			var tgo13 []byte = bytes
+			var value_tgo13 []byte = bytes
 			var tgo12 []byte
 			if ok {
 				tgo12 = nil
 			} else {
 				tgo12 = nil
 			}
-			tgo14 = copy(tgo13, tgo12) != 0
+			tgo14 = copy(value_tgo13, tgo12) != 0
 		}
 		if tgo14 == (0 == 0) {
 			panic("wrong byte operation")
@@ -177,79 +173,71 @@ func main() {
 	fmt.Println(text, keyed.value, positional.value, mapping["key"], values[0], array, pointer.value)
 
 	numbers := []int{10, 20, 30}
-	{
-		var tgo23 []int = numbers
-		var tgo24 int
-		if ok {
-			tgo24 = 1
-		} else {
-			tgo24 = 0
-		}
-		var tgo25 int
-		if ok {
-			tgo25 = 21
-		} else {
-			tgo25 = 22
-		}
-		tgo23[tgo24] = tgo25
+	var value_tgo23 []int = numbers
+	var tgo24 int
+	if ok {
+		tgo24 = 1
+	} else {
+		tgo24 = 0
 	}
-	{
-		var tgo26 []int = numbers
-		var tgo27 int
-		if ok {
-			tgo27 = 2
-		} else {
-			tgo27 = 0
-		}
-		tgo26[tgo27]++
+	var tgo25 int
+	if ok {
+		tgo25 = 21
+	} else {
+		tgo25 = 22
 	}
-	{
-		var tgo28 int
-		if ok {
-			tgo28 = 3
-		} else {
-			tgo28 = 4
-		}
-		var tgo31 int = -(tgo28)
-		var tgo30 []int = numbers
-		var tgo29 int
-		if ok {
-			tgo29 = 1
-		} else {
-			tgo29 = 0
-		}
-		var tgo35 int = tgo30[tgo29]
-		var tgo33 []int = numbers
-		var tgo32 int
-		if ok {
-			tgo32 = 1
-		} else {
-			tgo32 = 0
-		}
-		var tgo34 int
-		if ok {
-			tgo34 = 3
-		} else {
-			tgo34 = 2
-		}
-		fmt.Println(tgo31, tgo35, tgo33[tgo32:tgo34])
+	value_tgo23[tgo24] = tgo25
+	var value_tgo26 []int = numbers
+	var tgo27 int
+	if ok {
+		tgo27 = 2
+	} else {
+		tgo27 = 0
 	}
-	{
-		var tgo36 int
-		if ok {
-			tgo36 = 14
-		} else {
-			tgo36 = 15
-		}
-		var tgo38 int = identity(tgo36)
-		var tgo37 int8
-		if ok {
-			tgo37 = 16
-		} else {
-			tgo37 = 17
-		}
-		fmt.Println(tgo38, int8(tgo37))
+	value_tgo26[tgo27]++
+	var tgo28 int
+	if ok {
+		tgo28 = 3
+	} else {
+		tgo28 = 4
 	}
+	var value_tgo31 int = -(tgo28)
+	var value_tgo30 []int = numbers
+	var tgo29 int
+	if ok {
+		tgo29 = 1
+	} else {
+		tgo29 = 0
+	}
+	var value_tgo35 int = value_tgo30[tgo29]
+	var value_tgo33 []int = numbers
+	var tgo32 int
+	if ok {
+		tgo32 = 1
+	} else {
+		tgo32 = 0
+	}
+	var tgo34 int
+	if ok {
+		tgo34 = 3
+	} else {
+		tgo34 = 2
+	}
+	fmt.Println(value_tgo31, value_tgo35, value_tgo33[tgo32:tgo34])
+	var tgo36 int
+	if ok {
+		tgo36 = 14
+	} else {
+		tgo36 = 15
+	}
+	var value_tgo38 int = identity(tgo36)
+	var tgo37 int8
+	if ok {
+		tgo37 = 16
+	} else {
+		tgo37 = 17
+	}
+	fmt.Println(value_tgo38, int8(tgo37))
 	var tgo39 func(value int) int
 	if ok {
 		tgo39 = func(value int) int { return value + 1 }
@@ -257,23 +245,21 @@ func main() {
 		tgo39 = func(value int) int { return value + 2 }
 	}
 	call := tgo39
-	{
-		var tgo41 func(value int) int = call
-		var tgo40 int
-		if ok {
-			tgo40 = 18
-		} else {
-			tgo40 = 19
-		}
-		var tgo43 int = tgo41(tgo40)
-		var tgo42 any
-		if ok {
-			tgo42 = text
-		} else {
-			tgo42 = any(1)
-		}
-		fmt.Println(tgo43, (tgo42).(string))
+	var value_tgo41 func(value int) int = call
+	var tgo40 int
+	if ok {
+		tgo40 = 18
+	} else {
+		tgo40 = 19
 	}
+	var value_tgo43 int = value_tgo41(tgo40)
+	var tgo42 any
+	if ok {
+		tgo42 = text
+	} else {
+		tgo42 = any(1)
+	}
+	fmt.Println(value_tgo43, (tgo42).(string))
 	{
 		var tgo44 int
 
@@ -327,16 +313,14 @@ func main() {
 			}
 		}
 	}
-	{
-		var tgo50 []int
-		if ok {
-			tgo50 = []int{22, 23}
-		} else {
-			tgo50 = []int{}
-		}
-		for _, value := range tgo50 {
-			fmt.Println("range", value)
-		}
+	var tgo50 []int
+	if ok {
+		tgo50 = []int{22, 23}
+	} else {
+		tgo50 = []int{}
+	}
+	for _, value := range tgo50 {
+		fmt.Println("range", value)
 	}
 	{
 		var tgo51 int
@@ -352,7 +336,7 @@ func main() {
 		} else {
 			tgo52 = 0
 		}
-		var tgo53 int = tgo52
+		var value_tgo53 int = tgo52
 		var tgo54 int = -1
 		if tgo54 == -1 {
 			var tgo55 int
@@ -361,7 +345,7 @@ func main() {
 			} else {
 				tgo55 = 25
 			}
-			if tgo53 == tgo55 {
+			if value_tgo53 == tgo55 {
 				tgo54 = 0
 			}
 		}
@@ -392,50 +376,42 @@ func main() {
 	}
 
 	channel := make(chan any, 1)
-	{
-		var tgo58 chan any = channel
-		var tgo57 any
-		if ok {
-			tgo57 = 26
-		} else {
-			tgo57 = "other"
-		}
-		tgo58 <- tgo57
+	var value_tgo58 chan any = channel
+	var tgo57 any
+	if ok {
+		tgo57 = 26
+	} else {
+		tgo57 = "other"
 	}
+	value_tgo58 <- tgo57
 	fmt.Println("send", <-channel)
-	{
-		var tgo59 chan any = channel
-		var tgo60 any
-		if ok {
-			tgo60 = 27
-		} else {
-			tgo60 = "other"
-		}
-		select {
-		case tgo59 <- tgo60:
-			fmt.Println("select", <-channel)
-		default:
-			panic("blocked send")
-		}
+	var value_tgo59 chan any = channel
+	var tgo60 any
+	if ok {
+		tgo60 = 27
+	} else {
+		tgo60 = "other"
 	}
-	{
-		var tgo62 func(value any) = func(value any) { channel <- value }
-		var tgo61 any
-		if ok {
-			tgo61 = 28
-		} else {
-			tgo61 = "other"
-		}
-		go tgo62(tgo61)
+	select {
+	case value_tgo59 <- tgo60:
+		fmt.Println("select", <-channel)
+	default:
+		panic("blocked send")
 	}
+	var value_tgo62 func(value any) = func(value any) { channel <- value }
+	var tgo61 any
+	if ok {
+		tgo61 = 28
+	} else {
+		tgo61 = "other"
+	}
+	go value_tgo62(tgo61)
 	fmt.Println("go", <-channel)
-	{
-		var tgo63 any
-		if ok {
-			tgo63 = 29
-		} else {
-			tgo63 = "other"
-		}
-		defer fmt.Println("defer", tgo63)
+	var tgo63 any
+	if ok {
+		tgo63 = 29
+	} else {
+		tgo63 = "other"
 	}
+	defer fmt.Println("defer", tgo63)
 }

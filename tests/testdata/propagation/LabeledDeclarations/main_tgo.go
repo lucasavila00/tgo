@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo5 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -24,13 +22,13 @@ func shortDirect(fail bool) error {
 	visits := 0
 	goto L
 L:
-	var tgo1 int
-	var tgo2 error
-	tgo1, tgo2 = next(fail)
-	if tgo2 != nil {
-		return tgo2
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = next(fail)
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
-	value := tgo1
+	value := value_tgo1
 	trace = append(trace, fmt.Sprint(value))
 	visits++
 	if visits < 2 {
@@ -44,13 +42,13 @@ func shortWrapped(fail bool) error {
 	visits := 0
 	goto L
 L:
-	var tgo3 int
-	var tgo4 error
-	tgo3, tgo4 = next(fail)
-	if tgo4 != nil {
-		return fmt_tgo5.Errorf("next: %w", tgo4)
+	var value_tgo3 int
+	var error_tgo4 error
+	value_tgo3, error_tgo4 = next(fail)
+	if error_tgo4 != nil {
+		return fmt.Errorf("next: %w", error_tgo4)
 	}
-	value := tgo3
+	value := value_tgo3
 	trace = append(trace, fmt.Sprint(value))
 	visits++
 	if visits < 2 {
@@ -64,13 +62,13 @@ func varDirect(fail bool) error {
 	visits := 0
 	goto L
 L:
-	var tgo6 int
-	var tgo7 error
-	tgo6, tgo7 = next(fail)
-	if tgo7 != nil {
-		return tgo7
+	var value_tgo5 int
+	var error_tgo6 error
+	value_tgo5, error_tgo6 = next(fail)
+	if error_tgo6 != nil {
+		return error_tgo6
 	}
-	var value = tgo6
+	var value = value_tgo5
 	trace = append(trace, fmt.Sprint(value))
 	visits++
 	if visits < 2 {
@@ -84,13 +82,13 @@ func varWrapped(fail bool) error {
 	visits := 0
 	goto L
 L:
-	var tgo8 int
-	var tgo9 error
-	tgo8, tgo9 = next(fail)
-	if tgo9 != nil {
-		return fmt_tgo5.Errorf("next: %w", tgo9)
+	var value_tgo7 int
+	var error_tgo8 error
+	value_tgo7, error_tgo8 = next(fail)
+	if error_tgo8 != nil {
+		return fmt.Errorf("next: %w", error_tgo8)
 	}
-	var value = tgo8
+	var value = value_tgo7
 	trace = append(trace, fmt.Sprint(value))
 	visits++
 	if visits < 2 {
@@ -103,13 +101,13 @@ func nestedLabels(fail bool) error {
 	goto Outer
 Outer:
 Inner:
-	var tgo10 int
-	var tgo11 error
-	tgo10, tgo11 = next(fail)
-	if tgo11 != nil {
-		return tgo11
+	var value_tgo9 int
+	var error_tgo10 error
+	value_tgo9, error_tgo10 = next(fail)
+	if error_tgo10 != nil {
+		return error_tgo10
 	}
-	value := tgo10
+	value := value_tgo9
 	trace = append(trace, fmt.Sprint(value))
 	if false {
 		goto Inner

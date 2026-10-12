@@ -3,27 +3,23 @@ package main
 import "fmt"
 
 func choose(ok bool) int8 {
-	{
-		var tgo1 int8
-		if ok {
-			return 7
-		} else {
-			return 9
-		}
-		return min(tgo1, int8(3))
+	var tgo1 int8
+	if ok {
+		return 7
+	} else {
+		return 9
 	}
+	return min(tgo1, int8(3))
 }
 
 func point(ok bool) complex64 {
-	{
-		var tgo2 float32
-		if ok {
-			return 1
-		} else {
-			return 2
-		}
-		return complex(tgo2, float32(3))
+	var tgo2 float32
+	if ok {
+		return 1
+	} else {
+		return 2
 	}
+	return complex(tgo2, float32(3))
 }
 
 func pair() (float32, float32) { return 1, 2 }

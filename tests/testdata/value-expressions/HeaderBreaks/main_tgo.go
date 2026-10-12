@@ -157,7 +157,7 @@ func selectSend(skip bool) string {
 				trace += "C"
 				tgo12 = channel
 			}
-			var tgo13 chan int = (tgo12)
+			var value_tgo13 chan int = (tgo12)
 			var tgo14 int
 			if true {
 				trace += "V"
@@ -167,7 +167,7 @@ func selectSend(skip bool) string {
 			}
 		choice:
 			select {
-			case tgo13 <- tgo14:
+			case value_tgo13 <- tgo14:
 				trace += "B"
 				break choice
 			default:
@@ -186,18 +186,18 @@ func selectStore(skip bool) []int {
 	values := []int{0, 0}
 	{
 		{
-			var tgo16 chan int = channel
+			var value_tgo16 chan int = channel
 			var tgo17 int
 			select {
-			case tgo17 = <-tgo16:
-				var tgo18 []int = values
+			case tgo17 = <-value_tgo16:
+				var value_tgo18 []int = values
 				var tgo19 int
 				if skip {
 					goto tgo15
 				} else {
 					tgo19 = 0
 				}
-				tgo18[tgo19] = tgo17
+				value_tgo18[tgo19] = tgo17
 				values[1]++
 			}
 		}
@@ -215,20 +215,18 @@ func continueReceive() int {
 	channel <- 5
 	total := 0
 	for i := 0; i < 3; i++ {
-		{
-			var tgo20 chan int
+		var tgo20 chan int
 
-			if i == 0 {
-				continue
-			} else {
-				tgo20 = channel
-			}
-			select {
-			case <-tgo20:
-				total++
-			default:
-				total += 10
-			}
+		if i == 0 {
+			continue
+		} else {
+			tgo20 = channel
+		}
+		select {
+		case <-tgo20:
+			total++
+		default:
+			total += 10
 		}
 
 	}
@@ -240,24 +238,22 @@ func restart() int {
 again:
 	{
 		{
-			{
-				var tgo23 int
-				if attempts++; attempts == 1 {
-					goto again
-				} else if attempts == 2 {
-					goto tgo22
+			var tgo23 int
+			if attempts++; attempts == 1 {
+				goto again
+			} else if attempts == 2 {
+				goto tgo22
 
-				} else {
-					tgo23 = 1
-				}
-				switch tgo23 {
-
-				case 1:
-					panic("switch body")
-				}
+			} else {
+				tgo23 = 1
 			}
-		tgo22:
+			switch tgo23 {
+
+			case 1:
+				panic("switch body")
+			}
 		}
+	tgo22:
 	}
 
 	return attempts
@@ -317,16 +313,14 @@ func rangeOuterContinue() int {
 	total := 0
 outer:
 	for i := 0; i < 3; i++ {
-		{
-			var tgo28 []int
-			if i == 0 {
-				continue outer
-			} else {
-				tgo28 = []int{2}
-			}
-			for _, value := range tgo28 {
-				total += value
-			}
+		var tgo28 []int
+		if i == 0 {
+			continue outer
+		} else {
+			tgo28 = []int{2}
+		}
+		for _, value := range tgo28 {
+			total += value
 		}
 	}
 	return total

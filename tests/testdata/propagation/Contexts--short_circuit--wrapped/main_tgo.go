@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo3 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -40,34 +38,30 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	{
-		var tgo4 bool
-		tgo4 = false
-		if tgo4 {
-			var tgo1 bool
-			var tgo2 error
-			tgo1, tgo2 = predicate("B")
-			if tgo2 != nil {
-				return fmt_tgo3.Errorf("predicate: %w", tgo2)
-			}
-			tgo4 = tgo1
+	var tgo3 bool
+	tgo3 = false
+	if tgo3 {
+		var value_tgo1 bool
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = predicate("B")
+		if error_tgo2 != nil {
+			return fmt.Errorf("predicate: %w", error_tgo2)
 		}
-		fmt.Print(tgo4)
+		tgo3 = value_tgo1
 	}
-	{
-		var tgo7 bool
-		tgo7 = true
-		if tgo7 {
-			var tgo5 bool
-			var tgo6 error
-			tgo5, tgo6 = predicate("C")
-			if tgo6 != nil {
-				return fmt_tgo3.Errorf("predicate: %w", tgo6)
-			}
-			tgo7 = tgo5
+	fmt.Print(tgo3)
+	var tgo6 bool
+	tgo6 = true
+	if tgo6 {
+		var value_tgo4 bool
+		var error_tgo5 error
+		value_tgo4, error_tgo5 = predicate("C")
+		if error_tgo5 != nil {
+			return fmt.Errorf("predicate: %w", error_tgo5)
 		}
-		fmt.Print(tgo7)
+		tgo6 = value_tgo4
 	}
+	fmt.Print(tgo6)
 	return nil
 }
 

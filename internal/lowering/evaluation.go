@@ -23,6 +23,10 @@ func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original 
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
+	return r.saveResults(expr, false, false)
+}
+
+func (r *rewrite) saveResults(expr ast.Expr, discardSuccess, errorResult bool) ([]ast.Stmt, []ast.Expr) {
 	original := expr
 	if origin := r.functionState.origins[expr]; origin != nil {
 		original = origin
@@ -47,12 +51,12 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
 	}
-	refs := make([]ast.Expr, count)
-	for i := range refs {
-		refs[i] = r.name()
-	}
+	refs := r.savedReferences(count, discardSuccess, errorResult)
 	var statements []ast.Stmt
 	for i, ref := range refs {
+		if ref.(*ast.Ident).Name == "_" {
+			continue
+		}
 		resultType := typ
 		if tuple, ok := typ.(*types.Tuple); ok {
 			resultType = tuple.At(i).Type()
@@ -146,4 +150,19 @@ func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
 		return false
 	}
 	return true
+}
+
+func (r *rewrite) savedReferences(count int, discardSuccess, errorResult bool) []ast.Expr {
+	refs := make([]ast.Expr, count)
+	for i := range refs {
+		prefix := "value"
+		if errorResult && i == len(refs)-1 {
+			prefix = "error"
+		} else if discardSuccess {
+			refs[i] = ast.NewIdent("_")
+			continue
+		}
+		refs[i] = r.nameFor(prefix)
+	}
+	return refs
 }

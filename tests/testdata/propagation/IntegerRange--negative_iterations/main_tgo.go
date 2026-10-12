@@ -26,20 +26,18 @@ func run() error {
 		}
 	}()
 	a := []int{}
-	{
-		var tgo1 int
-		for tgo1 = range -1 {
-			var tgo2 []int = a
-			var tgo3 int
-			var tgo4 error
-			tgo3, tgo4 = step("I")
-			if tgo4 != nil {
-				return tgo4
-			}
-			tgo2[tgo3] = tgo1
-			{
+	var tgo1 int
+	for tgo1 = range -1 {
+		var value_tgo2 []int = a
+		var value_tgo3 int
+		var error_tgo4 error
+		value_tgo3, error_tgo4 = step("I")
+		if error_tgo4 != nil {
+			return error_tgo4
+		}
+		value_tgo2[value_tgo3] = tgo1
+		{
 
-			}
 		}
 	}
 	return nil
