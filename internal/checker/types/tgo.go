@@ -224,25 +224,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 			}
 		}
 	} else {
-		for _, branch := range values {
-			if branch.isNil() {
-				continue
-			}
-			if typ == nil {
-				typ = branch.typ()
-			} else {
-				typ = maxType(typ, branch.typ())
-				if typ == nil {
-					break
-				}
-			}
-		}
-		for _, branch := range values {
-			if branch.isNil() && typ != nil {
-				typ = nil
-				break
-			}
-		}
+		typ = untypedConditionalType(values)
 	}
 	if typ == nil {
 		check.error(call, IncompatibleAssign, "if result type is unknown; add an explicit type annotation")
@@ -250,6 +232,30 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	}
 	x.mode_, x.typ_ = value, typ
 	return expression
+}
+
+func untypedConditionalType(values []*operand) Type {
+	var typ Type
+	for _, branch := range values {
+		if branch.isNil() {
+			continue
+		}
+		if typ == nil {
+			typ = branch.typ()
+		} else {
+			typ = maxType(typ, branch.typ())
+			if typ == nil {
+				break
+			}
+		}
+	}
+	for _, branch := range values {
+		if branch.isNil() && typ != nil {
+			typ = nil
+			break
+		}
+	}
+	return typ
 }
 
 func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {

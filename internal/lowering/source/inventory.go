@@ -50,92 +50,7 @@ func (s *Inventory) inventory(file *ast.File, dir string) {
 			s.Parents[n] = stack[len(stack)-1]
 		}
 		if expr, ok := n.(ast.Expr); ok {
-			// Use physical file names and offsets for expression sites.
-			start := s.Checked.Fset.PositionFor(expr.Pos(), false)
-			end := s.Checked.Fset.PositionFor(expr.End(), false)
-			name, err := filepath.Rel(dir, start.Filename)
-			if err != nil {
-				name = start.Filename
-			}
-			site := Site{File: name, Start: start.Offset, End: end.Offset, Kind: fmt.Sprintf("%T", expr)}
-			tv, hasType := s.Checked.TypesInfo.Types[expr]
-			switch {
-			case hasType && tv.IsBuiltin():
-				site.Reason = "builtin name"
-			case hasType && tv.IsType():
-				site.Reason = "type syntax"
-			case !hasType:
-				site.Reason = "name or syntax without a value"
-			}
-			if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
-				site.Reason = "type switch assertion syntax"
-			}
-			var enclosingFunction ast.Node
-			for i := len(stack) - 1; i >= 0; i-- {
-				switch parent := stack[i].(type) {
-				case *ast.FuncDecl:
-					enclosingFunction = parent
-				case *ast.FuncLit:
-					call, _ := s.Parents[parent].(*ast.CallExpr)
-					if s.Checked.Conditionals[call] == nil && s.Checked.Comprehensions[call] == nil {
-						enclosingFunction = parent
-					}
-				case *ast.GenDecl:
-					if parent.Tok == token.CONST {
-						site.Reason = "constant declaration"
-					}
-				case *ast.ArrayType:
-					if contains(parent.Len, expr) {
-						site.Reason = "array length"
-					}
-				case *ast.RangeStmt:
-					if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
-						site.Reason = "range expression is not evaluated"
-					}
-				case *ast.GoStmt:
-					if parent.Call == expr {
-						site.Reason = "call executes in another goroutine"
-					}
-				case *ast.DeferStmt:
-					if parent.Call == expr {
-						site.Reason = "call executes when the function returns"
-					}
-				}
-				if enclosingFunction != nil {
-					break
-				}
-			}
-			if enclosingFunction == nil && site.Reason == "" {
-				site.Reason = "package scope"
-			}
-			if enclosingFunction != nil {
-				var functionType *ast.FuncType
-				switch function := enclosingFunction.(type) {
-				case *ast.FuncDecl:
-					functionType = function.Type
-				case *ast.FuncLit:
-					functionType = function.Type
-				}
-				signature, _ := s.Checked.TypesInfo.TypeOf(functionType).(*types.Signature)
-				if signature == nil {
-					if function, ok := enclosingFunction.(*ast.FuncDecl); ok {
-						signature, _ = s.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
-					}
-					if function, ok := enclosingFunction.(*ast.FuncLit); ok {
-						signature, _ = s.Checked.TypesInfo.TypeOf(function).(*types.Signature)
-					}
-				}
-				if signature != nil && signature.Results().Len() == 1 {
-					site.ErrorReturn = types.Identical(signature.Results().At(0).Type(), types.Universe.Lookup("error").Type())
-				}
-				if !site.ErrorReturn {
-					site.ReturnReason = "function does not return only error"
-				}
-			} else {
-				site.ReturnReason = "no enclosing function"
-			}
-			s.Sites = append(s.Sites, site)
-			s.Expressions[site] = expr
+			s.recordExpression(expr, stack, dir)
 		}
 		stack = append(stack, n)
 		return true
@@ -175,4 +90,102 @@ func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool {
 
 func contains(parent, child ast.Node) bool {
 	return parent != nil && child != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
+}
+
+func (s *Inventory) recordExpression(expr ast.Expr, stack []ast.Node, dir string) {
+	// Use physical file names and offsets for expression sites.
+	start := s.Checked.Fset.PositionFor(expr.Pos(), false)
+	end := s.Checked.Fset.PositionFor(expr.End(), false)
+	name, err := filepath.Rel(dir, start.Filename)
+	if err != nil {
+		name = start.Filename
+	}
+	site := Site{File: name, Start: start.Offset, End: end.Offset, Kind: fmt.Sprintf("%T", expr)}
+	tv, hasType := s.Checked.TypesInfo.Types[expr]
+	switch {
+	case hasType && tv.IsBuiltin():
+		site.Reason = "builtin name"
+	case hasType && tv.IsType():
+		site.Reason = "type syntax"
+	case !hasType:
+		site.Reason = "name or syntax without a value"
+	}
+	if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
+		site.Reason = "type switch assertion syntax"
+	}
+	enclosingFunction := s.expressionContext(expr, stack, &site)
+	if enclosingFunction == nil && site.Reason == "" {
+		site.Reason = "package scope"
+	}
+	s.recordReturnTarget(enclosingFunction, &site)
+	s.Sites = append(s.Sites, site)
+	s.Expressions[site] = expr
+}
+
+func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node, site *Site) ast.Node {
+	var enclosingFunction ast.Node
+	for i := len(stack) - 1; i >= 0; i-- {
+		switch parent := stack[i].(type) {
+		case *ast.FuncDecl:
+			enclosingFunction = parent
+		case *ast.FuncLit:
+			call, _ := s.Parents[parent].(*ast.CallExpr)
+			if s.Checked.Conditionals[call] == nil && s.Checked.Comprehensions[call] == nil {
+				enclosingFunction = parent
+			}
+		case *ast.GenDecl:
+			if parent.Tok == token.CONST {
+				site.Reason = "constant declaration"
+			}
+		case *ast.ArrayType:
+			if contains(parent.Len, expr) {
+				site.Reason = "array length"
+			}
+		case *ast.RangeStmt:
+			if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
+				site.Reason = "range expression is not evaluated"
+			}
+		case *ast.GoStmt:
+			if parent.Call == expr {
+				site.Reason = "call executes in another goroutine"
+			}
+		case *ast.DeferStmt:
+			if parent.Call == expr {
+				site.Reason = "call executes when the function returns"
+			}
+		}
+		if enclosingFunction != nil {
+			return enclosingFunction
+		}
+	}
+	return enclosingFunction
+}
+
+func (s *Inventory) recordReturnTarget(enclosingFunction ast.Node, site *Site) {
+	if enclosingFunction != nil {
+		var functionType *ast.FuncType
+		switch function := enclosingFunction.(type) {
+		case *ast.FuncDecl:
+			functionType = function.Type
+		case *ast.FuncLit:
+			functionType = function.Type
+		}
+		signature, _ := s.Checked.TypesInfo.TypeOf(functionType).(*types.Signature)
+		if signature == nil {
+			if function, ok := enclosingFunction.(*ast.FuncDecl); ok {
+				signature, _ = s.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
+			}
+			if function, ok := enclosingFunction.(*ast.FuncLit); ok {
+				signature, _ = s.Checked.TypesInfo.TypeOf(function).(*types.Signature)
+			}
+		}
+		if signature != nil && signature.Results().Len() == 1 {
+			site.ErrorReturn = types.Identical(signature.Results().At(0).Type(), types.Universe.Lookup("error").Type())
+		}
+		if !site.ErrorReturn {
+			site.ReturnReason = "function does not return only error"
+		}
+	} else {
+		site.ReturnReason = "no enclosing function"
+	}
 }
