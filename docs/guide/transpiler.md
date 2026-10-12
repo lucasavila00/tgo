@@ -36,6 +36,22 @@ func Parse(text string) (int, error) {
 `%w`. For example, a failure from `strconv.Atoi(text)!!` gets `strconv.Atoi`
 context. `errors.Is` and `errors.As` can still find the original error.
 
+When a propagation call is a statement, generated Go discards its success
+results in the call assignment. For example, `target(true)!!` produces:
+
+```go
+var error_tgo1 error
+_, error_tgo1 = target(true)
+if error_tgo1 != nil {
+    return fmt.Errorf("target: %w", error_tgo1)
+}
+```
+
+The generated call uses an existing `fmt` import when that binding is visible.
+If a source declaration hides the import, the compiler adds a fresh alias.
+Generated saved values use fresh names. Blocks remain where jumps or source
+scope require them.
+
 The enclosing function must end its result list with an error interface. The
 original error must fit that result for `!`; the wrapped `error` must fit it for
 `!!`. Failure returns zero values for the other results. Source deferred calls
