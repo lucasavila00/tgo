@@ -16,7 +16,7 @@ linters:
       rules:
         internal:
           files:
-            - "**/internal/**/*.go"
+            - "**/internal/**"
           deny:
             - pkg: github.com/lucasavila00/tgo/pkg/transpiler
               desc: The public API calls internal packages, not the reverse.
@@ -24,15 +24,15 @@ linters:
               desc: The command calls the public API, not the reverse.
         compiler:
           files:
-            - "**/internal/**/*.go"
-            - "!**/internal/driver/**/*.go"
+            - "**/internal/**"
+            - "!**/internal/driver/**"
           deny:
             - pkg: github.com/lucasavila00/tgo/internal/driver
               desc: The driver calls compiler layers, not the reverse.
         source:
           files:
-            - "**/internal/frontend/**/*.go"
-            - "**/internal/controlflow/**/*.go"
+            - "**/internal/frontend/**"
+            - "**/internal/controlflow/**"
           deny:
             - pkg: github.com/lucasavila00/tgo/internal/checker
               desc: Source syntax and control flow do not depend on type checking.
@@ -40,7 +40,7 @@ linters:
               desc: Source syntax and control flow do not depend on code generation.
         checker:
           files:
-            - "**/internal/checker/**/*.go"
+            - "**/internal/checker/**"
           deny:
             - pkg: github.com/lucasavila00/tgo/internal/lowering
               desc: Lowering reads checked source, not the reverse.
