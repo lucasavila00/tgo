@@ -6,9 +6,9 @@ import (
 )
 
 func fail(err error) (int, string, error) {
-	var tgo1 int
-	var tgo2 string
-	return tgo1, tgo2, err
+	var zero_tgo1 int
+	var zero_tgo2 string
+	return zero_tgo1, zero_tgo2, err
 }
 
 func succeed() (int, string, error) {

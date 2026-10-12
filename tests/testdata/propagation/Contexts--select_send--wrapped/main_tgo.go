@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo4 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -41,18 +39,16 @@ func identity[T any](v T) (T, error) {
 
 func run() error {
 	ch := make(chan int, 1)
-	{
-		var tgo1 chan int = ch
-		var tgo2 int
-		var tgo3 error
-		tgo2, tgo3 = step("V")
-		if tgo3 != nil {
-			return fmt_tgo4.Errorf("step: %w", tgo3)
-		}
-		select {
-		case tgo1 <- tgo2:
-			fmt.Print("b")
-		}
+	var value_tgo1 chan int = ch
+	var value_tgo2 int
+	var error_tgo3 error
+	value_tgo2, error_tgo3 = step("V")
+	if error_tgo3 != nil {
+		return fmt.Errorf("step: %w", error_tgo3)
+	}
+	select {
+	case value_tgo1 <- value_tgo2:
+		fmt.Print("b")
 	}
 
 	return nil

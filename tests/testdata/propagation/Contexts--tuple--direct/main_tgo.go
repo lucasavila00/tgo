@@ -38,14 +38,14 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	var tgo1 int
-	var tgo2 string
-	var tgo3 error
-	tgo1, tgo2, tgo3 = pair()
-	if tgo3 != nil {
-		return tgo3
+	var value_tgo1 int
+	var value_tgo2 string
+	var error_tgo3 error
+	value_tgo1, value_tgo2, error_tgo3 = pair()
+	if error_tgo3 != nil {
+		return error_tgo3
 	}
-	a, b := tgo1, tgo2
+	a, b := value_tgo1, value_tgo2
 	fmt.Print(a, b)
 	return nil
 }

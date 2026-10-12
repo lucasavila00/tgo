@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo8 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -31,28 +29,24 @@ func run[T any](f func(...T), channels chan (<-chan T), failAt int) error {
 	{
 		T := 1
 		_ = T
-		{
-			var tgo3 func(...tgo4) = f
-			var tgo5 chan (<-chan tgo4) = channels
-			var tgo1 int
-			var tgo2 error
-			tgo1, tgo2 = next(failAt)
-			if tgo2 != nil {
-				return tgo2
-			}
-			consume(tgo3, tgo5, tgo1)
+		var value_tgo3 func(...tgo4) = f
+		var value_tgo5 chan (<-chan tgo4) = channels
+		var value_tgo1 int
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = next(failAt)
+		if error_tgo2 != nil {
+			return error_tgo2
 		}
-		{
-			var tgo9 func(...tgo4) = f
-			var tgo10 chan (<-chan tgo4) = channels
-			var tgo6 int
-			var tgo7 error
-			tgo6, tgo7 = next(failAt)
-			if tgo7 != nil {
-				return fmt_tgo8.Errorf("next: %w", tgo7)
-			}
-			consume(tgo9, tgo10, tgo6)
+		consume(value_tgo3, value_tgo5, value_tgo1)
+		var value_tgo8 func(...tgo4) = f
+		var value_tgo9 chan (<-chan tgo4) = channels
+		var value_tgo6 int
+		var error_tgo7 error
+		value_tgo6, error_tgo7 = next(failAt)
+		if error_tgo7 != nil {
+			return fmt.Errorf("next: %w", error_tgo7)
 		}
+		consume(value_tgo8, value_tgo9, value_tgo6)
 	}
 	return nil
 }

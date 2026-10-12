@@ -18,60 +18,48 @@ func get() (Value, error) {
 }
 
 func unnamed(label string) (Value, error) {
-	var tgo3 Value
-	{
-		var tgo1 Value
-		var tgo2 error
-		tgo1, tgo2 = get()
-		if tgo2 != nil {
-			return tgo3, tgo2
-		}
-		return tgo1, nil
+	var zero_tgo3 Value
+	var value_tgo1 Value
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = get()
+	if error_tgo2 != nil {
+		return zero_tgo3, error_tgo2
 	}
+	return value_tgo1, nil
 }
 
 func named() (value Value, err error) {
-	var tgo6 Value
+	var zero_tgo5 Value
 	value = 5
 	err = sentinel
-	{
-		var tgo4 Value
-		var tgo5 error
-		tgo4, tgo5 = get()
-		if tgo5 != nil {
-			return tgo6, tgo5
-		}
-		_ = tgo4
+	var error_tgo4 error
+	_, error_tgo4 = get()
+	if error_tgo4 != nil {
+		return zero_tgo5, error_tgo4
 	}
 	return
 }
 
 func generic[T any](value T) (T, error) {
-	var tgo9 T
-	{
-		var tgo7 Value
-		var tgo8 error
-		tgo7, tgo8 = get()
-		if tgo8 != nil {
-			return tgo9, tgo8
-		}
-		_ = tgo7
+	var zero_tgo7 T
+	var error_tgo6 error
+	_, error_tgo6 = get()
+	if error_tgo6 != nil {
+		return zero_tgo7, error_tgo6
 	}
 	return value, nil
 }
 
 func closure() error {
 	call := func() (Value, error) {
-		var tgo12 Value
-		{
-			var tgo10 Value
-			var tgo11 error
-			tgo10, tgo11 = get()
-			if tgo11 != nil {
-				return tgo12, tgo11
-			}
-			return tgo10, nil
+		var zero_tgo10 Value
+		var value_tgo8 Value
+		var error_tgo9 error
+		value_tgo8, error_tgo9 = get()
+		if error_tgo9 != nil {
+			return zero_tgo10, error_tgo9
 		}
+		return value_tgo8, nil
 	}
 	v, e := call()
 	fmt.Print(v, e == sentinel)

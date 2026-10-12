@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo6 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -31,68 +29,60 @@ func use(value uint64, other int) {
 func count() uint { trace += "C"; return 40 }
 
 func calls(fail bool) error {
-	{
-		var tgo3 uint64 = 1 << count()
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = next(fail)
-		if tgo2 != nil {
-			return tgo2
-		}
-		use(tgo3, tgo1)
+	var value_tgo3 uint64 = 1 << count()
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = next(fail)
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
-	{
-		var tgo7 uint64 = 1 << count()
-		var tgo4 int
-		var tgo5 error
-		tgo4, tgo5 = next(fail)
-		if tgo5 != nil {
-			return fmt_tgo6.Errorf("next: %w", tgo5)
-		}
-		use(tgo7, tgo4)
+	use(value_tgo3, value_tgo1)
+	var value_tgo6 uint64 = 1 << count()
+	var value_tgo4 int
+	var error_tgo5 error
+	value_tgo4, error_tgo5 = next(fail)
+	if error_tgo5 != nil {
+		return fmt.Errorf("next: %w", error_tgo5)
 	}
+	use(value_tgo6, value_tgo4)
 	return nil
 }
 
 func returns(fail bool) (uint64, int, error) {
-	var tgo10 uint64
-	var tgo11 int
+	var zero_tgo9 uint64
+	var zero_tgo10 int
 	n := uint(40)
-	{
-		var tgo12 uint64 = 1 << n
-		var tgo8 int
-		var tgo9 error
-		tgo8, tgo9 = next(fail)
-		if tgo9 != nil {
-			return tgo10, tgo11, tgo9
-		}
-		return tgo12, tgo8, nil
+	var value_tgo11 uint64 = 1 << n
+	var value_tgo7 int
+	var error_tgo8 error
+	value_tgo7, error_tgo8 = next(fail)
+	if error_tgo8 != nil {
+		return zero_tgo9, zero_tgo10, error_tgo8
 	}
+	return value_tgo11, value_tgo7, nil
 }
 
 func assign(fail bool) error {
 	n := uint(40)
 	var first uint64
 	var second int
-	{
-		var tgo15 uint64 = 1 << n
-		var tgo13 int
-		var tgo14 error
-		tgo13, tgo14 = next(fail)
-		if tgo14 != nil {
-			return tgo14
-		}
-		first, second = tgo15, tgo13
+	var value_tgo14 uint64 = 1 << n
+	var value_tgo12 int
+	var error_tgo13 error
+	value_tgo12, error_tgo13 = next(fail)
+	if error_tgo13 != nil {
+		return error_tgo13
 	}
+	first, second = value_tgo14, value_tgo12
 	use(first, second)
-	var tgo18 uint64 = 1 << n
-	var tgo16 int
-	var tgo17 error
-	tgo16, tgo17 = next(fail)
-	if tgo17 != nil {
-		return fmt_tgo6.Errorf("next: %w", tgo17)
+	var value_tgo17 uint64 = 1 << n
+	var value_tgo15 int
+	var error_tgo16 error
+	value_tgo15, error_tgo16 = next(fail)
+	if error_tgo16 != nil {
+		return fmt.Errorf("next: %w", error_tgo16)
 	}
-	pair := Pair{First: tgo18, Second: tgo16}
+	pair := Pair{First: value_tgo17, Second: value_tgo15}
 	use(pair.First, pair.Second)
 	return nil
 }
@@ -102,42 +92,36 @@ func useNumber(value Number, next int) { fmt.Printf("%d %d ", value, next) }
 func named(fail bool) error {
 	n := uint(40)
 	var value Number = 1 << n
-	{
-		var tgo21 Number = value
-		var tgo19 int
-		var tgo20 error
-		tgo19, tgo20 = next(fail)
-		if tgo20 != nil {
-			return tgo20
-		}
-		useNumber(tgo21, tgo19)
+	var value_tgo20 Number = value
+	var value_tgo18 int
+	var error_tgo19 error
+	value_tgo18, error_tgo19 = next(fail)
+	if error_tgo19 != nil {
+		return error_tgo19
 	}
+	useNumber(value_tgo20, value_tgo18)
 	return nil
 }
 
 func generic[T ~uint64](value T, fail bool) error {
 	consume := func(first T, second int) { fmt.Printf("%d %d ", first, second) }
-	{
-		var tgo24 func(first T, second int) = consume
-		var tgo22 int
-		var tgo23 error
-		tgo22, tgo23 = next(fail)
-		if tgo23 != nil {
-			return tgo23
-		}
-		tgo24(1<<uint(40), tgo22)
+	var value_tgo23 func(first T, second int) = consume
+	var value_tgo21 int
+	var error_tgo22 error
+	value_tgo21, error_tgo22 = next(fail)
+	if error_tgo22 != nil {
+		return error_tgo22
 	}
-	{
-		var tgo27 func(first T, second int) = consume
-		var tgo28 T = value
-		var tgo25 int
-		var tgo26 error
-		tgo25, tgo26 = next(fail)
-		if tgo26 != nil {
-			return tgo26
-		}
-		tgo27(tgo28, tgo25)
+	value_tgo23(1<<uint(40), value_tgo21)
+	var value_tgo26 func(first T, second int) = consume
+	var value_tgo27 T = value
+	var value_tgo24 int
+	var error_tgo25 error
+	value_tgo24, error_tgo25 = next(fail)
+	if error_tgo25 != nil {
+		return error_tgo25
 	}
+	value_tgo26(value_tgo27, value_tgo24)
 	return nil
 }
 

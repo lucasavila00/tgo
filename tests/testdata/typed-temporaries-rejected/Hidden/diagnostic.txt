@@ -1,1 +1,1 @@
-TGo: main.tgo:8:7: cannot name type example.com/hidden.Value in a generated typed temporary: the source hides the type name Value; expose the type with an accessible name
+TGo: main.tgo:8:16: cannot name type example.com/hidden.Value in a generated typed temporary: the source hides the type name Value; expose the type with an accessible name

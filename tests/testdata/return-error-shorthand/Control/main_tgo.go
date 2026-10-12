@@ -11,42 +11,38 @@ var token = &struct{ N int }{8}
 func done() { events = append(events, "D") }
 
 func skipping(err error) (int, error) {
-	var tgo2 int
+	var zero_tgo2 int
 	for i := 0; i < 2; i++ {
-		{
-			var tgo1 int
-			if i == 0 {
-				continue
-				_ = 0 == 0
-			} else {
-				defer done()
-				tgo1 = 7
-			}
-			return tgo1, nil
+		var tgo1 int
+		if i == 0 {
+			continue
+			_ = 0 == 0
+		} else {
+			defer done()
+			tgo1 = 7
 		}
+		return tgo1, nil
 	}
-	return tgo2, err
+	return zero_tgo2, err
 }
 
 func breaking(err error) (int, error) {
-	var tgo4 int
+	var zero_tgo4 int
 	for {
-		{
-			var tgo3 int
-			if true {
-				break
-				_ = 0 == 0
-			} else {
-				tgo3 = 1
-			}
-			return tgo3, nil
+		var tgo3 int
+		if true {
+			break
+			_ = 0 == 0
+		} else {
+			tgo3 = 1
 		}
+		return tgo3, nil
 	}
-	return tgo4, err
+	return zero_tgo4, err
 }
 
 func jumping(err error) (int, error) {
-	var tgo6 int
+	var zero_tgo6 int
 	var value int
 	{
 		var tgo5 int
@@ -61,7 +57,7 @@ func jumping(err error) (int, error) {
 	return value, nil
 exit:
 	{
-		return tgo6, err
+		return zero_tgo6, err
 	}
 }
 
@@ -76,16 +72,14 @@ func ordinaryNamed() (value int, err error) {
 
 func panicking() (int, error) {
 	defer done()
-	{
-		var tgo7 int
-		if true {
-			panic(token)
-			_ = 0 == 0
-		} else {
-			tgo7 = 1
-		}
-		return tgo7, nil
+	var tgo7 int
+	if true {
+		panic(token)
+		_ = 0 == 0
+	} else {
+		tgo7 = 1
 	}
+	return tgo7, nil
 }
 
 func main() {

@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo6 "fmt"
-
 import "fmt"
 
 type echoed[A any] interface {
@@ -54,7 +52,7 @@ func run[T any](x T) error {
 	{
 		type T string
 		type Local = T
-		var tgo1 struct {
+		var value_tgo1 struct {
 			A      tgo3
 			B      T
 			T      T
@@ -68,13 +66,13 @@ func run[T any](x T) error {
 				echoed[tgo3]
 			}
 		}
-		var tgo2 error
-		tgo1, tgo2 = pair(x, T("local"))
-		if tgo2 != nil {
-			return tgo2
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = pair(x, T("local"))
+		if error_tgo2 != nil {
+			return error_tgo2
 		}
-		direct := tgo1
-		var tgo4 struct {
+		direct := value_tgo1
+		var value_tgo4 struct {
 			A      tgo3
 			B      T
 			T      T
@@ -88,13 +86,13 @@ func run[T any](x T) error {
 				echoed[tgo3]
 			}
 		}
-		var tgo5 error
-		tgo4, tgo5 = pair(x, T("local"))
-		if tgo5 != nil {
-			return fmt_tgo6.Errorf("pair: %w", tgo5)
+		var error_tgo5 error
+		value_tgo4, error_tgo5 = pair(x, T("local"))
+		if error_tgo5 != nil {
+			return fmt.Errorf("pair: %w", error_tgo5)
 		}
-		wrapped := tgo4
-		var tgo7 struct {
+		wrapped := value_tgo4
+		var value_tgo6 struct {
 			A      tgo3
 			B      Local
 			T      Local
@@ -108,12 +106,12 @@ func run[T any](x T) error {
 				echoed[tgo3]
 			}
 		}
-		var tgo8 error
-		tgo7, tgo8 = pair(x, Local("alias"))
-		if tgo8 != nil {
-			return tgo8
+		var error_tgo7 error
+		value_tgo6, error_tgo7 = pair(x, Local("alias"))
+		if error_tgo7 != nil {
+			return error_tgo7
 		}
-		aliased := tgo7
+		aliased := value_tgo6
 		fmt.Println(direct.A, direct.B, direct.T, *direct.Nested[0][direct.B], direct.G.A, direct.G.B)
 		fmt.Println(wrapped.F(wrapped.A, wrapped.B))
 		fmt.Println(aliased.G.A, aliased.G.B)

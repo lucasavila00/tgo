@@ -29,32 +29,30 @@ func set[T interface{ ~[2]int | ~[]int }](a, b T) error {
 	{
 		T := 3
 		_ = T
-		{
-			var tgo3 bool = reflect_tgo2.TypeFor[tgo1]().Kind() == reflect_tgo2.Array
-			var tgo4 tgo1
-			if !tgo3 {
-				tgo4 = a
-			}
-			var tgo5 int
-			var tgo6 error
-			tgo5, tgo6 = index()
-			if tgo6 != nil {
-				return tgo6
-			}
-			var tgo7 int
-			var tgo8 error
-			tgo7, tgo8 = step("V")
-			if tgo8 != nil {
-				return tgo8
-			}
-			var tgo9 int = tgo7
-			(*func() *tgo1 {
-				if tgo3 {
-					return &a
-				}
-				return &tgo4
-			}())[tgo5] = tgo9
+		var tgo3 bool = reflect_tgo2.TypeFor[tgo1]().Kind() == reflect_tgo2.Array
+		var tgo4 tgo1
+		if !tgo3 {
+			tgo4 = a
 		}
+		var value_tgo5 int
+		var error_tgo6 error
+		value_tgo5, error_tgo6 = index()
+		if error_tgo6 != nil {
+			return error_tgo6
+		}
+		var value_tgo7 int
+		var error_tgo8 error
+		value_tgo7, error_tgo8 = step("V")
+		if error_tgo8 != nil {
+			return error_tgo8
+		}
+		var value_tgo9 int = value_tgo7
+		(*func() *tgo1 {
+			if tgo3 {
+				return &a
+			}
+			return &tgo4
+		}())[value_tgo5] = value_tgo9
 	}
 	fmt.Print(a)
 	return nil
@@ -66,21 +64,19 @@ func arrays[T interface{ ~[2]int | ~[3]int }](a, b T) error {
 		a = b
 		return step("I")
 	}
-	{
-		var tgo10 int
-		var tgo11 error
-		tgo10, tgo11 = index()
-		if tgo11 != nil {
-			return tgo11
-		}
-		var tgo12 int
-		var tgo13 error
-		tgo12, tgo13 = step("V")
-		if tgo13 != nil {
-			return tgo13
-		}
-		a[tgo10] = tgo12
+	var value_tgo10 int
+	var error_tgo11 error
+	value_tgo10, error_tgo11 = index()
+	if error_tgo11 != nil {
+		return error_tgo11
 	}
+	var value_tgo12 int
+	var error_tgo13 error
+	value_tgo12, error_tgo13 = step("V")
+	if error_tgo13 != nil {
+		return error_tgo13
+	}
+	a[value_tgo10] = value_tgo12
 	fmt.Print(a)
 	return nil
 }
@@ -94,33 +90,31 @@ func (b *Box[T]) Set() error {
 			fmt.Print("r")
 		}
 	}()
-	{
-		var tgo15 *Box[T] = b
-		var tgo16 bool = reflect_tgo2.TypeFor[tgo14]().Kind() == reflect_tgo2.Array
-		var tgo17 tgo14
-		if !tgo16 {
-			tgo17 = tgo15.Value
-		}
-		var tgo18 int
-		var tgo19 error
-		tgo18, tgo19 = step("I")
-		if tgo19 != nil {
-			return tgo19
-		}
-		var tgo20 int
-		var tgo21 error
-		tgo20, tgo21 = step("V")
-		if tgo21 != nil {
-			return tgo21
-		}
-		var tgo22 int = tgo20
-		(*func() *tgo14 {
-			if tgo16 {
-				return &tgo15.Value
-			}
-			return &tgo17
-		}())[tgo18] = tgo22
+	var value_tgo15 *Box[T] = b
+	var tgo16 bool = reflect_tgo2.TypeFor[tgo14]().Kind() == reflect_tgo2.Array
+	var tgo17 tgo14
+	if !tgo16 {
+		tgo17 = value_tgo15.Value
 	}
+	var value_tgo18 int
+	var error_tgo19 error
+	value_tgo18, error_tgo19 = step("I")
+	if error_tgo19 != nil {
+		return error_tgo19
+	}
+	var value_tgo20 int
+	var error_tgo21 error
+	value_tgo20, error_tgo21 = step("V")
+	if error_tgo21 != nil {
+		return error_tgo21
+	}
+	var value_tgo22 int = value_tgo20
+	(*func() *tgo14 {
+		if tgo16 {
+			return &value_tgo15.Value
+		}
+		return &tgo17
+	}())[value_tgo18] = value_tgo22
 	fmt.Print(b.Value)
 	return nil
 }

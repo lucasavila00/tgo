@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo5 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -43,20 +41,18 @@ func run() error {
 	ch := make(chan int, 1)
 	ch <- 1
 	a := [2]int{}
-	{
-		var tgo1 chan int = ch
-		var tgo2 int
-		select {
-		case tgo2 = <-tgo1:
-			var tgo3 int
-			var tgo4 error
-			tgo3, tgo4 = step("I")
-			if tgo4 != nil {
-				return fmt_tgo5.Errorf("step: %w", tgo4)
-			}
-			a[tgo3] = tgo2
-			fmt.Print("b")
+	var value_tgo1 chan int = ch
+	var tgo2 int
+	select {
+	case tgo2 = <-value_tgo1:
+		var value_tgo3 int
+		var error_tgo4 error
+		value_tgo3, error_tgo4 = step("I")
+		if error_tgo4 != nil {
+			return fmt.Errorf("step: %w", error_tgo4)
 		}
+		a[value_tgo3] = tgo2
+		fmt.Print("b")
 	}
 
 	return nil

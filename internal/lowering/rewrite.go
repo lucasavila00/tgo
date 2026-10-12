@@ -40,6 +40,7 @@ type rewriteRequest struct {
 
 // functionState owns evaluation and control flow within one function.
 type functionState struct {
+	hasGoto             bool
 	labels              map[string]string
 	breakExits          map[*ast.BranchStmt]*ast.Ident
 	controlTargets      map[ast.Stmt]ast.Stmt

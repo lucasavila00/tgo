@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo3 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -25,33 +23,27 @@ func target(typedNil bool) error {
 }
 
 func direct() error {
-	{
-		var tgo1 error = target(true)
-		if tgo1 != nil {
-			return tgo1
-		}
+	var error_tgo1 error = target(true)
+	if error_tgo1 != nil {
+		return error_tgo1
 	}
 	panic("not reached")
 }
 
 func wrapped() error {
-	{
-		var tgo2 error = target(false)
-		if tgo2 != nil {
-			return fmt_tgo3.Errorf("target: %w", tgo2)
-		}
+	var error_tgo2 error = target(false)
+	if error_tgo2 != nil {
+		return fmt.Errorf("target: %w", error_tgo2)
 	}
 	panic("not reached")
 }
 
 func shadow(nil, true, false int) error {
 	fmt.Print(nil, true, false)
-	{
-		var tgo4 error = target(0 != 0)
-		var tgo5 error
-		if tgo4 != tgo5 {
-			return tgo4
-		}
+	var error_tgo3 error = target(0 != 0)
+	var zero_tgo4 error
+	if error_tgo3 != zero_tgo4 {
+		return error_tgo3
 	}
 	var success error
 	return success

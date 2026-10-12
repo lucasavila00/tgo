@@ -9,7 +9,8 @@ import (
 
 func run() error {
 	call := foreign.Number
-	call("A")!!
+	value := call("A")!!
+	_ = value
 	return nil
 }
 

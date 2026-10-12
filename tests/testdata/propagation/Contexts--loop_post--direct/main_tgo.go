@@ -44,13 +44,13 @@ func run() error {
 			if tgo3 {
 				tgo3 = 0 != 0
 			} else {
-				var tgo1 int
-				var tgo2 error
-				tgo1, tgo2 = step("P")
-				if tgo2 != nil {
-					return tgo2
+				var value_tgo1 int
+				var error_tgo2 error
+				value_tgo1, error_tgo2 = step("P")
+				if error_tgo2 != nil {
+					return error_tgo2
 				}
-				i += tgo1
+				i += value_tgo1
 			}
 			if !(i < 2) {
 				break
