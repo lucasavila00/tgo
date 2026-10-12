@@ -1,0 +1,17 @@
+// Package propagation lowers TGo error propagation into a call and error check.
+//
+// The rule owns the failure action: ! returns the original error, while !! wraps
+// it with the call name. A failure uses the result types and return target of
+// the source function. The error is checked before conversion to that function's
+// error interface, because converting a nil pointer can create a non-nil interface.
+//
+// Shared operations evaluate and save the call once, retain checked result
+// types, and prepare zero values for the other function results. Keeping these
+// operations shared gives nested calls the same operand order as ordinary Go
+// expressions. The rule decides whether unused success results need storage.
+//
+// The caller supplies the current shared context. Evaluation can return to the
+// dispatcher when a call operand contains a comprehension or value expression.
+// No rule package imports another rule, and recursive evaluation keeps the
+// source function's error return, deferred calls, and jumps in that function.
+package propagation

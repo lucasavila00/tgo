@@ -6,9 +6,460 @@
 import "github.com/lucasavila00/tgo/internal/lowering/shared"
 ```
 
-Package shared contains typed values for common lowering operations.
+Package shared supplies the operations used by TGo lowering rules.
 
-Value keeps checked types and source identities with generated expressions. Result keeps statements with their values until a caller builds Go syntax. This package does not import lowering rules.
+An expression can need statements before its value is available. Result keeps those statements with typed values until their caller places them in Go syntax. Value retains the checked type and source identity, including tuple results. Operand evaluation saves earlier values before adding later statements. Assignments evaluate destinations without reading them, then store in source order. These operations give all rules the same execution and type behavior.
+
+Context holds state for the current function. New function and initializer contexts share request names and file imports, but have separate returns, labels, jumps, and temporary values. Source inventory stays unchanged. Expression and statement callbacks receive the active context explicitly. They return to the lowering dispatcher when an operand contains another rule; this package has no dependency on rule packages.
+
+Ordinary and value switches share case selection and jump handling. A value switch supplies a ValueBlock callback as a local parameter to transform its branch results. The switch passes its current context to that callback. Ordinary switches do not supply a transformer. This parameter keeps the value\-expression rule separate without duplicating switch control flow.
+
+## func BlankDestinations
+
+```go
+func BlankDestinations(expressions []ast.Expr) bool
+```
+
+BlankDestinations reports whether all assignment destinations discard values.
+
+## func Boolean
+
+```go
+func Boolean(value bool) ast.Expr
+```
+
+Boolean builds a Boolean literal without a source\-name lookup.
+
+## func Integer
+
+```go
+func Integer(value int) ast.Expr
+```
+
+Integer builds an integer literal.
+
+## func Variable
+
+```go
+func Variable(name *ast.Ident, typ ast.Expr, value ast.Expr) ast.Stmt
+```
+
+Variable builds a typed local declaration.
+
+## type After
+
+After receives references to the evaluated expression results.
+
+```go
+type After func(results []ast.Expr) []ast.Stmt
+```
+
+## type CollectionDestination
+
+CollectionDestination records storage for a collection output in one function.
+
+```go
+type CollectionDestination struct {
+    Index  *ast.Ident
+    Grow   *ast.Ident
+    Result *ast.Ident
+    Type   types.Type
+}
+```
+
+## type Context
+
+Context owns one function rewrite and shares file and request state.
+
+```go
+type Context struct {
+    Input   *Input
+    Request *Request
+    // contains filtered or unexported fields
+}
+```
+
+### func New
+
+```go
+func New(inventory *source.Inventory, dispatch Dispatch) *Context
+```
+
+New starts a rewrite with checked source facts and current\-context dispatch.
+
+### func \(\*Context\) BindingReference
+
+```go
+func (r *Context) BindingReference(object types.Object) *ast.Ident
+```
+
+BindingReference returns the emitted name for a checked source binding.
+
+### func \(\*Context\) Block
+
+```go
+func (r *Context) Block(body *ast.BlockStmt) *ast.BlockStmt
+```
+
+Block lowers statements while retaining the source block.
+
+### func \(\*Context\) BuiltinHidden
+
+```go
+func (r *Context) BuiltinHidden(name string) bool
+```
+
+BuiltinHidden checks source declarations before emitting a builtin name.
+
+### func \(\*Context\) Capture
+
+```go
+func (r *Context) Capture(expr ast.Expr) ([]ast.Stmt, ast.Expr)
+```
+
+Capture saves addressable operands without reading the destination.
+
+### func \(\*Context\) CheckLoweredOperations
+
+```go
+func (r *Context) CheckLoweredOperations() error
+```
+
+CheckLoweredOperations reports any selected operation that was not emitted.
+
+### func \(\*Context\) CollectionOutput
+
+```go
+func (r *Context) CollectionOutput(name string) *CollectionDestination
+```
+
+CollectionOutput finds an output destination in the current function.
+
+### func \(\*Context\) CompleteExpression
+
+```go
+func (r *Context) CompleteExpression(expression ast.Expr)
+```
+
+CompleteExpression records completion of a selected source expression.
+
+### func \(\*Context\) CompletePropagation
+
+```go
+func (r *Context) CompletePropagation(expression ast.Expr)
+```
+
+CompletePropagation records a completed error propagation and its insertion.
+
+### func \(\*Context\) ComprehensionBindings
+
+```go
+func (r *Context) ComprehensionBindings(body *ast.BlockStmt)
+```
+
+ComprehensionBindings gives generator variables fresh names. Checked object identity keeps their output uses and closures separate from outer bindings.
+
+### func \(\*Context\) Contains
+
+```go
+func (r *Context) Contains(node ast.Node) bool
+```
+
+Contains reports whether a node contains selected lowering work.
+
+### func \(\*Context\) Emit
+
+```go
+func (r *Context) Emit() (map[string][]byte, error)
+```
+
+Emit returns formatted files without changing the checked input.
+
+### func \(\*Context\) ErrorReturnType
+
+```go
+func (r *Context) ErrorReturnType() types.Type
+```
+
+ErrorReturnType reads the current source function's final result type.
+
+### func \(\*Context\) Expression
+
+```go
+func (r *Context) Expression(expression ast.Expr) Result
+```
+
+Expression returns through dispatch with the current function context.
+
+### func \(\*Context\) ExpressionSyntax
+
+```go
+func (r *Context) ExpressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr)
+```
+
+ExpressionSyntax lowers ordinary Go expression syntax and its operands.
+
+### func \(\*Context\) FailureResults
+
+```go
+func (r *Context) FailureResults() []ast.Expr
+```
+
+FailureResults prepares zero values once in the function that owns the return.
+
+### func \(\*Context\) FinishExpression
+
+```go
+func (r *Context) FinishExpression(expr ast.Expr, before []ast.Stmt, result ast.Expr) Result
+```
+
+FinishExpression adds selected insertion work and result storage.
+
+### func \(\*Context\) FormatPackage
+
+```go
+func (r *Context) FormatPackage(call ast.Expr) *ast.Ident
+```
+
+FormatPackage returns a fmt import that is visible at the call position.
+
+### func \(\*Context\) Header
+
+```go
+func (r *Context) Header(statement ast.Stmt) []ast.Stmt
+```
+
+Header lowers a header before its enclosing control operation.
+
+### func \(\*Context\) Inventory
+
+```go
+func (r *Context) Inventory() *source.Inventory
+```
+
+Inventory returns immutable checked source facts.
+
+### func \(\*Context\) Name
+
+```go
+func (r *Context) Name() *ast.Ident
+```
+
+Name allocates a fresh output identifier.
+
+### func \(\*Context\) NameFor
+
+```go
+func (r *Context) NameFor(sourceName string) *ast.Ident
+```
+
+NameFor adds the source name to a fresh generated identifier.
+
+### func \(\*Context\) Operands
+
+```go
+func (r *Context) Operands(input []ast.Expr) Result
+```
+
+Operands saves earlier values before a later operand adds statements.
+
+### func \(\*Context\) PrepareSliceImport
+
+```go
+func (r *Context) PrepareSliceImport()
+```
+
+PrepareSliceImport reserves a slices import for collection output.
+
+### func \(\*Context\) PropagationAt
+
+```go
+func (r *Context) PropagationAt(expression ast.Expr) (Propagation, bool)
+```
+
+PropagationAt returns an active operation in the current function.
+
+### func \(\*Context\) RangeStatement
+
+```go
+func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt
+```
+
+RangeStatement lowers a range with its original iteration and assignment order.
+
+### func \(\*Context\) RealFunction
+
+```go
+func (r *Context) RealFunction(function *ast.FuncLit) bool
+```
+
+RealFunction distinguishes a source closure from generated comprehension syntax.
+
+### func \(\*Context\) ReflectPackage
+
+```go
+func (r *Context) ReflectPackage() *ast.Ident
+```
+
+ReflectPackage returns the reflect import for the current file.
+
+### func \(\*Context\) RegisterComprehension
+
+```go
+func (r *Context) RegisterComprehension(record *frontend.Comprehension, destination *CollectionDestination)
+```
+
+RegisterComprehension connects generated ranges and output calls in this function.
+
+### func \(\*Context\) ResultOf
+
+```go
+func (r *Context) ResultOf(statements []ast.Stmt, expressions []ast.Expr) Result
+```
+
+ResultOf joins statements with their typed output expressions.
+
+### func \(\*Context\) ResultStorage
+
+```go
+func (r *Context) ResultStorage(result *ast.Ident, typ types.Type, original ast.Expr, value ast.Expr) ast.Stmt
+```
+
+ResultStorage declares a typed result and records its source identity.
+
+### func \(\*Context\) Save
+
+```go
+func (r *Context) Save(value Value) Result
+```
+
+Save evaluates a typed value once into fresh local storage.
+
+### func \(\*Context\) SaveResults
+
+```go
+func (r *Context) SaveResults(value Value, discardSuccess, errorResult bool) Result
+```
+
+SaveResults stores selected call results and retains their checked types.
+
+### func \(\*Context\) SlicePackage
+
+```go
+func (r *Context) SlicePackage() *ast.Ident
+```
+
+SlicePackage returns the slices import selected for the current file.
+
+### func \(\*Context\) Statement
+
+```go
+func (r *Context) Statement(statement ast.Stmt) []ast.Stmt
+```
+
+Statement retains branch targets and scope around statement dispatch.
+
+### func \(\*Context\) StatementSyntax
+
+```go
+func (r *Context) StatementSyntax(statement ast.Stmt) []ast.Stmt
+```
+
+StatementSyntax lowers one ordinary Go statement after rule selection.
+
+### func \(\*Context\) TemporaryType
+
+```go
+func (r *Context) TemporaryType(typ types.Type, original ast.Expr) ast.Expr
+```
+
+TemporaryType names the checked type without using a hidden source binding.
+
+### func \(\*Context\) TypeOf
+
+```go
+func (r *Context) TypeOf(expr ast.Expr) types.Type
+```
+
+TypeOf returns the checked type of a source or generated expression.
+
+### func \(\*Context\) ValueOf
+
+```go
+func (r *Context) ValueOf(expression ast.Expr) Value
+```
+
+ValueOf returns the checked type and source identity for an expression.
+
+### func \(\*Context\) ValueSwitchStatement
+
+```go
+func (r *Context) ValueSwitchStatement(statement *ast.SwitchStmt, resultVariable *ast.Ident, transform ValueBlock) []ast.Stmt
+```
+
+ValueSwitchStatement lowers a value switch with an explicit branch transformer.
+
+### func \(\*Context\) ValueTypeSwitchStatement
+
+```go
+func (r *Context) ValueTypeSwitchStatement(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident, transform ValueBlock) []ast.Stmt
+```
+
+ValueTypeSwitchStatement lowers a type switch with an explicit branch transformer.
+
+## type Dispatch
+
+Dispatch selects rules with the current function context.
+
+```go
+type Dispatch struct {
+    Expression func(*Context, ast.Expr) Result
+    Statement  func(*Context, ast.Stmt) []ast.Stmt
+}
+```
+
+## type Input
+
+Input holds source facts and the selected operations. Build it before emission.
+
+```go
+type Input struct {
+    Inventory      *source.Inventory
+    Dispatch       Dispatch
+    Target         ast.Expr
+    After          After
+    Propagations   map[ast.Expr]Propagation
+    Comprehensions map[*ast.CallExpr]*frontend.Comprehension
+    Conditionals   map[*ast.CallExpr]ast.Stmt
+    ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+}
+```
+
+## type Propagation
+
+Propagation defines the error action for a typed marker call.
+
+```go
+type Propagation struct {
+    Position token.Position
+    Wrap     bool
+    CallName string
+}
+```
+
+## type Request
+
+Request owns progress and fresh names for the complete output request.
+
+```go
+type Request struct {
+    Inserted       bool
+    Lowered        map[ast.Expr]bool
+    LoweredReturns map[*ast.ReturnStmt]bool
+    Err            error
+    // contains filtered or unexported fields
+}
+```
 
 ## type Result
 
@@ -40,6 +491,14 @@ type Value struct {
     Original   ast.Expr
     Temporary  bool
 }
+```
+
+## type ValueBlock
+
+ValueBlock transforms a value switch branch in its current context.
+
+```go
+type ValueBlock func(*Context, *ast.BlockStmt, *ast.Ident) *ast.BlockStmt
 ```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

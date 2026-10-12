@@ -3,7 +3,6 @@ package lowering
 import (
 	"fmt"
 	"github.com/lucasavila00/tgo/internal/lowering/source"
-	"go/ast"
 
 	"github.com/lucasavila00/tgo/internal/checker"
 	"golang.org/x/tools/go/packages"
@@ -62,12 +61,4 @@ func SourceFromCheckedPackage(p *checker.Package, dir string) (*Source, error) {
 		sites = append(sites, Site(site))
 	}
 	return &Source{Sites: sites, inventory: *inventory}, nil
-}
-
-func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
-	return source.RangeElided(s.inventory.Checked, statement)
-}
-
-func contains(parent, child ast.Node) bool {
-	return parent != nil && child != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
 }

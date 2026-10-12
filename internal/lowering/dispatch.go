@@ -1,0 +1,93 @@
+package lowering
+
+import (
+	"github.com/lucasavila00/tgo/internal/lowering/comprehensions"
+	"github.com/lucasavila00/tgo/internal/lowering/propagation"
+	"github.com/lucasavila00/tgo/internal/lowering/shared"
+	"github.com/lucasavila00/tgo/internal/lowering/valueexpr"
+	"go/ast"
+	"go/token"
+)
+
+// After receives references to the evaluated expression results.
+type After func(results []ast.Expr) []ast.Stmt
+
+func newRewrite(source *Source) *shared.Context {
+	return shared.New(&source.inventory, shared.Dispatch{Expression: expression, Statement: statement})
+}
+
+func statement(r *shared.Context, stmt ast.Stmt) []ast.Stmt {
+	if expr, ok := stmt.(*ast.ExprStmt); ok {
+		if statements, handled := discardedPropagation(r, expr.X); handled {
+			return statements
+		}
+	}
+	if assignment, ok := stmt.(*ast.AssignStmt); ok && assignment.Tok == token.ASSIGN &&
+		len(assignment.Rhs) == 1 && shared.BlankDestinations(assignment.Lhs) {
+		if statements, handled := discardedPropagation(r, assignment.Rhs[0]); handled {
+			return statements
+		}
+	}
+	return r.StatementSyntax(stmt)
+}
+
+func expression(r *shared.Context, expr ast.Expr) shared.Result {
+	if expr == nil {
+		return r.ResultOf(nil, nil)
+	}
+	if !r.Contains(expr) {
+		return r.ResultOf(nil, []ast.Expr{expr})
+	}
+	if result, special := specialExpression(r, expr); special {
+		return result
+	}
+	if parenthesized, ok := expr.(*ast.ParenExpr); ok {
+		inner := r.Expression(parenthesized.X)
+		if len(inner.Values) != 1 {
+			return inner
+		}
+		output := *parenthesized
+		output.X = inner.Values[0].Expression
+		return r.FinishExpression(expr, inner.Statements, &output)
+	}
+	statements, result := r.ExpressionSyntax(expr)
+	return r.FinishExpression(expr, statements, result)
+}
+
+func specialExpression(r *shared.Context, expr ast.Expr) (shared.Result, bool) {
+	if operation, ok := r.PropagationAt(expr); ok {
+		return propagation.Expression(r, expr.(*ast.CallExpr), operation, false), true
+	}
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return shared.Result{}, false
+	}
+	if record := r.Input.Comprehensions[call]; record != nil {
+		return comprehensions.Expression(r, call, record), true
+	}
+	if identifier, ok := call.Fun.(*ast.Ident); ok {
+		if destination := r.CollectionOutput(identifier.Name); destination != nil {
+			return comprehensions.Output(r, call, destination), true
+		}
+	}
+	if statement := r.Input.Conditionals[call]; statement != nil {
+		return valueexpr.Expression(r, call, statement), true
+	}
+	return shared.Result{}, false
+}
+
+// discardedPropagation keeps the call and its error check without success storage.
+func discardedPropagation(r *shared.Context, expression ast.Expr) ([]ast.Stmt, bool) {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
+	if operation, ok := r.PropagationAt(expression); ok {
+		evaluation := propagation.Expression(r, expression.(*ast.CallExpr), operation, true)
+		return evaluation.Statements, true
+	}
+	return nil, false
+}

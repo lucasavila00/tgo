@@ -1,12 +1,9 @@
 package lowering
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/lowering/shared"
 	"go/ast"
-	"go/format"
-	"go/token"
-	"reflect"
 
 	"github.com/lucasavila00/tgo/internal/lowering/source"
 )
@@ -22,13 +19,13 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 		return nil, fmt.Errorf("expression has no current-function evaluation: %s", site.Reason)
 	}
 	r := newRewrite(s)
-	r.input.target = target
-	r.input.after = after
-	output, err := r.emit()
+	r.Input.Target = target
+	r.Input.After = shared.After(after)
+	output, err := r.Emit()
 	if err != nil {
 		return nil, err
 	}
-	if !r.request.inserted {
+	if !r.Request.Inserted {
 		return nil, fmt.Errorf("expression site was not lowered: %s:%d", site.File, site.Start)
 	}
 	return output, nil
@@ -40,12 +37,12 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
 	checked := s.inventory.Checked
 	r := newRewrite(s)
-	r.input.propagations = make(map[ast.Expr]Propagation)
-	r.input.comprehensions = checked.Comprehensions
-	r.input.conditionals = checked.Conditionals
-	r.input.shortReturns = checked.ShortReturns
-	r.request.loweredReturns = make(map[*ast.ReturnStmt]bool)
-	r.request.lowered = make(map[ast.Expr]bool)
+	r.Input.Propagations = make(map[ast.Expr]shared.Propagation)
+	r.Input.Comprehensions = checked.Comprehensions
+	r.Input.Conditionals = checked.Conditionals
+	r.Input.ShortReturns = checked.ShortReturns
+	r.Request.LoweredReturns = make(map[*ast.ReturnStmt]bool)
+	r.Request.Lowered = make(map[ast.Expr]bool)
 	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -62,188 +59,14 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 		if site.Reason != "" {
 			return nil, fmt.Errorf("propagation has no current-function evaluation: %s", site.Reason)
 		}
-		r.input.propagations[call] = operation
+		r.Input.Propagations[call] = shared.Propagation(operation)
 	}
-	output, err := r.emit()
+	output, err := r.Emit()
 	if err != nil {
 		return nil, err
 	}
-	if err := r.checkLoweredOperations(); err != nil {
+	if err := r.CheckLoweredOperations(); err != nil {
 		return nil, err
 	}
 	return output, nil
-}
-
-func (r *rewrite) checkLoweredOperations() error {
-	s := r.input.source
-	for _, site := range s.Sites {
-		expression := s.inventory.Expressions[source.Site(site)]
-		if _, expected := r.input.propagations[expression]; expected && !r.request.lowered[expression] {
-			return fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
-		}
-	}
-	if err := r.checkLoweredElements(); err != nil {
-		return err
-	}
-	for call := range r.input.comprehensions {
-		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
-		}
-	}
-	for statement := range r.input.shortReturns {
-		if !r.request.loweredReturns[statement] {
-			return fmt.Errorf("%s: short return was not lowered", s.inventory.Checked.Fset.Position(statement.Pos()))
-		}
-	}
-	for call := range r.input.conditionals {
-		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: conditional expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
-		}
-	}
-	return nil
-}
-
-func (r *rewrite) contains(node ast.Node) bool {
-	if r.functionState.suppressed || node == nil {
-		return false
-	}
-	if contains(node, r.input.target) {
-		return true
-	}
-	if r.containsShortReturn(node) {
-		return true
-	}
-	for expression := range r.input.propagations {
-		if contains(node, expression) {
-			return true
-		}
-	}
-	for expression := range r.input.comprehensions {
-		if contains(node, expression) {
-			return true
-		}
-	}
-	if r.containsElement(node) {
-		return true
-	}
-	for expression := range r.input.conditionals {
-		if contains(node, expression) {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *rewrite) isTarget(expression ast.Expr) bool {
-	if r.functionState.suppressed {
-		return false
-	}
-	if expression == r.input.target && expression != nil {
-		return true
-	}
-	_, ok := r.input.propagations[expression]
-	call, _ := expression.(*ast.CallExpr)
-	return ok || r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil
-}
-
-func (r *rewrite) emit() (map[string][]byte, error) {
-	r.request.names.ReserveSyntax(r.input.source.inventory.Checked.Syntax)
-	output := make(map[string][]byte)
-	for _, file := range r.input.source.inventory.Checked.Syntax {
-		fileRewrite := &rewrite{input: r.input, request: r.request, file: &fileState{}, functionState: &functionState{}}
-		outputFile := fileRewrite.functionBodies(file).(*ast.File)
-		if r.request.err != nil {
-			return nil, r.request.err
-		}
-
-		outputFile.Decls = append(outputFile.Decls, fileRewrite.file.extraDeclarations...)
-		for _, spec := range fileRewrite.file.extraImports {
-			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
-			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
-		}
-		var buf bytes.Buffer
-		if err := format.Node(
-			&buf, r.input.source.inventory.Checked.Fset, fileRewrite.renameBindings(outputFile),
-		); err != nil {
-			return nil, err
-		}
-		output[r.input.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
-	}
-	return output, nil
-}
-
-// functionBodies visits the same typed syntax tree as the expression inventory.
-// It copies the path to each changed function; package expressions do not run here.
-func (r *rewrite) functionBodies(node ast.Node) ast.Node {
-	if node == nil || !r.contains(node) {
-		return node
-	}
-	switch fn := node.(type) {
-	case *ast.ValueSpec:
-		valueSpec := *fn
-		valueSpec.Values = append([]ast.Expr(nil), fn.Values...)
-		for i, value := range fn.Values {
-			if r.packageConditional(value) {
-				valueSpec.Values[i] = r.packageInitializer(value)
-			} else {
-				valueSpec.Values[i] = r.functionBodies(value).(ast.Expr)
-			}
-		}
-		return &valueSpec
-	case *ast.FuncDecl:
-		function := *fn
-		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
-		return &function
-	case *ast.FuncLit:
-		function := *fn
-		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
-		return &function
-	}
-	original := reflect.ValueOf(node).Elem()
-	rewritten := reflect.New(original.Type())
-	rewritten.Elem().Set(original)
-	rewriteChildFields(original, rewritten.Elem(), r.functionBodies)
-	return rewritten.Interface().(ast.Node)
-}
-
-func (r *rewrite) checkLoweredElements() error {
-	s := r.input.source
-	for _, file := range s.inventory.Checked.Syntax {
-		var missing error
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element &&
-					!r.request.lowered[call] {
-					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
-				}
-			}
-			return missing == nil
-		})
-		if missing != nil {
-			return missing
-		}
-	}
-	return nil
-}
-
-func (r *rewrite) containsElement(node ast.Node) bool {
-	found := false
-	ast.Inspect(node, func(child ast.Node) bool {
-		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.input.source.inventory.Checked.Operations[id.Name].Element {
-				found = true
-			}
-		}
-		return !found
-	})
-	return found
-}
-
-func (r *rewrite) containsShortReturn(node ast.Node) bool {
-	for statement := range r.input.shortReturns {
-		if contains(node, statement) {
-			return true
-		}
-	}
-	return false
 }

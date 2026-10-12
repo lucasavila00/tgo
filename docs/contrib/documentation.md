@@ -3,8 +3,8 @@
 Put compiler explanations in package comments, normally `doc.go`. The
 [driver](../../internal/driver/readme.md) is the starting point and owns the
 shared glossary. Frontend, checker, control-flow, and lowering comments explain
-their own work. The [lowering guide](../../internal/lowering/readme.md#follow-the-rewrite)
-explains input facts, operand setup, and how to add a lowering rule. Link to
+their own work. The [lowering guide](../../internal/lowering/readme.md)
+explains the purpose of lowering and its package boundaries. Link to
 another package instead of repeating its process.
 
 Function comments explain caller behavior: what is read or written, what is
