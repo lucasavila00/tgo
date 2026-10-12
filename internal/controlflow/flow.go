@@ -95,22 +95,7 @@ func (g *graph) statementInner(s ast.Stmt, next *point, t targets, label string)
 		entry.next = []*point{g.statement(s.Stmt, next, t, s.Label.Name)}
 		return entry
 	case *ast.BranchStmt:
-		switch s.Tok {
-		case token.GOTO:
-			return g.label(s.Label.Name)
-		case token.BREAK:
-			if s.Label != nil {
-				return link(g.jumps[s.Label.Name].stop)
-			}
-			return link(t.stop)
-		case token.CONTINUE:
-			if s.Label != nil {
-				return link(g.jumps[s.Label.Name].next)
-			}
-			return link(t.next)
-		case token.FALLTHROUGH:
-			return link(t.fall)
-		}
+		return g.branchStatement(s, next, t)
 	case *ast.ReturnStmt:
 		return g.expressions(s.Results, link(), t)
 	case *ast.ExprStmt:
@@ -120,14 +105,7 @@ func (g *graph) statementInner(s ast.Stmt, next *point, t targets, label string)
 		operands = append(operands, s.Rhs...)
 		return g.expressions(operands, next, t)
 	case *ast.DeclStmt:
-		if decl, ok := s.Decl.(*ast.GenDecl); ok {
-			for i := len(decl.Specs) - 1; i >= 0; i-- {
-				if spec, ok := decl.Specs[i].(*ast.ValueSpec); ok {
-					next = g.expressions(spec.Values, next, t)
-				}
-			}
-		}
-		return next
+		return g.declaration(s, next, t)
 	case *ast.SendStmt:
 		return g.expressions([]ast.Expr{s.Chan, s.Value}, next, t)
 	case *ast.IncDecStmt:
@@ -153,24 +131,44 @@ func (g *graph) statementInner(s ast.Stmt, next *point, t targets, label string)
 	return next
 }
 
+func (g *graph) declaration(s *ast.DeclStmt, next *point, t targets) *point {
+	if decl, ok := s.Decl.(*ast.GenDecl); ok {
+		for i := len(decl.Specs) - 1; i >= 0; i-- {
+			if spec, ok := decl.Specs[i].(*ast.ValueSpec); ok {
+				next = g.expressions(spec.Values, next, t)
+			}
+		}
+	}
+	return next
+}
+
+func (g *graph) branchStatement(s *ast.BranchStmt, next *point, t targets) *point {
+	switch s.Tok {
+	case token.GOTO:
+		return g.label(s.Label.Name)
+	case token.BREAK:
+		if s.Label != nil {
+			return link(g.jumps[s.Label.Name].stop)
+		}
+		return link(t.stop)
+	case token.CONTINUE:
+		if s.Label != nil {
+			return link(g.jumps[s.Label.Name].next)
+		}
+		return link(t.next)
+	case token.FALLTHROUGH:
+		return link(t.fall)
+	}
+	return next
+}
+
 func (g *graph) expression(expr ast.Expr, next *point, t targets) *point {
 	if expr == nil {
 		return next
 	}
 	switch e := expr.(type) {
 	case *ast.CallExpr:
-		if g.syntax.Unevaluated != nil && g.syntax.Unevaluated(e) {
-			return next
-		}
-		if g.syntax.Statements != nil {
-			if body := g.syntax.Statements(e); body != nil {
-				return g.statement(body, next, t, "")
-			}
-		}
-		if g.syntax.Terminates != nil && g.syntax.Terminates(e) {
-			next = link()
-		}
-		return g.callOperands(e, next, t)
+		return g.callExpression(e, next, t)
 	case *ast.BinaryExpr:
 		right := g.expression(e.Y, next, t)
 		if e.Op == token.LAND || e.Op == token.LOR {
@@ -200,6 +198,21 @@ func (g *graph) expression(expr ast.Expr, next *point, t targets) *point {
 	}
 	return next
 }
+func (g *graph) callExpression(e *ast.CallExpr, next *point, t targets) *point {
+	if g.syntax.Unevaluated != nil && g.syntax.Unevaluated(e) {
+		return next
+	}
+	if g.syntax.Statements != nil {
+		if body := g.syntax.Statements(e); body != nil {
+			return g.statement(body, next, t, "")
+		}
+	}
+	if g.syntax.Terminates != nil && g.syntax.Terminates(e) {
+		next = link()
+	}
+	return g.callOperands(e, next, t)
+}
+
 func (g *graph) expressions(exprs []ast.Expr, next *point, t targets) *point {
 	for i := len(exprs) - 1; i >= 0; i-- {
 		next = g.expression(exprs[i], next, t)

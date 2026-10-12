@@ -106,20 +106,7 @@ func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr, parameterN
 				expr.(*ast.SelectorExpr).X = unsafeAlias
 			}
 		case *types.Named, *types.Alias:
-			var args *types.TypeList
-			if named, ok := t.(*types.Named); ok {
-				args = named.TypeArgs()
-			} else {
-				args = t.(*types.Alias).TypeArgs()
-			}
-			switch e := expr.(type) {
-			case *ast.IndexExpr:
-				rename(args.At(0), e.Index)
-			case *ast.IndexListExpr:
-				for i, index := range e.Indices {
-					rename(args.At(i), index)
-				}
-			}
+			renameTypeArguments(t, expr, rename)
 		case *types.Pointer:
 			rename(t.Elem(), expr.(*ast.StarExpr).X)
 		case *types.Array:
@@ -151,6 +138,23 @@ func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr, parameterN
 		}
 	}
 	rename(types.Default(typ), result)
+}
+
+func renameTypeArguments(typ types.Type, expr ast.Expr, rename func(types.Type, ast.Expr)) {
+	var args *types.TypeList
+	if named, ok := typ.(*types.Named); ok {
+		args = named.TypeArgs()
+	} else {
+		args = typ.(*types.Alias).TypeArgs()
+	}
+	switch e := expr.(type) {
+	case *ast.IndexExpr:
+		rename(args.At(0), e.Index)
+	case *ast.IndexListExpr:
+		for i, index := range e.Indices {
+			rename(args.At(i), index)
+		}
+	}
 }
 
 func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(types.Type, ast.Expr)) {

@@ -29,7 +29,7 @@ linters:
       statements: -1
       ignore-comments: false
     gocyclo:
-      min-complexity: 30
+      min-complexity: 20
   exclusions:
     paths:
       - tests/testdata
