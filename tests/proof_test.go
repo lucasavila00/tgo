@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucasavila00/tgo/pkg/transpiler"
+	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
 var updateManifest = flag.Bool("update-manifest", false, "update expression locations after a fixture change")
@@ -46,7 +46,7 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 	}
 	count := 0
 	for _, pattern := range []string{"./testdata/proof", "./testdata/proof/foreign"} {
-		source, err := transpiler.Load(root, pattern)
+		source, err := lowering.Load(root, pattern)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -83,7 +83,7 @@ func writeProofVariant(t *testing.T,
 	count int,
 	files map[string][]byte,
 	packageName string,
-	site transpiler.Site,
+	site lowering.Site,
 	neutral,
 	returnCheck bool) string {
 	t.Helper()
@@ -158,7 +158,7 @@ func checkProofVariants(t *testing.T, dir string) {
 	}
 }
 
-func writeNeutralChecks(t *testing.T, dir, packageName string, site transpiler.Site) {
+func writeNeutralChecks(t *testing.T, dir, packageName string, site lowering.Site) {
 	t.Helper()
 	if packageName == "foreign" {
 		checks := `package foreign
@@ -239,9 +239,9 @@ func TestProofInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var sites []transpiler.Site
+	var sites []lowering.Site
 	for _, pattern := range []string{"./testdata/proof", "./testdata/proof/foreign"} {
-		source, err := transpiler.Load(dir, pattern)
+		source, err := lowering.Load(dir, pattern)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,8 +337,8 @@ func TestProofReference(t *testing.T) {
 
 func checkProofSite(
 	t *testing.T,
-	source *transpiler.Source,
-	site transpiler.Site,
+	source *lowering.Source,
+	site lowering.Site,
 	dir string,
 	count int,
 	rejections map[string]string,

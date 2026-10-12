@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lucasavila00/tgo/pkg/transpiler"
+	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
 func TestSourceReturnTargets(t *testing.T) {
@@ -32,7 +32,7 @@ func run(err error) error {
 			t.Fatal(err)
 		}
 	}
-	source, err := transpiler.Load(dir, ".")
+	source, err := lowering.Load(dir, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func run(err error) error {
 	}
 }
 
-func checkSourceReturnSite(t *testing.T, text string, site transpiler.Site, found map[string]bool) {
+func checkSourceReturnSite(t *testing.T, text string, site lowering.Site, found map[string]bool) {
 	t.Helper()
 	expression := text[site.Start:site.End]
 	switch expression {
@@ -96,7 +96,7 @@ func TestSourceLineDirectives(t *testing.T) {
 		"go.mod":   []byte("module example.com/input\n\ngo 1.27.1\n"),
 		"input.go": []byte(input),
 	})
-	source, err := transpiler.Load(dir, ".")
+	source, err := lowering.Load(dir, ".")
 	if err != nil {
 		t.Fatal(err)
 	}

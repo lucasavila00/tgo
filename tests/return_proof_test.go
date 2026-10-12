@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucasavila00/tgo/pkg/transpiler"
+	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
-func writeReturnChecks(t *testing.T, dir string, site transpiler.Site) {
+func writeReturnChecks(t *testing.T, dir string, site lowering.Site) {
 	t.Helper()
 	reference, err := os.ReadFile("testdata/proof/reference.go")
 	if err != nil {

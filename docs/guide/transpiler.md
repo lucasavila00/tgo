@@ -212,5 +212,4 @@ See [the driver](../../internal/driver/readme.md) for each step.
 
 ## Go API
 
-See [pkg/transpiler](../../pkg/transpiler/readme.md) for `Compile`, `Load`,
-and `InsertAfter`, including expression-insertion examples.
+See [pkg/transpiler](../../pkg/transpiler/readme.md) for the `Compile` API.

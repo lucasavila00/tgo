@@ -14,6 +14,11 @@ The size check includes tests, fixture inputs, and reference programs. It skips
 names ending exactly in `_tgo.go` or `_tgo_test.go`. Untracked generated checker
 source is not in the Git file list.
 
-`make lint` prepares the checker, runs the source-size check, runs Go linters,
+`check-dead-code.sh` uses the pinned Go `deadcode` tool to find functions that
+no entry point can reach. It checks the repository with tests included, then
+checks public functions under `pkg/` from `cmd/tgo` without tests. It fails on
+any finding. The second check catches public APIs kept alive only by tests.
+
+`make lint` prepares the checker, runs the source-size and dead-code checks, runs Go linters,
 and checks Go formatting. The pull request workflow runs the same command.
 See [source checks](../docs/guide/lint.md) for tool versions and limits.

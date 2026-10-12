@@ -24,6 +24,18 @@ The file-size check includes fixture inputs and reference programs. It skips
 names ending exactly in `_tgo.go` or `_tgo_test.go`. Go lint and formatting exclude
 `tests/testdata`; normal test files outside that directory remain checked.
 
+## Dead code
+
+`make lint` also runs Go's `deadcode` tool from the pinned `golang.org/x/tools`
+module version. First, it checks functions across the repository with test
+entry points included. Then, it checks functions in `pkg/` using only the
+`tgo` command as an entry point. Any reported function fails the check.
+
+The second check excludes tests. A test can call an obsolete public API and
+keep it alive even when the compiler does not use it. Internal lowering helpers
+can remain available for proof tests. The existing `unused` linter also checks
+unused declarations, including types and variables.
+
 ## Compiler dependencies
 
 Depguard checks imports in the existing lint job. It also checks test files
@@ -38,7 +50,7 @@ The current dependency direction is:
 | Package | Compiler packages it uses |
 | --- | --- |
 | `cmd/tgo` | `pkg/transpiler` |
-| `pkg/transpiler` | `internal/driver`, `internal/lowering` |
+| `pkg/transpiler` | `internal/driver` |
 | `internal/driver` | `internal/checker`, `internal/lowering` |
 | `internal/lowering` | `internal/checker`, `internal/frontend`, lowering helpers |
 | `internal/lowering/source` | `internal/checker` |
