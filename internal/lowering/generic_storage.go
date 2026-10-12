@@ -37,19 +37,19 @@ func storageKinds(typ types.Type) int {
 }
 
 func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
-	if alias := r.parameterAliases[parameter]; alias != nil {
+	if alias := r.file.parameterAliases[parameter]; alias != nil {
 		return alias
 	}
-	if r.parameterAliases == nil {
-		r.parameterAliases = make(map[*types.TypeParam]*ast.Ident)
-		r.aliasStatements = make(map[ast.Node][]ast.Stmt)
+	if r.file.parameterAliases == nil {
+		r.file.parameterAliases = make(map[*types.TypeParam]*ast.Ident)
+		r.file.aliasStatements = make(map[ast.Node][]ast.Stmt)
 	}
 	var owner ast.Node
-	for id, object := range r.source.inventory.Checked.TypesInfo.Defs {
+	for id, object := range r.input.source.inventory.Checked.TypesInfo.Defs {
 		if object != parameter.Obj() {
 			continue
 		}
-		for node := r.source.inventory.Parents[id]; node != nil; node = r.source.inventory.Parents[node] {
+		for node := r.input.source.inventory.Parents[id]; node != nil; node = r.input.source.inventory.Parents[node] {
 			if _, ok := node.(*ast.FuncDecl); ok {
 				owner = node
 				break
@@ -62,22 +62,22 @@ func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 	alias := r.name()
 	typeSpec := &ast.TypeSpec{Name: alias, Assign: 1, Type: ast.NewIdent(parameter.Obj().Name())}
 	declaration := &ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{typeSpec}}}
-	r.parameterAliases[parameter] = alias
-	r.aliasStatements[owner] = append(r.aliasStatements[owner], declaration)
+	r.file.parameterAliases[parameter] = alias
+	r.file.aliasStatements[owner] = append(r.file.aliasStatements[owner], declaration)
 	return alias
 }
 
 func (r *rewrite) reflectPackage() *ast.Ident {
-	if r.reflectAlias == nil {
-		r.reflectAlias = r.nameFor("reflect")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
+	if r.file.reflectAlias == nil {
+		r.file.reflectAlias = r.nameFor("reflect")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
 	}
-	return r.reflectAlias
+	return r.file.reflectAlias
 }
 
 // genericBase keeps array storage and saves slice or map headers.
 func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	parameter := types.Unalias(r.source.inventory.Checked.TypesInfo.TypeOf(expr)).(*types.TypeParam)
+	parameter := types.Unalias(r.input.source.inventory.Checked.TypesInfo.TypeOf(expr)).(*types.TypeParam)
 	typeAlias := r.parameterAlias(parameter)
 	reflectPackage := r.reflectPackage()
 	before, place := r.place(expr)
@@ -93,10 +93,10 @@ func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	before = append(before, &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: isArray}, Body: &ast.BlockStmt{List: []ast.Stmt{saveHeader}}})
 	getter := genericBaseGetter(typeAlias, isArray, place, savedHeader)
 	base := &ast.ParenExpr{X: &ast.StarExpr{X: &ast.CallExpr{Fun: getter}}}
-	if r.deferredBases == nil {
-		r.deferredBases = make(map[ast.Expr]bool)
+	if r.functionState.deferredBases == nil {
+		r.functionState.deferredBases = make(map[ast.Expr]bool)
 	}
-	r.deferredBases[base] = true
+	r.functionState.deferredBases[base] = true
 	return before, base
 }
 
@@ -114,7 +114,7 @@ func genericBaseGetter(typeAlias, isArray *ast.Ident, place ast.Expr, savedHeade
 func (r *rewrite) deferredPlace(expr ast.Expr) bool {
 	found := false
 	ast.Inspect(expr, func(node ast.Node) bool {
-		if expression, ok := node.(ast.Expr); ok && r.deferredBases[expression] {
+		if expression, ok := node.(ast.Expr); ok && r.functionState.deferredBases[expression] {
 			found = true
 			return false
 		}

@@ -17,7 +17,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	statements, values := r.expression(s.X)
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+		if value := r.input.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
 			return r.withBreakExit(s, &output, r.integerRange(s, &output, statements), exit)
 		}
 		statements = r.rangeAssignments(s, &output, statements)
@@ -100,7 +100,7 @@ func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariabl
 	var tagValue ast.Expr
 	if len(tagExpressions) != 0 {
 		tagValue = tagExpressions[0]
-		tagInfo := r.source.inventory.Checked.TypesInfo.Types[statement.Tag]
+		tagInfo := r.input.source.inventory.Checked.TypesInfo.Types[statement.Tag]
 		if tagInfo.Value == nil {
 			savedTagStatements, savedTagValues := r.save(tagValue)
 			selectionStatements = append(selectionStatements, savedTagStatements...)
@@ -221,7 +221,7 @@ func (r *rewrite) typeSwitchStatementResult(statement *ast.TypeSwitchStmt, resul
 func (r *rewrite) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ident, isValueExpression bool) []ast.Stmt {
 	if isValueExpression {
 		branchResult := resultVariable
-		if !r.source.inventory.Checked.TypesInfo.TGoCases[clause] {
+		if !r.input.source.inventory.Checked.TypesInfo.TGoCases[clause] {
 			branchResult = nil
 		}
 		branchBody := &ast.BlockStmt{List: clause.Body}

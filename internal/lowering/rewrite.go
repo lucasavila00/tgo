@@ -12,41 +12,45 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source              *Source
-	target              ast.Expr
-	after               After
-	names               names.Allocator
-	inserted            bool
+	input         *loweringInput
+	request       *rewriteRequest
+	file          *fileState
+	functionState *functionState
+}
+
+// loweringInput holds source facts and the selected operations. Build it before emission.
+type loweringInput struct {
+	source         *Source
+	target         ast.Expr
+	after          After
+	propagations   map[ast.Expr]Propagation
+	comprehensions map[*ast.CallExpr]*frontend.Comprehension
+	conditionals   map[*ast.CallExpr]ast.Stmt
+	shortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+}
+
+// rewriteRequest owns progress and fresh names for the complete output request.
+type rewriteRequest struct {
+	names          names.Allocator
+	inserted       bool
+	lowered        map[ast.Expr]bool
+	loweredReturns map[*ast.ReturnStmt]bool
+	err            error
+}
+
+// functionState owns evaluation and control flow within one function.
+type functionState struct {
 	labels              map[string]string
 	breakExits          map[*ast.BranchStmt]*ast.Ident
 	controlTargets      map[ast.Stmt]ast.Stmt
-	bindings            map[types.Object]string
 	suppressedRoot      ast.Expr
-	propagations        map[ast.Expr]Propagation
-	comprehensions      map[*ast.CallExpr]*frontend.Comprehension
 	comprehensionRanges map[*ast.RangeStmt]bool
 	collectionOutputs   map[string]*collectionDestination
-	conditionals        map[*ast.CallExpr]ast.Stmt
-	lowered             map[ast.Expr]bool
-	shortReturns        map[*ast.ReturnStmt]frontend.ShortReturn
-	loweredReturns      map[*ast.ReturnStmt]bool
 	frame               *returnFrame
-	formatAlias         *ast.Ident
 	suppressed          bool
-	extraImports        []*ast.ImportSpec
-	extraDeclarations   []ast.Decl
-	zeroSequence        *ast.Ident
-	iterAlias           *ast.Ident
-	mapAlias            *ast.Ident
-	sliceAlias          *ast.Ident
 	origins             map[ast.Expr]ast.Expr
-	parameterAliases    map[*types.TypeParam]*ast.Ident
-	aliasStatements     map[ast.Node][]ast.Stmt
-	reflectAlias        *ast.Ident
 	deferredBases       map[ast.Expr]bool
 	temporaryTypes      map[ast.Expr]types.Type
-	typeImports         map[*types.Package]*ast.Ident
-	err                 error
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -55,5 +59,31 @@ func (r *rewrite) name() *ast.Ident {
 
 // nameFor adds the source name to a fresh generated identifier.
 func (r *rewrite) nameFor(sourceName string) *ast.Ident {
-	return r.names.Fresh(sourceName)
+	return r.request.names.Fresh(sourceName)
+}
+
+// fileState owns output imports, declarations, and binding changes.
+// Binding changes and type aliases stay available to closures in the file.
+type fileState struct {
+	bindings          map[types.Object]string
+	parameterAliases  map[*types.TypeParam]*ast.Ident
+	aliasStatements   map[ast.Node][]ast.Stmt
+	formatAlias       *ast.Ident
+	extraImports      []*ast.ImportSpec
+	extraDeclarations []ast.Decl
+	zeroSequence      *ast.Ident
+	iterAlias         *ast.Ident
+	mapAlias          *ast.Ident
+	sliceAlias        *ast.Ident
+	reflectAlias      *ast.Ident
+	typeImports       map[*types.Package]*ast.Ident
+}
+
+func newRewrite(source *Source) *rewrite {
+	return &rewrite{
+		input:         &loweringInput{source: source},
+		request:       &rewriteRequest{},
+		file:          &fileState{},
+		functionState: &functionState{},
+	}
 }

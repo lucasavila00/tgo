@@ -10,7 +10,7 @@ import (
 func (r *rewrite) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok && (r.conditionals[call] != nil || r.comprehensions[call] != nil) {
+		if call, ok := node.(*ast.CallExpr); ok && (r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil) {
 			found = true
 			return false
 		}
@@ -21,27 +21,28 @@ func (r *rewrite) packageConditional(expression ast.Expr) bool {
 }
 
 func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
-	typ := r.typeOf(expression)
+	initializer := &rewrite{input: r.input, request: r.request, file: r.file, functionState: &functionState{}}
+	typ := initializer.typeOf(expression)
 	results := &ast.FieldList{}
 	if tuple, ok := typ.(*types.Tuple); ok {
 		for i := 0; i < tuple.Len(); i++ {
-			results.List = append(results.List, &ast.Field{Type: r.temporaryType(tuple.At(i).Type(), expression)})
+			results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(tuple.At(i).Type(), expression)})
 		}
 	} else {
-		results.List = append(results.List, &ast.Field{Type: r.temporaryType(typ, expression)})
+		results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(typ, expression)})
 	}
-	before, values := r.expression(expression)
+	before, values := initializer.expression(expression)
 	body := &ast.BlockStmt{List: append(before, &ast.ReturnStmt{Results: values})}
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }
 
 func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) ([]ast.Stmt, []ast.Expr) {
 	resultVariable := r.name()
-	resultType := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
+	resultType := types.Default(r.input.source.inventory.Checked.TypesInfo.TypeOf(call))
 	declaration := variable(resultVariable, r.temporaryType(resultType, call), nil)
 	r.recordTemporary(resultVariable, resultType, call)
 	branchStatements := r.valueStatement(statement, resultVariable)
-	r.lowered[call] = true
+	r.request.lowered[call] = true
 	return append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable}
 }
 
@@ -79,7 +80,7 @@ func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident)
 func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
 	output := *body
 	output.List = nil
-	if completes, recorded := r.source.inventory.Checked.TypesInfo.TGoBranches[body]; recorded && !completes {
+	if completes, recorded := r.input.source.inventory.Checked.TypesInfo.TGoBranches[body]; recorded && !completes {
 		result = nil
 	}
 	last := len(body.List) - 1
@@ -130,7 +131,7 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 	case *ast.TypeSwitchStmt:
 		return r.valueTypeSwitchStatement(statement, result)
 	case *ast.ExprStmt:
-		if tv := r.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
+		if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 			statements, values := r.expression(statement.X)
 			if result == nil {
 				for _, value := range values {

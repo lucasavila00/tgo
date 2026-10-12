@@ -11,7 +11,7 @@ func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
-				if object := r.source.inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
+				if object := r.input.source.inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
 					// Keep the terminating statement after unreachable inserted code.
 					return append(statements, s)
 				}
@@ -54,7 +54,7 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 	if deferred {
 		var savedValues []ast.Expr
 		for _, value := range values {
-			if tv := r.source.inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+			if tv := r.input.source.inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
 				savedValues = append(savedValues, value)
 				continue
 			}
@@ -119,14 +119,14 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 	var inner *ast.Ident
 	if jump && r.hasLabelBranch(s.Stmt, s.Label.Name) {
 		inner = r.name()
-		if r.labels == nil {
-			r.labels = make(map[string]string)
+		if r.functionState.labels == nil {
+			r.functionState.labels = make(map[string]string)
 		}
-		r.labels[s.Label.Name] = inner.Name
-		defer delete(r.labels, s.Label.Name)
+		r.functionState.labels[s.Label.Name] = inner.Name
+		defer delete(r.functionState.labels, s.Label.Name)
 	}
 	statements := r.statement(s.Stmt)
-	if target := r.controlTargets[s.Stmt]; target != nil {
+	if target := r.functionState.controlTargets[s.Stmt]; target != nil {
 		label := s.Label
 		if jump {
 			label = inner

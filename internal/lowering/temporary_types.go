@@ -19,13 +19,13 @@ func variable(name *ast.Ident, typ ast.Expr, value ast.Expr) ast.Stmt {
 }
 
 func (r *rewrite) typeOf(expr ast.Expr) types.Type {
-	if typ := r.temporaryTypes[expr]; typ != nil {
+	if typ := r.functionState.temporaryTypes[expr]; typ != nil {
 		return typ
 	}
-	if origin := r.origins[expr]; origin != nil {
+	if origin := r.functionState.origins[expr]; origin != nil {
 		expr = origin
 	}
-	return r.source.inventory.Checked.TypesInfo.TypeOf(expr)
+	return r.input.source.inventory.Checked.TypesInfo.TypeOf(expr)
 }
 
 // temporaryType names the checked type without using a hidden source binding.
@@ -36,31 +36,31 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
 	nameCheck := r.checkTypeNames(typ, position)
 	if nameCheck.problem != "" {
-		if r.err == nil {
+		if r.request.err == nil {
 			errorPosition := r.temporaryTypeErrorPosition(original)
-			r.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name", errorPosition, typ, nameCheck.problem)
+			r.request.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name", errorPosition, typ, nameCheck.problem)
 		}
 		return ast.NewIdent("invalid")
 	}
 	text := types.TypeString(types.Default(typ), func(pkg *types.Package) string {
-		if pkg == r.source.inventory.Checked.Types {
+		if pkg == r.input.source.inventory.Checked.Types {
 			return ""
 		}
-		if r.typeImports == nil {
-			r.typeImports = make(map[*types.Package]*ast.Ident)
+		if r.file.typeImports == nil {
+			r.file.typeImports = make(map[*types.Package]*ast.Ident)
 		}
-		alias := r.typeImports[pkg]
+		alias := r.file.typeImports[pkg]
 		if alias == nil {
 			alias = r.nameFor(pkg.Name())
-			r.typeImports[pkg] = alias
-			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
+			r.file.typeImports[pkg] = alias
+			r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
 		}
 		return alias.Name
 	})
 	var unsafeAlias *ast.Ident
 	if nameCheck.unsafePointer {
 		unsafeAlias = r.nameFor("unsafe")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
 	}
 	result, err := parser.ParseExpr(text)
 	if err != nil {

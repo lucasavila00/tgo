@@ -13,15 +13,15 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 	if !ok || literal.Type != nil {
 		return value
 	}
-	parent := r.source.inventory.Parents[original]
+	parent := r.input.source.inventory.Parents[original]
 	if pair, ok := parent.(*ast.KeyValueExpr); ok {
-		parent = r.source.inventory.Parents[pair]
+		parent = r.input.source.inventory.Parents[pair]
 	}
 	container, ok := parent.(*ast.CompositeLit)
 	if !ok {
 		return value
 	}
-	typ := r.source.inventory.Checked.TypesInfo.TypeOf(container).Underlying()
+	typ := r.input.source.inventory.Checked.TypesInfo.TypeOf(container).Underlying()
 	pointer := false
 	if p, ok := typ.(*types.Pointer); ok {
 		typ = p.Elem().Underlying()
@@ -48,14 +48,14 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 		wrapper.Elts = []ast.Expr{value}
 		access = &ast.IndexExpr{Index: integer(0)}
 	case *types.Map:
-		pair := r.source.inventory.Parents[original].(*ast.KeyValueExpr)
+		pair := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
 		if pair.Key == original {
 			r.prepareCollectionImports()
 			empty := r.contextLiteral(&ast.CompositeLit{Type: container.Type}, container)
 			if pointer {
 				empty = &ast.StarExpr{X: empty}
 			}
-			values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{empty}}
+			values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{empty}}
 			wrapper.Elts = []ast.Expr{&ast.KeyValueExpr{Key: value, Value: r.sequenceZero(values)}}
 			var mapValue ast.Expr = wrapper
 			if container.Type == nil {
@@ -64,9 +64,9 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 			if pointer {
 				mapValue = &ast.StarExpr{X: mapValue}
 			}
-			keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{mapValue}}
+			keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{mapValue}}
 			r.prepareSliceImport()
-			collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{keys}}
+			collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{keys}}
 			return &ast.IndexExpr{X: collected, Index: integer(0)}
 		}
 		key := r.zeroMapKey(container, pointer)
@@ -79,9 +79,9 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 		if pointer {
 			mapValue = &ast.StarExpr{X: mapValue}
 		}
-		values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{mapValue}}
+		values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{mapValue}}
 		r.prepareSliceImport()
-		collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{values}}
+		collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{values}}
 		return &ast.IndexExpr{X: collected, Index: integer(0)}
 	default:
 		return value
@@ -116,7 +116,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 	var statements []ast.Stmt
 	var values []ast.Expr
 	for _, element := range elements {
-		if tv, ok := r.source.inventory.Checked.TypesInfo.Types[element]; ok && (tv.Value != nil || tv.IsNil()) {
+		if tv, ok := r.input.source.inventory.Checked.TypesInfo.Types[element]; ok && (tv.Value != nil || tv.IsNil()) {
 			values = append(values, element)
 			continue
 		}
@@ -130,7 +130,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 	index := 0
 	for i, element := range value.Elts {
 		var place ast.Expr
-		switch typ := r.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(type) {
+		switch typ := r.input.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(type) {
 		case *types.Struct:
 			name := typ.Field(i).Name()
 			if item, ok := element.(*ast.KeyValueExpr); ok {
@@ -141,7 +141,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 			var position ast.Expr = integer(index)
 			if item, ok := element.(*ast.KeyValueExpr); ok {
 				position = item.Key
-				positionValue, _ := constant.Int64Val(r.source.inventory.Checked.TypesInfo.Types[item.Key].Value)
+				positionValue, _ := constant.Int64Val(r.input.source.inventory.Checked.TypesInfo.Types[item.Key].Value)
 				index = int(positionValue)
 			}
 			place = &ast.IndexExpr{X: key, Index: position}
@@ -158,20 +158,20 @@ func (r *rewrite) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr
 	if pointer {
 		empty = &ast.StarExpr{X: empty}
 	}
-	keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{empty}}
+	keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{empty}}
 	return r.sequenceZero(keys)
 }
 
 func (r *rewrite) prepareCollectionImports() {
-	if r.mapAlias == nil {
-		r.mapAlias = r.nameFor("maps")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.mapAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"maps"`}})
+	if r.file.mapAlias == nil {
+		r.file.mapAlias = r.nameFor("maps")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.mapAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"maps"`}})
 	}
 }
 
 func (r *rewrite) prepareSliceImport() {
-	if r.sliceAlias == nil {
-		r.sliceAlias = r.nameFor("slices")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.sliceAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"slices"`}})
+	if r.file.sliceAlias == nil {
+		r.file.sliceAlias = r.nameFor("slices")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.sliceAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"slices"`}})
 	}
 }

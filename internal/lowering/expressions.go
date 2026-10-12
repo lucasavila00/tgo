@@ -31,7 +31,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 }
 
 func (r *rewrite) specialExpression(expr ast.Expr) ([]ast.Stmt, []ast.Expr, bool) {
-	if operation, ok := r.propagations[expr]; ok && !r.suppressed {
+	if operation, ok := r.input.propagations[expr]; ok && !r.functionState.suppressed {
 		statements, values := r.propagatedCall(expr.(*ast.CallExpr), operation)
 		return statements, values, true
 	}
@@ -39,17 +39,17 @@ func (r *rewrite) specialExpression(expr ast.Expr) ([]ast.Stmt, []ast.Expr, bool
 	if !ok {
 		return nil, nil, false
 	}
-	if record := r.comprehensions[call]; record != nil {
+	if record := r.input.comprehensions[call]; record != nil {
 		statements, values := r.comprehensionCall(call, record)
 		return statements, values, true
 	}
 	if identifier, ok := call.Fun.(*ast.Ident); ok {
-		if destination := r.collectionOutputs[identifier.Name]; destination != nil {
+		if destination := r.functionState.collectionOutputs[identifier.Name]; destination != nil {
 			statements, values := r.comprehensionOutput(call, destination)
 			return statements, values, true
 		}
 	}
-	if statement := r.conditionals[call]; statement != nil {
+	if statement := r.input.conditionals[call]; statement != nil {
 		statements, values := r.conditionalCall(call, statement)
 		return statements, values, true
 	}
@@ -62,10 +62,7 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.FuncLit:
 		function := *e
-		labels := r.labels
-		r.labels = nil
 		function.Type, function.Body = r.function(e, e.Type, e.Body)
-		r.labels = labels
 		result = &function
 	case *ast.CallExpr:
 		if r.unsafeOperand(e) {
@@ -125,18 +122,18 @@ func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 	if result != expr {
 		r.recordOrigin(result, expr)
 	}
-	if expr == r.target && expr != r.suppressedRoot {
-		r.inserted = true
+	if expr == r.input.target && expr != r.functionState.suppressedRoot {
+		r.request.inserted = true
 		if r.functionName(expr) {
-			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
+			return append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
-		if tv := r.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
-			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
+		if tv := r.input.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+			return append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
 		// Read types from the original expression, not from the new tree.
 		saved, refs := r.save(result)
 		before = append(before, saved...)
-		before = append(before, r.after(refs)...)
+		before = append(before, r.input.after(refs)...)
 		return before, refs
 	}
 	return before, []ast.Expr{result}
@@ -145,16 +142,16 @@ func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 func (r *rewrite) functionName(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.Ident:
-		_, ok := r.source.inventory.Checked.TypesInfo.Uses[e].(*types.Func)
+		_, ok := r.input.source.inventory.Checked.TypesInfo.Uses[e].(*types.Func)
 		return ok
 	case *ast.SelectorExpr:
-		if r.source.inventory.Checked.TypesInfo.Selections[e] != nil {
+		if r.input.source.inventory.Checked.TypesInfo.Selections[e] != nil {
 			return false
 		}
-		_, ok := r.source.inventory.Checked.TypesInfo.Uses[e.Sel].(*types.Func)
+		_, ok := r.input.source.inventory.Checked.TypesInfo.Uses[e.Sel].(*types.Func)
 		return ok
 	case *ast.IndexExpr:
-		return r.source.inventory.Checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
+		return r.input.source.inventory.Checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
 	case *ast.IndexListExpr:
 		return r.functionName(e.X)
 	}
@@ -162,8 +159,8 @@ func (r *rewrite) functionName(expr ast.Expr) bool {
 }
 
 func (r *rewrite) addressableArray(expr ast.Expr) bool {
-	array := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
-	return array && r.source.inventory.Checked.TypesInfo.Types[expr].Addressable()
+	array := storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
+	return array && r.input.source.inventory.Checked.TypesInfo.Types[expr].Addressable()
 }
 
 func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
@@ -186,7 +183,7 @@ func (r *rewrite) untypedBoolean(expr ast.Expr) bool {
 			return r.untypedBoolean(e.X)
 		}
 	case *ast.Ident:
-		if obj := r.source.inventory.Checked.TypesInfo.Uses[e]; obj != nil {
+		if obj := r.input.source.inventory.Checked.TypesInfo.Uses[e]; obj != nil {
 			if basic, ok := obj.Type().(*types.Basic); ok {
 				return basic.Kind() == types.UntypedBool
 			}

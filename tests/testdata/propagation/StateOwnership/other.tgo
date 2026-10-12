@@ -1,0 +1,6 @@
+package main
+
+func other() error {
+	fail()!!
+	return nil
+}

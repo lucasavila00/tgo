@@ -21,12 +21,14 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	if site.Reason != "" {
 		return nil, fmt.Errorf("expression has no current-function evaluation: %s", site.Reason)
 	}
-	r := &rewrite{source: s, target: target, after: after}
+	r := newRewrite(s)
+	r.input.target = target
+	r.input.after = after
 	output, err := r.emit()
 	if err != nil {
 		return nil, err
 	}
-	if !r.inserted {
+	if !r.request.inserted {
 		return nil, fmt.Errorf("expression site was not lowered: %s:%d", site.File, site.Start)
 	}
 	return output, nil
@@ -37,17 +39,13 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
 	checked := s.inventory.Checked
-	r := &rewrite{
-		source:              s,
-		propagations:        make(map[ast.Expr]Propagation),
-		comprehensions:      checked.Comprehensions,
-		comprehensionRanges: make(map[*ast.RangeStmt]bool),
-		collectionOutputs:   make(map[string]*collectionDestination),
-		conditionals:        checked.Conditionals,
-		shortReturns:        checked.ShortReturns,
-		loweredReturns:      make(map[*ast.ReturnStmt]bool),
-		lowered:             make(map[ast.Expr]bool),
-	}
+	r := newRewrite(s)
+	r.input.propagations = make(map[ast.Expr]Propagation)
+	r.input.comprehensions = checked.Comprehensions
+	r.input.conditionals = checked.Conditionals
+	r.input.shortReturns = checked.ShortReturns
+	r.request.loweredReturns = make(map[*ast.ReturnStmt]bool)
+	r.request.lowered = make(map[ast.Expr]bool)
 	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -64,7 +62,7 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 		if site.Reason != "" {
 			return nil, fmt.Errorf("propagation has no current-function evaluation: %s", site.Reason)
 		}
-		r.propagations[call] = operation
+		r.input.propagations[call] = operation
 	}
 	output, err := r.emit()
 	if err != nil {
@@ -77,10 +75,10 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 }
 
 func (r *rewrite) checkLoweredOperations() error {
-	s := r.source
+	s := r.input.source
 	for _, site := range s.Sites {
 		expression := s.inventory.Expressions[source.Site(site)]
-		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
+		if _, expected := r.input.propagations[expression]; expected && !r.request.lowered[expression] {
 			return fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
 		}
 	}
@@ -88,7 +86,7 @@ func (r *rewrite) checkLoweredOperations() error {
 		var missing error
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.lowered[call] {
+				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.request.lowered[call] {
 					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 				}
 			}
@@ -98,18 +96,18 @@ func (r *rewrite) checkLoweredOperations() error {
 			return missing
 		}
 	}
-	for call := range r.comprehensions {
-		if !r.lowered[call] {
+	for call := range r.input.comprehensions {
+		if !r.request.lowered[call] {
 			return fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
-	for statement := range r.shortReturns {
-		if !r.loweredReturns[statement] {
+	for statement := range r.input.shortReturns {
+		if !r.request.loweredReturns[statement] {
 			return fmt.Errorf("%s: short return was not lowered", s.inventory.Checked.Fset.Position(statement.Pos()))
 		}
 	}
-	for call := range r.conditionals {
-		if !r.lowered[call] {
+	for call := range r.input.conditionals {
+		if !r.request.lowered[call] {
 			return fmt.Errorf("%s: conditional expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
@@ -117,23 +115,23 @@ func (r *rewrite) checkLoweredOperations() error {
 }
 
 func (r *rewrite) contains(node ast.Node) bool {
-	if r.suppressed || node == nil {
+	if r.functionState.suppressed || node == nil {
 		return false
 	}
-	if contains(node, r.target) {
+	if contains(node, r.input.target) {
 		return true
 	}
-	for statement := range r.shortReturns {
+	for statement := range r.input.shortReturns {
 		if contains(node, statement) {
 			return true
 		}
 	}
-	for expression := range r.propagations {
+	for expression := range r.input.propagations {
 		if contains(node, expression) {
 			return true
 		}
 	}
-	for expression := range r.comprehensions {
+	for expression := range r.input.comprehensions {
 		if contains(node, expression) {
 			return true
 		}
@@ -141,7 +139,7 @@ func (r *rewrite) contains(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(child ast.Node) bool {
 		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.source.inventory.Checked.Operations[id.Name].Element {
+			if id, ok := call.Fun.(*ast.Ident); ok && r.input.source.inventory.Checked.Operations[id.Name].Element {
 				found = true
 			}
 		}
@@ -150,7 +148,7 @@ func (r *rewrite) contains(node ast.Node) bool {
 	if found {
 		return true
 	}
-	for expression := range r.conditionals {
+	for expression := range r.input.conditionals {
 		if contains(node, expression) {
 			return true
 		}
@@ -159,51 +157,39 @@ func (r *rewrite) contains(node ast.Node) bool {
 }
 
 func (r *rewrite) isTarget(expression ast.Expr) bool {
-	if r.suppressed {
+	if r.functionState.suppressed {
 		return false
 	}
-	if expression == r.target && expression != nil {
+	if expression == r.input.target && expression != nil {
 		return true
 	}
-	_, ok := r.propagations[expression]
+	_, ok := r.input.propagations[expression]
 	call, _ := expression.(*ast.CallExpr)
-	return ok || r.conditionals[call] != nil || r.comprehensions[call] != nil
+	return ok || r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {
-	r.names.ReserveSyntax(r.source.inventory.Checked.Syntax)
+	r.request.names.ReserveSyntax(r.input.source.inventory.Checked.Syntax)
 	output := make(map[string][]byte)
-	for _, file := range r.source.inventory.Checked.Syntax {
-		r.startFile()
-		outputFile := r.functionBodies(file).(*ast.File)
-		if r.err != nil {
-			return nil, r.err
+	for _, file := range r.input.source.inventory.Checked.Syntax {
+		fileRewrite := &rewrite{input: r.input, request: r.request, file: &fileState{}, functionState: &functionState{}}
+		outputFile := fileRewrite.functionBodies(file).(*ast.File)
+		if r.request.err != nil {
+			return nil, r.request.err
 		}
 
-		outputFile.Decls = append(outputFile.Decls, r.extraDeclarations...)
-		for _, spec := range r.extraImports {
+		outputFile.Decls = append(outputFile.Decls, fileRewrite.file.extraDeclarations...)
+		for _, spec := range fileRewrite.file.extraImports {
 			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
 			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.inventory.Checked.Fset, r.renameBindings(outputFile)); err != nil {
+		if err := format.Node(&buf, r.input.source.inventory.Checked.Fset, fileRewrite.renameBindings(outputFile)); err != nil {
 			return nil, err
 		}
-		output[r.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
+		output[r.input.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
-}
-
-func (r *rewrite) startFile() {
-	r.extraImports = nil
-	r.extraDeclarations = nil
-	r.formatAlias = nil
-	r.zeroSequence = nil
-	r.iterAlias = nil
-	r.mapAlias = nil
-	r.sliceAlias = nil
-	r.reflectAlias = nil
-	r.typeImports = nil
 }
 
 // functionBodies visits the same typed syntax tree as the expression inventory.

@@ -70,8 +70,8 @@ func (r *rewrite) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 	if !ok || assignment.Tok != token.DEFINE {
 		return nil, nil
 	}
-	if r.bindings == nil {
-		r.bindings = make(map[types.Object]string)
+	if r.file.bindings == nil {
+		r.file.bindings = make(map[types.Object]string)
 	}
 	header := &ast.AssignStmt{Tok: token.DEFINE}
 	var before []ast.Stmt
@@ -80,10 +80,10 @@ func (r *rewrite) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 		if id.Name == "_" {
 			continue
 		}
-		object := r.source.inventory.Checked.TypesInfo.Defs[id]
+		object := r.input.source.inventory.Checked.TypesInfo.Defs[id]
 		bindingName := r.nameFor(id.Name)
 		zeroValue := r.name()
-		r.bindings[object] = bindingName.Name
+		r.file.bindings[object] = bindingName.Name
 		before = append(before, variable(zeroValue, r.temporaryType(object.Type(), id), nil))
 		header.Lhs = append(header.Lhs, bindingName)
 		header.Rhs = append(header.Rhs, zeroValue)
@@ -111,8 +111,8 @@ func (r *rewrite) initializerJumps(loop *ast.ForStmt) bool {
 }
 
 func (r *rewrite) realFunction(function *ast.FuncLit) bool {
-	call, _ := r.source.inventory.Parents[function].(*ast.CallExpr)
-	return r.conditionals[call] == nil && r.comprehensions[call] == nil
+	call, _ := r.input.source.inventory.Parents[function].(*ast.CallExpr)
+	return r.input.conditionals[call] == nil && r.input.comprehensions[call] == nil
 }
 
 // branchTarget uses source parents and checked labels, before statements move.
@@ -120,19 +120,19 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
 		return nil
 	}
-	for node := r.source.inventory.Parents[branch]; node != nil; node = r.source.inventory.Parents[node] {
+	for node := r.input.source.inventory.Parents[branch]; node != nil; node = r.input.source.inventory.Parents[node] {
 		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
 			return nil
 		}
 		if branch.Label != nil {
-			if label, ok := node.(*ast.LabeledStmt); ok && r.source.inventory.Checked.TypesInfo.Defs[label.Label] == r.source.inventory.Checked.TypesInfo.Uses[branch.Label] {
+			if label, ok := node.(*ast.LabeledStmt); ok && r.input.source.inventory.Checked.TypesInfo.Defs[label.Label] == r.input.source.inventory.Checked.TypesInfo.Uses[branch.Label] {
 				return label.Stmt
 			}
 			continue
 		}
 		switch node := node.(type) {
 		case *ast.RangeStmt:
-			if r.comprehensionRanges[node] && contains(node.X, branch) {
+			if r.functionState.comprehensionRanges[node] && contains(node.X, branch) {
 				continue
 			}
 			return node
