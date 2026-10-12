@@ -17,7 +17,8 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	statements, values := r.expression(s.X)
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.input.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+		if value := r.input.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil &&
+			value.Kind() == constant.Int {
 			return r.withBreakExit(s, &output, r.integerRange(s, &output, statements), exit)
 		}
 		statements = r.rangeAssignments(s, &output, statements)
@@ -41,7 +42,8 @@ func (r *rewrite) rangeAssignments(original, output *ast.RangeStmt, statements [
 		}
 		value := r.name()
 		*rangeVariable.output = value
-		statements = append(statements, variable(value, r.temporaryType(r.typeOf(rangeVariable.original), rangeVariable.original), nil))
+		statements = append(statements, variable(value, r.temporaryType(r.typeOf(rangeVariable.original),
+			rangeVariable.original), nil))
 		placeStatements, destination := r.place(rangeVariable.original)
 		stores = append(stores, placeStatements...)
 		destinations = append(destinations, destination)
@@ -61,7 +63,8 @@ func (r *rewrite) valueSwitchStatement(statement *ast.SwitchStmt, resultVariable
 	return r.switchStatementResult(statement, resultVariable, true)
 }
 
-func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariable *ast.Ident, isValueExpression bool) []ast.Stmt {
+func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariable *ast.Ident,
+	isValueExpression bool) []ast.Stmt {
 	headerNodes := []ast.Node{statement.Init, statement.Tag}
 	for _, caseStatement := range statement.Body.List {
 		for _, caseExpression := range caseStatement.(*ast.CaseClause).List {
@@ -108,18 +111,21 @@ func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariabl
 		}
 	}
 	selectedCase := r.name()
-	selectionStatements = append(selectionStatements, variable(selectedCase, r.temporaryType(types.Typ[types.Int], firstExpression(statement)), integer(-1)))
+	selectionStatements = append(selectionStatements, variable(selectedCase,
+		r.temporaryType(types.Typ[types.Int], firstExpression(statement)), integer(-1)))
 	defaultCase := -1
 	for i, rewrittenCase := range caseClauses {
 		if len(rewrittenCase.List) == 0 {
 			defaultCase = i
 		}
-		selectionStatements = append(selectionStatements, r.switchCaseSelection(rewrittenCase.List, tagValue, selectedCase, i)...)
+		selectionStatements = append(selectionStatements, r.switchCaseSelection(rewrittenCase.List, tagValue,
+			selectedCase, i)...)
 		rewrittenCase.List = []ast.Expr{integer(i)}
 		rewrittenSwitch.Body.List = append(rewrittenSwitch.Body.List, rewrittenCase)
 	}
 	if defaultCase >= 0 {
-		selectDefault := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(defaultCase)}}
+		selectDefault := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN,
+			Rhs: []ast.Expr{integer(defaultCase)}}
 		noCaseSelected := &ast.BinaryExpr{X: selectedCase, Op: token.EQL, Y: integer(-1)}
 		defaultSelection := &ast.IfStmt{Cond: noCaseSelected, Body: &ast.BlockStmt{List: []ast.Stmt{selectDefault}}}
 		selectionStatements = append(selectionStatements, defaultSelection)
@@ -131,7 +137,8 @@ func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariabl
 	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{switchBlock}, exit)
 }
 
-func (r *rewrite) switchCases(statement *ast.SwitchStmt, resultVariable *ast.Ident, isValueExpression bool) ([]*ast.CaseClause, bool) {
+func (r *rewrite) switchCases(statement *ast.SwitchStmt, resultVariable *ast.Ident,
+	isValueExpression bool) ([]*ast.CaseClause, bool) {
 	var caseClauses []*ast.CaseClause
 	casesNeedStatements := false
 	for _, caseStatement := range statement.Body.List {
@@ -148,7 +155,8 @@ func (r *rewrite) switchCases(statement *ast.SwitchStmt, resultVariable *ast.Ide
 	return caseClauses, casesNeedStatements
 }
 
-func (r *rewrite) switchCaseSelection(expressions []ast.Expr, tagValue ast.Expr, selectedCase *ast.Ident, caseIndex int) []ast.Stmt {
+func (r *rewrite) switchCaseSelection(expressions []ast.Expr, tagValue ast.Expr, selectedCase *ast.Ident,
+	caseIndex int) []ast.Stmt {
 	var selectionStatements []ast.Stmt
 	for _, caseExpression := range expressions {
 		operandStatements, operandValues := r.expression(caseExpression)
@@ -156,7 +164,8 @@ func (r *rewrite) switchCaseSelection(expressions []ast.Expr, tagValue ast.Expr,
 		if tagValue != nil {
 			condition = &ast.BinaryExpr{X: tagValue, Op: token.EQL, Y: condition}
 		}
-		selectCase := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(caseIndex)}}
+		selectCase := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN,
+			Rhs: []ast.Expr{integer(caseIndex)}}
 		matchingCase := &ast.IfStmt{Cond: condition, Body: &ast.BlockStmt{List: []ast.Stmt{selectCase}}}
 		caseBody := append(operandStatements, matchingCase)
 		noCaseSelected := &ast.BinaryExpr{X: selectedCase, Op: token.EQL, Y: integer(-1)}
@@ -170,11 +179,13 @@ func (r *rewrite) typeSwitchStatement(statement *ast.TypeSwitchStmt) []ast.Stmt 
 	return r.typeSwitchStatementResult(statement, nil, false)
 }
 
-func (r *rewrite) valueTypeSwitchStatement(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident) []ast.Stmt {
+func (r *rewrite) valueTypeSwitchStatement(statement *ast.TypeSwitchStmt,
+	resultVariable *ast.Ident) []ast.Stmt {
 	return r.typeSwitchStatementResult(statement, resultVariable, true)
 }
 
-func (r *rewrite) typeSwitchStatementResult(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident, isValueExpression bool) []ast.Stmt {
+func (r *rewrite) typeSwitchStatementResult(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident,
+	isValueExpression bool) []ast.Stmt {
 	exit := r.prepareBreakExit(statement, statement.Init, statement.Assign)
 	rewrittenSwitch := *statement
 	var headerStatements []ast.Stmt
@@ -218,7 +229,8 @@ func (r *rewrite) typeSwitchStatementResult(statement *ast.TypeSwitchStmt, resul
 	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{&rewrittenSwitch}, exit)
 }
 
-func (r *rewrite) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ident, isValueExpression bool) []ast.Stmt {
+func (r *rewrite) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ident,
+	isValueExpression bool) []ast.Stmt {
 	if isValueExpression {
 		branchResult := resultVariable
 		if !r.input.source.inventory.Checked.TypesInfo.TGoCases[clause] {

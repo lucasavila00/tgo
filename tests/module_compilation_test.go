@@ -19,7 +19,9 @@ func TestCompileFromSubdirectory(t *testing.T) {
 	})
 	root := filepath.Join(base, "source")
 	input := map[string][]byte{
-		"go.mod": []byte("module example.com/source\n\ngo 1.27.1\n\nrequire example.com/dependency v0.0.0\nreplace example.com/dependency => ../dependency\n"),
+		"go.mod": []byte("module example.com/source\n\ngo 1.27.1\n\nrequire example.com/dependency " +
+			"v0.0.0\nreplace example.com/dependency => ../dependency\n"),
+
 		"cmd/app/main.tgo": []byte(`package main
 
 import (

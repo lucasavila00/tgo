@@ -68,7 +68,8 @@ func conditionalEnd(filename, source string, start int, tokens []sourceToken) in
 		case token.RBRACE:
 			braces--
 		}
-		if tokens[i].kind != token.RBRACE || braces != 0 || parens != 0 || brackets != 0 || tokens[i+1].kind == token.ELSE {
+		if tokens[i].kind != token.RBRACE || braces != 0 || parens != 0 || brackets != 0 || tokens[i+
+			1].kind == token.ELSE {
 			continue
 		}
 		end := tokens[i].offset + 1
@@ -103,7 +104,8 @@ type conditionalEdit struct {
 
 // prepareConditionals wraps independent operands together. A nested operand
 // is prepared before its containing expression; ambiguous syntax uses AST recovery.
-func (s *mappedSource) prepareConditionals(filename string, original *token.File, used map[string]bool, conditionals map[string]token.Position) bool {
+func (s *mappedSource) prepareConditionals(filename string, original *token.File, used map[string]bool,
+	conditionals map[string]token.Position) bool {
 	var starts []int
 	for offset, operand := range expressionConditionalTokens(s.text) {
 		if operand {

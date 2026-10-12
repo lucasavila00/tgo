@@ -10,6 +10,9 @@ The repository pins golangci-lint v2.14.0. Its checks cover unchecked errors,
 Go vet findings, Staticcheck bugs, unused code, documentation, and basic names.
 Revive supplies style checks. The formatter checks Go formatting.
 
+Go source lines are limited to 120 characters. Split long calls, conditions,
+and literals at clear boundaries.
+
 Each function is limited to 100 lines, including comments. Each tracked Go or
 TGo source file is limited to 700 lines, including comments and blank lines.
 Split work into steps with clear inputs and results when a limit is exceeded.
