@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+findings=$(go run golang.org/x/tools/cmd/deadcode -test ./...)
+if [ -n "$findings" ]; then
+    printf '%s\n' "$findings"
+    exit 1
+fi
+
 # Tests can keep obsolete public APIs alive. Start from the command instead.
 findings=$(go run golang.org/x/tools/cmd/deadcode \
     -filter '^github.com/lucasavila00/tgo/pkg/' ./cmd/tgo)

@@ -24,16 +24,17 @@ The file-size check includes fixture inputs and reference programs. It skips
 names ending exactly in `_tgo.go` or `_tgo_test.go`. Go lint and formatting exclude
 `tests/testdata`; normal test files outside that directory remain checked.
 
-## Public API reachability
+## Dead code
 
 `make lint` also runs Go's `deadcode` tool from the pinned `golang.org/x/tools`
-module version. It reports functions in `pkg/` that the `tgo` command cannot
-reach. Any reported function fails the check.
+module version. First, it checks functions across the repository with test
+entry points included. Then, it checks functions in `pkg/` using only the
+`tgo` command as an entry point. Any reported function fails the check.
 
-Tests are excluded from this check. A test can call an obsolete public API
-and keep it alive even when the compiler does not use it. Internal lowering
-helpers can remain available for proof tests. The existing `unused` linter
-checks other unused declarations.
+The second check excludes tests. A test can call an obsolete public API and
+keep it alive even when the compiler does not use it. Internal lowering helpers
+can remain available for proof tests. The existing `unused` linter also checks
+unused declarations, including types and variables.
 
 ## Compiler dependencies
 

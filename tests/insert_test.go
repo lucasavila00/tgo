@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lucasavila00/tgo/pkg/transpiler"
+	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
 var insertReturnCases = []struct{ name, code, target, want string }{
@@ -189,12 +189,12 @@ func next(i int) int { fmt.Print("T"); return i+1 }
 	}
 }
 
-func runInsertion(t *testing.T, input, target string, after transpiler.After) string {
+func runInsertion(t *testing.T, input, target string, after lowering.After) string {
 	t.Helper()
 	return runInsertionFiles(t, input, target, after, nil)
 }
 
-func runInsertionFiles(t *testing.T, input, target string, after transpiler.After,
+func runInsertionFiles(t *testing.T, input, target string, after lowering.After,
 	extra map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -205,11 +205,11 @@ func runInsertionFiles(t *testing.T, input, target string, after transpiler.Afte
 		}
 	}
 	writeInsertionDependencies(t, dir, extra)
-	source, err := transpiler.Load(dir, ".")
+	source, err := lowering.Load(dir, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var site transpiler.Site
+	var site lowering.Site
 	for _, candidate := range source.Sites {
 		if input[candidate.Start:candidate.End] == target {
 			site = candidate

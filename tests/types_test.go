@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucasavila00/tgo/pkg/transpiler"
+	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
 func TestInsertOmittedLiteralType(t *testing.T) {
@@ -82,7 +82,7 @@ func main() { _ = foreign.Map{{value()}:value()} }
 		"main.go":            []byte(input),
 		"foreign/foreign.go": []byte("package foreign\ntype key struct{N int}\ntype Map map[key]int\n"),
 	})
-	source, err := transpiler.Load(dir, ".")
+	source, err := lowering.Load(dir, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
