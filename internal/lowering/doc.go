@@ -16,8 +16,8 @@
 // every source file before the first generated name. It keeps one sequence for
 // the complete request, including import aliases.
 //
-// Expression lowering returns prerequisite statements and references to the
-// resulting values. The caller puts the statements at the expression's
+// Expression lowering returns statements that must run first and references to
+// the resulting values. The caller puts the statements at the expression's
 // evaluation point. For use(first(), fetch()!, last()), operands saves first
 // before it adds the statements for fetch. Statement lowering then places the
 // final use call after these statements.
@@ -34,8 +34,9 @@
 // expression, which handles insertion and result storage. A statement starts in
 // statementInner and can delegate to a helper for its source construct.
 //
-// Return prerequisite statements and result references through operands. That
-// function saves earlier operands before it adds statements from a later one.
+// Return the statements that must run first and result references through
+// operands. That function saves earlier operands before it adds statements from
+// a later one.
 // Keep statements that run conditionally inside their source branch or clause.
 //
 // Use save for evaluated values and place for store destinations. Read types

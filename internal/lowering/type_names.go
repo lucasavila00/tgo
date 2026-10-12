@@ -27,7 +27,7 @@ func (r *rewrite) temporaryTypeErrorPosition(original ast.Expr) token.Position {
 	return position
 }
 
-// typeNameCheck finds source bindings that cannot spell a temporary's type.
+// typeNameCheck records source bindings that prevent a temporary type name.
 type typeNameCheck struct {
 	rewrite        *rewrite
 	position       token.Pos

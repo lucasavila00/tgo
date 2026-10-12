@@ -100,7 +100,7 @@ func (r *rewrite) resultCount(expr ast.Expr) int {
 	return 1
 }
 
-// operands saves earlier values before a later operand emits statements.
+// operands saves earlier values before a later operand adds statements.
 func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	var statements []ast.Stmt
 	var values []ast.Expr
