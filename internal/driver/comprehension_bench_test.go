@@ -27,7 +27,8 @@ func BenchmarkCompileComprehensions(b *testing.B) {
 					}
 				}
 				body.WriteString(" }")
-				for name, content := range map[string]string{"go.mod": "module example.com/bench\n\ngo 1.27.1\n", "main.tgo": body.String()} {
+				for name, content := range map[string]string{"go.mod": "module example.com/bench\n\ngo 1.27.1\n",
+					"main.tgo": body.String()} {
 					if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0644); err != nil {
 						b.Fatal(err)
 					}

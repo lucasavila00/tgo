@@ -58,7 +58,9 @@ func TestPropagationFixtures(t *testing.T) {
 					continue
 				}
 				if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
-					t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots\nSAVED:\n%s\nGENERATED:\n%s", name, saved, content)
+					t.Errorf("generated %s differs from snapshot; inspect output before using "+
+						"-update-snapshots\nSAVED:\n%s\nGENERATED:\n%s",
+						name, saved, content)
 				}
 			}
 			command := exec.Command("go", "run", ".")

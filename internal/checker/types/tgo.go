@@ -50,7 +50,8 @@ func (check *Checker) expressionType(e ast.Expr, typ Type) {
 			check.expressionType(e.X, typ)
 		}
 	case *ast.BinaryExpr:
-		if accepts := binaryOpPredicates[e.Op]; (accepts != nil && accepts(typ)) || (isShift(e.Op) && allInteger(typ)) {
+		if accepts := binaryOpPredicates[e.Op]; (accepts != nil && accepts(typ)) || (isShift(e.Op) &&
+			allInteger(typ)) {
 			check.expressionType(e.X, typ)
 			if !isShift(e.Op) {
 				check.expressionType(e.Y, typ)
@@ -185,7 +186,8 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	}
 	// A byte-slice source of copy or append can instead be a string.
 	// Keep its own string type when every value branch produces a string.
-	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) && len(values) != 0 {
+	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) &&
+		len(values) != 0 {
 		strings := true
 		for _, branch := range values {
 			strings = strings && allString(branch.typ())
@@ -386,13 +388,15 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 		operator = "!!"
 	}
 	returnErrorType := check.sig.Results().At(check.sig.Results().Len() - 1).Type()
-	if _, ok := returnErrorType.Underlying().(*Interface); !ok || !AssignableTo(returnErrorType, Universe.Lookup("error").Type()) {
+	if _, ok := returnErrorType.Underlying().(*Interface); !ok || !AssignableTo(returnErrorType,
+		Universe.Lookup("error").Type()) {
 		check.error(position, IncompatibleAssign, "propagation requires a final error interface return")
 		x.invalidate()
 		return expression
 	}
 	if !AssignableTo(returnedErrorType, returnErrorType) {
-		check.errorf(position, IncompatibleAssign, "%s cannot return error of type %s as %s", operator, returnedErrorType, returnErrorType)
+		check.errorf(position, IncompatibleAssign, "%s cannot return error of type %s as %s", operator,
+			returnedErrorType, returnErrorType)
 		x.invalidate()
 		return expression
 	}
@@ -542,7 +546,8 @@ func (check *Checker) conditionalFunctionExit(body *ast.BlockStmt) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
 		if call, ok := node.(*ast.CallExpr); ok {
-			if operation, exists := check.tgoOperation(call); exists && (operation.Conditional || operation.Comprehension) {
+			if operation, exists := check.tgoOperation(call); exists && (operation.Conditional ||
+				operation.Comprehension) {
 				found = true
 				return false
 			}
@@ -587,7 +592,8 @@ func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
 		visitor.loops++
 	case *ast.BranchStmt:
 		if node.Tok == token.CONTINUE && node.Label == nil && visitor.loops == 0 {
-			visitor.check.error(node, MisplacedContinue, "continue cannot advance a range before its collection is computed")
+			visitor.check.error(node, MisplacedContinue,
+				"continue cannot advance a range before its collection is computed")
 		}
 	}
 	return visitor

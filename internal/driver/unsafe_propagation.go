@@ -49,7 +49,8 @@ func rejectUnsafePropagation(pkg *checker.Package) {
 					if operation.Wrap {
 						operator = "!!"
 					}
-					panic(fmt.Sprintf("%s: %s is not allowed inside unsafe.%s operands", operation.Position, operator, builtin.Name()))
+					panic(fmt.Sprintf("%s: %s is not allowed inside unsafe.%s operands", operation.Position,
+						operator, builtin.Name()))
 				})
 			}
 			return true

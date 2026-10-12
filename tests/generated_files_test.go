@@ -15,11 +15,14 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	dir := t.TempDir()
 	target := "selected_" + runtime.GOOS + "_" + runtime.GOARCH
 	files := map[string][]byte{
-		"go.mod":             []byte("module example.com/generated\n\ngo 1.27.1\n"),
-		"main.tgo":           []byte("package example\nfunc Value() int { return targetValue }\n"),
-		target + ".tgo":      []byte("package example\nconst targetValue = 7\n"),
-		target + "_test.tgo": []byte("package example\nimport \"testing\"\nfunc TestValue(t *testing.T) { if Value()!=7 { t.Fatal(Value()) } }\n"),
-		"main_tgo.go":        []byte("this stale snapshot must not be parsed"),
+		"go.mod":        []byte("module example.com/generated\n\ngo 1.27.1\n"),
+		"main.tgo":      []byte("package example\nfunc Value() int { return targetValue }\n"),
+		target + ".tgo": []byte("package example\nconst targetValue = 7\n"),
+		target +
+			"_test.tgo": []byte("package example\nimport \"testing\"\nfunc TestValue(t *testing.T) { if " +
+			"Value()!=7 { t.Fatal(Value()) } }\n"),
+
+		"main_tgo.go": []byte("this stale snapshot must not be parsed"),
 	}
 	excludedOS := "windows"
 	if runtime.GOOS == excludedOS {
@@ -35,7 +38,8 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "excluded_tgo_"+excludedOS+".go")); !os.IsNotExist(err) {
 		t.Fatalf("excluded generated file remains: %v", err)
 	}
-	for _, name := range []string{"main_tgo.go", "selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + ".go", "selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + "_test.go"} {
+	for _, name := range []string{"main_tgo.go", "selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + ".go",
+		"selected_tgo_" + runtime.GOOS + "_" + runtime.GOARCH + "_test.go"} {
 		if len(first[name]) == 0 {
 			t.Fatalf("missing %s", name)
 		}
@@ -45,7 +49,8 @@ func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 			t.Fatalf("source changed: %s", name)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main_tgo.go"), []byte("package example\nvar _tgoValue0 = nonexistent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main_tgo.go"),
+		[]byte("package example\nvar _tgoValue0 = nonexistent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	transpiler.Compile(dir)

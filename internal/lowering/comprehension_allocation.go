@@ -11,7 +11,8 @@ import (
 
 // exactComprehension allocates once when one slice or array range emits one value
 // on every visit. It leaves filters, nested ranges, and source jumps on append.
-func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Comprehension, result *ast.Ident, typ types.Type) []ast.Stmt {
+func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Comprehension, result *ast.Ident,
+	typ types.Type) []ast.Stmt {
 	key, _ := types.ComprehensionTypes(typ)
 	if r.builtinHidden("make") || r.builtinHidden("len") || len(record.Body.List) != 1 {
 		return nil
@@ -46,7 +47,9 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	if key != nil {
 		outputKey, ok := ast.Unparen(leaf.Args[0]).(*ast.Ident)
 		rangeKey, bound := loop.Key.(*ast.Ident)
-		if !ok || !bound || r.input.source.inventory.Checked.TypesInfo.Uses[outputKey] != r.input.source.inventory.Checked.TypesInfo.Defs[rangeKey] {
+		info := r.input.source.inventory.Checked.TypesInfo
+		if !ok || !bound ||
+			info.Uses[outputKey] != info.Defs[rangeKey] {
 			return nil
 		}
 	}

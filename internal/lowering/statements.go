@@ -123,7 +123,8 @@ func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 				return false
 			}
 		}
-		if branch, ok := n.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO && branch.Label.Name == label {
+		if branch, ok := n.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO &&
+			branch.Label.Name == label {
 			found = true
 		}
 		return true
@@ -173,7 +174,8 @@ func (r *rewrite) hasGoto(label *ast.LabeledStmt) bool {
 found:
 	used := false
 	ast.Inspect(node, func(n ast.Node) bool {
-		if branch, ok := n.(*ast.BranchStmt); ok && branch.Tok == token.GOTO && branch.Label.Name == label.Label.Name {
+		if branch, ok := n.(*ast.BranchStmt); ok && branch.Tok == token.GOTO &&
+			branch.Label.Name == label.Label.Name {
 			used = true
 		}
 		return true
@@ -186,5 +188,6 @@ func boolean(value bool) ast.Expr {
 	if value {
 		op = token.EQL
 	}
-	return &ast.BinaryExpr{X: &ast.BasicLit{Kind: token.INT, Value: "0"}, Op: op, Y: &ast.BasicLit{Kind: token.INT, Value: "0"}}
+	return &ast.BinaryExpr{X: &ast.BasicLit{Kind: token.INT, Value: "0"}, Op: op,
+		Y: &ast.BasicLit{Kind: token.INT, Value: "0"}}
 }

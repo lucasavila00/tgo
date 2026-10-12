@@ -24,7 +24,8 @@ func TestLoadKeepsStockTypeObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source.Package.Fset != source.inventory.Checked.Fset || source.Package.Syntax[0] != source.inventory.Checked.Syntax[0] {
+	if source.Package.Fset != source.inventory.Checked.Fset ||
+		source.Package.Syntax[0] != source.inventory.Checked.Syntax[0] {
 		t.Fatal("checks must use the same source syntax and positions")
 	}
 	fn := source.Package.Syntax[0].Decls[0].(*ast.FuncDecl)
