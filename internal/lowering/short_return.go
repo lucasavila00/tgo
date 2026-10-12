@@ -11,7 +11,7 @@ import (
 // shortReturnStatement supplies omitted results without a function wrapper.
 func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record frontend.ShortReturn) []ast.Stmt {
 	returnMarker := statement.Results[0].(*ast.CallExpr)
-	setupStatements, returnValues := r.operands(returnMarker.Args)
+	statements, returnValues := r.operands(returnMarker.Args)
 	if record.ZeroSuccess {
 		if !r.frame.prepared {
 			r.frame.prefix = r.prepareReturns(r.frame.typ)
@@ -21,18 +21,18 @@ func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 		returnValues = append(zeroValues, returnValues...)
 	} else {
 		if len(returnValues) == 1 && r.resultCount(returnMarker.Args[0]) > 1 {
-			tupleSetup, tupleResults := r.shortReturnTuple(returnValues[0], returnMarker.Args[0])
-			setupStatements = append(setupStatements, tupleSetup...)
+			tupleStatements, tupleResults := r.shortReturnTuple(returnValues[0], returnMarker.Args[0])
+			statements = append(statements, tupleStatements...)
 			returnValues = tupleResults
 		}
-		nilSetup, nilResult := r.shortReturnNil(statement)
-		setupStatements = append(setupStatements, nilSetup...)
+		nilStatements, nilResult := r.shortReturnNil(statement)
+		statements = append(statements, nilStatements...)
 		returnValues = append(returnValues, nilResult)
 	}
 	returnStatement := *statement
 	returnStatement.Results = returnValues
 	r.loweredReturns[statement] = true
-	return append(setupStatements, &returnStatement)
+	return append(statements, &returnStatement)
 }
 
 func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
@@ -50,27 +50,20 @@ func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Exp
 }
 
 func (r *rewrite) shortReturnResults() *types.Tuple {
-	var signature *types.Signature
-	switch function := r.frame.function.(type) {
-	case *ast.FuncDecl:
-		signature = r.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
-	case *ast.FuncLit:
-		signature = r.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
-	}
-	return signature.Results()
+	return r.frameSignature().Results()
 }
 
 // shortReturnTuple uses declared result types, so private callee types need no name.
 func (r *rewrite) shortReturnTuple(tupleCall, originalCall ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	declaredResults := r.shortReturnResults()
-	var setupStatements []ast.Stmt
+	var statements []ast.Stmt
 	var resultReferences []ast.Expr
 	for resultIndex := 0; resultIndex < declaredResults.Len()-1; resultIndex++ {
 		resultName := r.name()
 		resultType := r.temporaryType(declaredResults.At(resultIndex).Type(), originalCall)
-		setupStatements = append(setupStatements, variable(resultName, resultType, nil))
+		statements = append(statements, variable(resultName, resultType, nil))
 		resultReferences = append(resultReferences, resultName)
 	}
-	setupStatements = append(setupStatements, &ast.AssignStmt{Lhs: resultReferences, Tok: token.ASSIGN, Rhs: []ast.Expr{tupleCall}})
-	return setupStatements, resultReferences
+	statements = append(statements, &ast.AssignStmt{Lhs: resultReferences, Tok: token.ASSIGN, Rhs: []ast.Expr{tupleCall}})
+	return statements, resultReferences
 }

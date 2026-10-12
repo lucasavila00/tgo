@@ -39,52 +39,46 @@ func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]
 	result := r.name()
 	typ := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
 	declaration := variable(result, r.temporaryType(typ, call), nil)
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.temporaryTypes[result] = typ
-	r.origins[result] = call
+	r.recordTemporary(result, typ, call)
 	body := r.conditionalStatement(statement, result)
 	r.lowered[call] = true
 	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}
 }
 
 func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
-	copy := *statement
-	copy.Body = r.conditionalBlock(statement.Body, result)
+	output := *statement
+	output.Body = r.conditionalBlock(statement.Body, result)
 	switch alternative := statement.Else.(type) {
 	case *ast.BlockStmt:
-		copy.Else = r.conditionalBlock(alternative, result)
+		output.Else = r.conditionalBlock(alternative, result)
 	case *ast.IfStmt:
-		output := r.conditionalStatement(alternative, result)
-		if len(output) == 1 {
-			copy.Else = output[0]
+		alternativeStatements := r.conditionalStatement(alternative, result)
+		if len(alternativeStatements) == 1 {
+			output.Else = alternativeStatements[0]
 		} else {
-			copy.Else = &ast.BlockStmt{List: output}
+			output.Else = &ast.BlockStmt{List: alternativeStatements}
 		}
 	}
-	var setup []ast.Stmt
+	var initStatements []ast.Stmt
 	if statement.Init != nil {
-		setup = r.header(statement.Init)
+		initStatements = r.header(statement.Init)
 	}
-	before, condition := r.expression(statement.Cond)
-	copy.Cond = condition[0]
-	if len(before) == 0 && len(setup) <= 1 {
-		if len(setup) != 0 {
-			copy.Init = setup[0]
+	conditionStatements, conditionValues := r.expression(statement.Cond)
+	output.Cond = conditionValues[0]
+	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
+		if len(initStatements) != 0 {
+			output.Init = initStatements[0]
 		}
-		return []ast.Stmt{&copy}
+		return []ast.Stmt{&output}
 	}
-	copy.Init = nil
-	return []ast.Stmt{&ast.BlockStmt{List: append(append(setup, before...), &copy)}}
+	output.Init = nil
+	statements := append(initStatements, conditionStatements...)
+	return []ast.Stmt{&ast.BlockStmt{List: append(statements, &output)}}
 }
 
 func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
-	copy := *body
-	copy.List = nil
+	output := *body
+	output.List = nil
 	if completes, recorded := r.source.inventory.Checked.TypesInfo.TGoBranches[body]; recorded && !completes {
 		result = nil
 	}
@@ -97,12 +91,12 @@ func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.
 	}
 	for i, statement := range body.List {
 		if i == last {
-			copy.List = append(copy.List, r.conditionalTail(statement, result)...)
+			output.List = append(output.List, r.conditionalTail(statement, result)...)
 		} else {
-			copy.List = append(copy.List, r.statement(statement)...)
+			output.List = append(output.List, r.statement(statement)...)
 		}
 	}
-	return &copy
+	return &output
 }
 
 func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.Stmt {
@@ -121,19 +115,19 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 		default:
 			return r.statement(statement)
 		}
-		copy := *statement
-		output := r.conditionalTail(statement.Stmt, result)
-		if len(output) == 1 {
-			copy.Stmt = output[0]
+		labeled := *statement
+		statements := r.conditionalTail(statement.Stmt, result)
+		if len(statements) == 1 {
+			labeled.Stmt = statements[0]
 		} else {
-			copy.Stmt = &ast.BlockStmt{List: output}
+			labeled.Stmt = &ast.BlockStmt{List: statements}
 		}
-		return []ast.Stmt{&copy}
+		return []ast.Stmt{&labeled}
 	case *ast.IfStmt:
 		return r.conditionalStatement(statement, result)
 	case *ast.ExprStmt:
 		if tv := r.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
-			before, values := r.expression(statement.X)
+			statements, values := r.expression(statement.X)
 			if result == nil {
 				for _, value := range values {
 					if tv.Value != nil {
@@ -142,11 +136,11 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 					if tv.IsNil() {
 						value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
 					}
-					before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+					statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 				}
-				return before
+				return statements
 			}
-			return append(before, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
+			return append(statements, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
 		}
 	}
 	return r.statement(statement)

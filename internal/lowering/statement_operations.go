@@ -7,64 +7,64 @@ import (
 )
 
 func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
-	before, refs := r.expression(s.X)
-	if len(refs) == 0 {
+	statements, values := r.expression(s.X)
+	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
 				if object := r.source.inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
 					// Keep the terminating statement after unreachable inserted code.
-					return append(before, s)
+					return append(statements, s)
 				}
 			}
 		}
-		return before
+		return statements
 	}
-	copy := *s
-	copy.X = refs[0]
+	output := *s
+	output.X = values[0]
 	if r.isTarget(s.X) {
 		// A completed expression statement has no further operation.
-		for _, ref := range refs {
-			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{ref}})
+		for _, value := range values {
+			statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 		}
-		return before
+		return statements
 	}
-	return append(before, &copy)
+	return append(statements, &output)
 }
 
 func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
-	copy := *s
-	var before []ast.Stmt
-	copy.Lhs = make([]ast.Expr, len(s.Lhs))
+	output := *s
+	var statements []ast.Stmt
+	output.Lhs = make([]ast.Expr, len(s.Lhs))
 	if s.Tok == token.DEFINE {
-		copy.Lhs = s.Lhs
+		output.Lhs = s.Lhs
 	} else {
 		for i, lhs := range s.Lhs {
-			setup, place := r.place(lhs)
-			before = append(before, setup...)
-			copy.Lhs[i] = place
+			placeStatements, place := r.place(lhs)
+			statements = append(statements, placeStatements...)
+			output.Lhs[i] = place
 		}
 	}
-	valueSetup, values := r.operands(s.Rhs)
-	before = append(before, valueSetup...)
-	copy.Rhs = values
+	valueStatements, values := r.operands(s.Rhs)
+	statements = append(statements, valueStatements...)
+	output.Rhs = values
 	deferred := false
-	for _, place := range copy.Lhs {
+	for _, place := range output.Lhs {
 		deferred = deferred || r.deferredPlace(place)
 	}
 	if deferred {
-		var refs []ast.Expr
+		var savedValues []ast.Expr
 		for _, value := range values {
 			if tv := r.source.inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
-				refs = append(refs, value)
+				savedValues = append(savedValues, value)
 				continue
 			}
-			saveSetup, saved := r.save(value)
-			before = append(before, saveSetup...)
-			refs = append(refs, saved...)
+			saveStatements, saved := r.save(value)
+			statements = append(statements, saveStatements...)
+			savedValues = append(savedValues, saved...)
 		}
-		return append(before, r.orderedStores(copy.Lhs, refs, copy.Tok)...)
+		return append(statements, r.orderedStores(output.Lhs, savedValues, output.Tok)...)
 	}
-	return append(before, &copy)
+	return append(statements, &output)
 }
 
 func (r *rewrite) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
@@ -76,44 +76,45 @@ func (r *rewrite) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 			output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{spec}}})
 			continue
 		}
-		copy := *value
-		before, values := r.operands(value.Values)
-		copy.Values = values
-		output = append(output, before...)
-		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{&copy}}})
+		valueSpec := *value
+		statements, values := r.operands(value.Values)
+		valueSpec.Values = values
+		output = append(output, statements...)
+		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{&valueSpec}}})
 	}
 	return output
 }
 
 func (r *rewrite) ifStatement(s *ast.IfStmt) []ast.Stmt {
-	copy := *s
-	copy.Body = r.block(s.Body)
+	output := *s
+	output.Body = r.block(s.Body)
 	if s.Else != nil {
 		statements := r.statement(s.Else)
 		if len(statements) == 1 {
-			copy.Else = statements[0]
+			output.Else = statements[0]
 		} else {
-			copy.Else = &ast.BlockStmt{List: statements}
+			output.Else = &ast.BlockStmt{List: statements}
 		}
 	}
-	var setup []ast.Stmt
+	var initStatements []ast.Stmt
 	if s.Init != nil {
-		setup = r.header(s.Init)
+		initStatements = r.header(s.Init)
 	}
-	before, refs := r.expression(s.Cond)
-	copy.Cond = refs[0]
-	if len(before) == 0 && len(setup) <= 1 {
-		if len(setup) != 0 {
-			copy.Init = setup[0]
+	conditionStatements, conditionValues := r.expression(s.Cond)
+	output.Cond = conditionValues[0]
+	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
+		if len(initStatements) != 0 {
+			output.Init = initStatements[0]
 		}
-		return []ast.Stmt{&copy}
+		return []ast.Stmt{&output}
 	}
-	copy.Init = nil
-	return []ast.Stmt{&ast.BlockStmt{List: append(append(setup, before...), &copy)}}
+	output.Init = nil
+	statements := append(initStatements, conditionStatements...)
+	return []ast.Stmt{&ast.BlockStmt{List: append(statements, &output)}}
 }
 
 func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
-	copy := *s
+	output := *s
 	jump := r.hasGoto(s)
 	var inner *ast.Ident
 	if jump && r.hasLabelBranch(s.Stmt, s.Label.Name) {
@@ -134,8 +135,8 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 			attachControlLabel(statements, target, label)
 		}
 		if jump {
-			copy.Stmt = &ast.BlockStmt{List: statements}
-			return []ast.Stmt{&copy}
+			output.Stmt = &ast.BlockStmt{List: statements}
+			return []ast.Stmt{&output}
 		}
 		return statements
 	}
@@ -150,29 +151,29 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 	}
 	switch declaration := declaration.(type) {
 	case *ast.DeclStmt:
-		copy.Stmt = statements[0]
-		return append([]ast.Stmt{&copy}, statements[1:]...)
+		output.Stmt = statements[0]
+		return append([]ast.Stmt{&output}, statements[1:]...)
 	case *ast.AssignStmt:
 		if declaration.Tok == token.DEFINE {
-			copy.Stmt = statements[0]
-			return append([]ast.Stmt{&copy}, statements[1:]...)
+			output.Stmt = statements[0]
+			return append([]ast.Stmt{&output}, statements[1:]...)
 		}
 	}
 	if !jump {
 		if len(statements) == 1 {
 			if block, ok := statements[0].(*ast.BlockStmt); ok {
 				last := len(block.List) - 1
-				copy.Stmt = block.List[last]
-				block.List[last] = &copy
+				output.Stmt = block.List[last]
+				block.List[last] = &output
 				return statements
 			}
 		}
-		copy.Stmt = statements[len(statements)-1]
-		return append(statements[:len(statements)-1], &copy)
+		output.Stmt = statements[len(statements)-1]
+		return append(statements[:len(statements)-1], &output)
 	}
 	if inner != nil {
 		attachLabel(statements, inner)
 	}
-	copy.Stmt = &ast.BlockStmt{List: statements}
-	return []ast.Stmt{&copy}
+	output.Stmt = &ast.BlockStmt{List: statements}
+	return []ast.Stmt{&output}
 }

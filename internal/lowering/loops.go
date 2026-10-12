@@ -8,53 +8,59 @@ import (
 )
 
 func (r *rewrite) forStatement(s *ast.ForStmt) []ast.Stmt {
-	copy := *s
-	copy.Body = r.block(s.Body)
-	condition, refs := r.expression(s.Cond)
-	var post, init []ast.Stmt
+	output := *s
+	output.Body = r.block(s.Body)
+	conditionStatements, conditionValues := r.expression(s.Cond)
+	var postStatements []ast.Stmt
 	if s.Post != nil {
-		post = r.header(s.Post)
+		postStatements = r.header(s.Post)
 	}
+	var initStatements []ast.Stmt
 	if s.Init != nil {
-		init = r.header(s.Init)
+		initStatements = r.header(s.Init)
 	}
 	jumpingInit := r.initializerJumps(s)
-	if !jumpingInit && len(condition) == 0 && len(post) <= 1 && len(init) <= 1 {
-		if len(refs) != 0 {
-			copy.Cond = refs[0]
+	if !jumpingInit && len(conditionStatements) == 0 && len(postStatements) <= 1 && len(initStatements) <= 1 {
+		if len(conditionValues) != 0 {
+			output.Cond = conditionValues[0]
 		}
-		if len(post) != 0 {
-			copy.Post = post[0]
+		if len(postStatements) != 0 {
+			output.Post = postStatements[0]
 		}
-		if len(init) != 0 {
-			copy.Init = init[0]
+		if len(initStatements) != 0 {
+			output.Init = initStatements[0]
 		}
-		return []ast.Stmt{&copy}
+		return []ast.Stmt{&output}
 	}
-	var outer, body []ast.Stmt
+	var outerStatements []ast.Stmt
 	if jumpingInit {
-		outer, copy.Init = r.loopBindings(s.Init, init)
-	} else if len(init) != 0 {
-		outer = append(outer, init[:len(init)-1]...)
-		copy.Init = init[len(init)-1]
+		var loopInit ast.Stmt
+		outerStatements, loopInit = r.loopBindings(s.Init, initStatements)
+		output.Init = loopInit
+	} else if len(initStatements) != 0 {
+		outerStatements = append(outerStatements, initStatements[:len(initStatements)-1]...)
+		output.Init = initStatements[len(initStatements)-1]
 	}
-	if jumpingInit || len(post) != 0 {
+	var bodyStatements []ast.Stmt
+	if jumpingInit || len(postStatements) != 0 {
 		first := r.name()
-		outer = append(outer, variable(first, r.temporaryType(types.Typ[types.Bool], firstExpression(s)), boolean(true)))
+		outerStatements = append(outerStatements, variable(first, r.temporaryType(types.Typ[types.Bool], firstExpression(s)), boolean(true)))
 		firstBody := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN, Rhs: []ast.Expr{boolean(false)}}}
 		if jumpingInit {
-			firstBody = append(firstBody, init...)
+			firstBody = append(firstBody, initStatements...)
 		}
-		body = append(body, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: firstBody}, Else: &ast.BlockStmt{List: post}})
+		bodyStatements = append(bodyStatements, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: firstBody}, Else: &ast.BlockStmt{List: postStatements}})
 	}
-	body = append(body, condition...)
-	if len(refs) != 0 {
-		body = append(body, &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: refs[0]}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{Tok: token.BREAK}}}})
+	bodyStatements = append(bodyStatements, conditionStatements...)
+	if len(conditionValues) != 0 {
+		stop := &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: conditionValues[0]}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{Tok: token.BREAK}}}}
+		bodyStatements = append(bodyStatements, stop)
 	}
-	body = append(body, copy.Body)
-	copy.Cond, copy.Post = nil, nil
-	copy.Body = &ast.BlockStmt{List: body}
-	return []ast.Stmt{&ast.BlockStmt{List: append(outer, &copy)}}
+	bodyStatements = append(bodyStatements, output.Body)
+	output.Cond = nil
+	output.Post = nil
+	output.Body = &ast.BlockStmt{List: bodyStatements}
+	return []ast.Stmt{&ast.BlockStmt{List: append(outerStatements, &output)}}
 }
 
 // loopBindings keeps new variables in the Go loop header for per-iteration copies.
