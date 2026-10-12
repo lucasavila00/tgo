@@ -29,21 +29,7 @@ func TestReadablePropagation(t *testing.T) {
 			if !ok {
 				continue
 			}
-			switch function.Name.Name {
-			case "discarded", "blank":
-				checkDiscardedPropagation(t, function)
-				if function.Name.Name == "discarded" {
-					checkFormatBinding(t, function, "fmt")
-				}
-			case "shadowed", "closure":
-				checkFormatBinding(t, function, "fmt_tgo")
-			case "aliased":
-				checkFormatBinding(t, function, "format")
-			case "jumped":
-				if _, ok := function.Body.List[1].(*ast.BlockStmt); !ok {
-					t.Fatal("goto crosses an unprotected generated declaration")
-				}
-			}
+			checkReadableFunction(t, function)
 		}
 	}
 }
@@ -87,5 +73,24 @@ func checkFormatBinding(t *testing.T, function *ast.FuncDecl, prefix string) {
 	})
 	if !found {
 		t.Fatalf("%s has no generated error wrapper", function.Name.Name)
+	}
+}
+
+func checkReadableFunction(t *testing.T, function *ast.FuncDecl) {
+	t.Helper()
+	switch function.Name.Name {
+	case "discarded", "blank":
+		checkDiscardedPropagation(t, function)
+		if function.Name.Name == "discarded" {
+			checkFormatBinding(t, function, "fmt")
+		}
+	case "shadowed", "closure":
+		checkFormatBinding(t, function, "fmt_tgo")
+	case "aliased":
+		checkFormatBinding(t, function, "format")
+	case "jumped":
+		if _, ok := function.Body.List[1].(*ast.BlockStmt); !ok {
+			t.Fatal("goto crosses an unprotected generated declaration")
+		}
 	}
 }

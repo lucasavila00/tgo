@@ -204,15 +204,7 @@ func runInsertionFiles(t *testing.T, input, target string, after transpiler.Afte
 			t.Fatal(err)
 		}
 	}
-	for name, content := range extra {
-		path := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeInsertionDependencies(t, dir, extra)
 	source, err := transpiler.Load(dir, ".")
 	if err != nil {
 		t.Fatal(err)
@@ -253,4 +245,17 @@ func runInsertionFiles(t *testing.T, input, target string, after transpiler.Afte
 		t.Fatalf("run generated source: %v\n%s\n%s", err, output, files[filepath.Join(dir, "main.go")])
 	}
 	return string(output)
+}
+
+func writeInsertionDependencies(t *testing.T, dir string, extra map[string]string) {
+	t.Helper()
+	for name, content := range extra {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

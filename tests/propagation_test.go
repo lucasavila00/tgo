@@ -28,50 +28,7 @@ func TestPropagationFixtures(t *testing.T) {
 			continue
 		}
 		t.Run(fixture.Name(), func(t *testing.T) {
-			dir := filepath.Join("testdata/propagation", fixture.Name())
-			input, err := filepath.Abs(dir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			source := readFiles(t, input)
-			work := t.TempDir()
-			writeFiles(t, work, source)
-			transpiler.Compile(work)
-			files := readFiles(t, work)
-			inputs := 0
-			for name := range source {
-				if strings.HasSuffix(name, ".tgo") {
-					inputs++
-				}
-			}
-			if inputs == 0 {
-				t.Fatal("fixture has no TGo input")
-			}
-			checkPropagationSnapshots(t, input, source, files)
-			command := exec.Command("go", "run", ".")
-			command.Dir = work
-			actual, err := command.CombinedOutput()
-			if err != nil {
-				t.Fatalf("run generated source: %v\n%s", err, actual)
-			}
-			want, err := os.ReadFile(filepath.Join(dir, "stdout.txt"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(actual, want) {
-				t.Fatalf("output: %q, want %q", actual, want)
-			}
-			for name := range files {
-				if strings.HasSuffix(name, "_test.go") {
-					command := exec.Command("go", "test", "./...")
-					command.Dir = work
-					actual, err := command.CombinedOutput()
-					if err != nil {
-						t.Fatalf("generated tests: %v\n%s", err, actual)
-					}
-					break
-				}
-			}
+			checkPropagationFixture(t, fixture.Name())
 		})
 	}
 }
@@ -163,4 +120,52 @@ func copyFixture(t *testing.T, dir string) string {
 	work := t.TempDir()
 	writeFiles(t, work, readFiles(t, dir))
 	return work
+}
+
+func checkPropagationFixture(t *testing.T, name string) {
+	t.Helper()
+	dir := filepath.Join("testdata/propagation", name)
+	input, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := readFiles(t, input)
+	work := t.TempDir()
+	writeFiles(t, work, source)
+	transpiler.Compile(work)
+	files := readFiles(t, work)
+	inputs := 0
+	for name := range source {
+		if strings.HasSuffix(name, ".tgo") {
+			inputs++
+		}
+	}
+	if inputs == 0 {
+		t.Fatal("fixture has no TGo input")
+	}
+	checkPropagationSnapshots(t, input, source, files)
+	command := exec.Command("go", "run", ".")
+	command.Dir = work
+	actual, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("run generated source: %v\n%s", err, actual)
+	}
+	want, err := os.ReadFile(filepath.Join(dir, "stdout.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(actual, want) {
+		t.Fatalf("output: %q, want %q", actual, want)
+	}
+	for name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			command := exec.Command("go", "test", "./...")
+			command.Dir = work
+			actual, err := command.CombinedOutput()
+			if err != nil {
+				t.Fatalf("generated tests: %v\n%s", err, actual)
+			}
+			break
+		}
+	}
 }

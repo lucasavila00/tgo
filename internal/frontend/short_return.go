@@ -14,8 +14,11 @@ type ShortReturn struct {
 }
 
 // prepareShortReturn wraps one operand list without adding a source function.
-func (s *mappedSource) prepareShortReturn(original *token.File, used map[string]bool,
-	records map[string]ShortReturn) (bool, error) {
+func (s *mappedSource) prepareShortReturn(
+	original *token.File,
+	used map[string]bool,
+	records map[string]ShortReturn,
+) (bool, error) {
 	tokens := sourceTokens(s.text)
 	for returnIndex := len(tokens) - 1; returnIndex >= 0; returnIndex-- {
 		if tokens[returnIndex].kind != token.RETURN {
@@ -67,8 +70,7 @@ func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (i
 	leadingOperator := false
 	for i := returnIndex + 1; i < len(tokens); i++ {
 		currentToken := tokens[i]
-		atStatementEnd := currentToken.depth == returnDepth && (currentToken.kind == token.SEMICOLON ||
-			currentToken.kind == token.RBRACE)
+		atStatementEnd := returnStatementEnd(currentToken, returnDepth)
 		if currentToken.kind == token.EOF || atStatementEnd {
 			if leadingOperator && i == returnIndex+3 {
 				return operatorOffset, 0, fmt.Errorf("short return requires an error operand")
@@ -91,11 +93,7 @@ func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (i
 		if leadingOperator {
 			continue
 		}
-		nextToken := tokens[i+1]
-		atNextStatement := nextToken.kind == token.EOF || nextToken.kind == token.SEMICOLON ||
-			nextToken.kind == token.RBRACE
-		hasNewline := strings.Contains(s.text[secondDot.end:nextToken.offset], "\n")
-		if atNextStatement || hasNewline {
+		if s.shortReturnEndsAfter(tokens, i) {
 			return operatorOffset, tokens[i].end, nil
 		}
 		return operatorOffset, 0, fmt.Errorf("short return permits .. only before or after its operands")
@@ -125,4 +123,16 @@ func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, returnEnd i
 			return returnEnd
 		}
 	}
+}
+
+func (s *mappedSource) shortReturnEndsAfter(tokens []sourceToken, secondDotIndex int) bool {
+	secondDot := tokens[secondDotIndex]
+	nextToken := tokens[secondDotIndex+1]
+	atNextStatement := nextToken.kind == token.EOF || nextToken.kind == token.SEMICOLON || nextToken.kind == token.RBRACE
+	hasNewline := strings.Contains(s.text[secondDot.end:nextToken.offset], "\n")
+	return atNextStatement || hasNewline
+}
+
+func returnStatementEnd(current sourceToken, depth int) bool {
+	return current.depth == depth && (current.kind == token.SEMICOLON || current.kind == token.RBRACE)
 }

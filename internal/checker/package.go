@@ -47,16 +47,19 @@ type Loader struct {
 
 // NewLoader records dependency exports before any source package is checked.
 // Every source check uses the module's selected Go target architecture.
-func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string,
-	used map[string]bool) (*Loader, error) {
+func NewLoader(
+	root string,
+	roots []*packages.Package,
+	tgoFiles map[string]string,
+	used map[string]bool,
+) (*Loader, error) {
 	sizes, err := targetSizes(root)
 	if err != nil {
 		return nil, err
 	}
 	loader := &Loader{Root: root, TGoFiles: tgoFiles, Used: used,
 		packages: make(map[string]*Package), checking: make(map[string]bool),
-		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: token.NewFileSet(),
-		sizes: sizes}
+		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: token.NewFileSet(), sizes: sizes}
 	packages.Visit(roots, nil, func(pkg *packages.Package) {
 		if pkg.ExportFile != "" {
 			loader.exports[pkg.PkgPath] = pkg.ExportFile
@@ -99,46 +102,9 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 		filenames = metadata.GoFiles
 	}
 	for _, filename := range filenames {
-		input, err := os.ReadFile(filename)
+		file, err := loader.parseFile(filename, pkg)
 		if err != nil {
 			return nil, err
-		}
-		name, err := filepath.Rel(loader.Root, filename)
-		if err != nil {
-			return nil, err
-		}
-		var file *ast.File
-		if sourceName := loader.TGoFiles[name]; sourceName != "" {
-			parsed, err := frontend.ParseFile(loader.fset, filename, sourceName, input, loader.Used)
-			if err != nil {
-				return nil, err
-			}
-			file = parsed.File
-			for name, record := range parsed.Comprehensions {
-				pkg.Operations[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges,
-					Output: record.Output, Position: record.Position}
-				pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
-				ast.Inspect(file, func(node ast.Node) bool {
-					if call, ok := node.(*ast.CallExpr); ok {
-						if id, ok := call.Fun.(*ast.Ident); ok && id.Name == name {
-							pkg.Comprehensions[call] = record
-						}
-					}
-					return true
-				})
-			}
-			pkg.recordShortReturns(file, parsed.ShortReturns)
-			for name, pos := range parsed.Conditionals {
-				pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
-			}
-			for name, op := range parsed.Propagations {
-				pkg.Operations[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
-			}
-		} else {
-			file, err = parser.ParseFile(loader.fset, filename, input, parser.ParseComments|parser.SkipObjectResolution)
-			if err != nil {
-				return nil, err
-			}
 		}
 		pkg.Syntax = append(pkg.Syntax, file)
 	}
@@ -146,10 +112,12 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 }
 
 func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package, error) {
-	config := types.Config{TGo: pkg.Operations, Importer: packageImporter{loader, metadata},
-		Sizes: loader.sizes, Error: func(err error) {
-			pkg.Errors = append(pkg.Errors, err)
-		}}
+	config := types.Config{
+		TGo:      pkg.Operations,
+		Importer: packageImporter{loader, metadata},
+		Sizes:    loader.sizes,
+		Error:    func(err error) { pkg.Errors = append(pkg.Errors, err) },
+	}
 	if metadata.Module != nil {
 		config.GoVersion = "go" + metadata.Module.GoVersion
 	}
@@ -193,22 +161,27 @@ func (importer packageImporter) Import(path string) (*types.Package, error) {
 
 func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode) (*types.Package, error) {
 	dependency := importer.metadata.Imports[path]
-	if dependency != nil && dependency.Module != nil && (dependency.Module.Main ||
-		strings.HasPrefix(dependency.ID, dependency.PkgPath+" [")) {
+	if dependency != nil && dependency.Module != nil &&
+		(dependency.Module.Main || strings.HasPrefix(dependency.ID, dependency.PkgPath+" [")) {
 		pkg, err := importer.loader.Check(dependency)
 		if err != nil {
 			return nil, err
 		}
 		return pkg.Types, nil
 	}
-	return gcimporter.Import(importer.loader.fset, importer.loader.imports, path, dir,
+	return gcimporter.Import(
+		importer.loader.fset,
+		importer.loader.imports,
+		path,
+		dir,
 		func(path string) (io.ReadCloser, error) {
 			filename := importer.loader.exports[path]
 			if filename == "" {
 				return nil, fmt.Errorf("no compiled export data for %s", path)
 			}
 			return os.Open(filename)
-		})
+		},
+	)
 }
 
 // CheckGo checks ordinary Go syntax separately from its stock Go type objects.
@@ -233,8 +206,11 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 
 func (pkg *Package) recordShortReturns(file *ast.File, records map[string]frontend.ShortReturn) {
 	for name, record := range records {
-		pkg.Operations[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess,
-			Position: record.Position}
+		pkg.Operations[name] = types.TGoOperation{
+			ShortReturn: true,
+			ZeroSuccess: record.ZeroSuccess,
+			Position:    record.Position,
+		}
 	}
 	ast.Inspect(file, func(node ast.Node) bool {
 		statement, isReturn := node.(*ast.ReturnStmt)
@@ -255,4 +231,57 @@ func (pkg *Package) recordShortReturns(file *ast.File, records map[string]fronte
 		}
 		return true
 	})
+}
+
+func (loader *Loader) parseFile(filename string, pkg *Package) (*ast.File, error) {
+	input, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	name, err := filepath.Rel(loader.Root, filename)
+	if err != nil {
+		return nil, err
+	}
+	var file *ast.File
+	if sourceName := loader.TGoFiles[name]; sourceName != "" {
+		parsed, err := frontend.ParseFile(loader.fset, filename, sourceName, input, loader.Used)
+		if err != nil {
+			return nil, err
+		}
+		file = parsed.File
+		pkg.recordParsedFile(file, parsed)
+	} else {
+		file, err = parser.ParseFile(loader.fset, filename, input, parser.ParseComments|parser.SkipObjectResolution)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return file, nil
+}
+
+func (pkg *Package) recordParsedFile(file *ast.File, parsed *frontend.Parsed) {
+	for name, record := range parsed.Comprehensions {
+		pkg.Operations[name] = types.TGoOperation{
+			Comprehension: true,
+			Ranges:        record.Ranges,
+			Output:        record.Output,
+			Position:      record.Position,
+		}
+		pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
+		ast.Inspect(file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok && id.Name == name {
+					pkg.Comprehensions[call] = record
+				}
+			}
+			return true
+		})
+	}
+	pkg.recordShortReturns(file, parsed.ShortReturns)
+	for name, pos := range parsed.Conditionals {
+		pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
+	}
+	for name, op := range parsed.Propagations {
+		pkg.Operations[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
+	}
 }
