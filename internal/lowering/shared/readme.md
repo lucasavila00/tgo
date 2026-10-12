@@ -6,7 +6,7 @@
 import "github.com/lucasavila00/tgo/internal/lowering/shared"
 ```
 
-Package shared contains common lowering operations and typed values.
+Package shared contains typed values for common lowering operations.
 
 Value keeps checked types and source identities with generated expressions. Result keeps statements with their values until a caller builds Go syntax. This package does not import lowering rules.
 
