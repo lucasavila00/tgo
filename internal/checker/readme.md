@@ -14,13 +14,13 @@ It checks the syntax from the [frontend](<https://github.com/lucasavila00/tgo/bl
 
 For a function fetch that returns \(Value, error\), fetch\(\)\! provides a Value to the surrounding expression. The checker verifies the error result and the enclosing function's return type. It also checks nested uses, such as outer\(inner\(\)\!\)\!, within the same source package check.
 
-An if expression gets its type from its use or from the values in its branches. For example, this assignment requires both branch values to fit int:
+If and switch expressions get their type from their use or branch values. For example, this assignment requires both branch values to fit int:
 
 ```
 var count int = if ready { 1 } else { 0 }
 ```
 
-A branch that returns from the function does not supply a value. The shared [control flow analysis](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) determines whether a branch can reach its end. Returns, defers, and jumps inside added expressions belong to the source function, even when the frontend uses temporary function syntax to represent them.
+Switch cases keep Go scopes, including the types of type\-switch bindings. A branch that returns from the function does not supply a value. The shared [control flow analysis](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) determines whether a branch can reach its end. Returns, defers, and jumps inside added expressions belong to the source function, even when the frontend uses temporary function syntax to represent them.
 
 A comprehension declares the slice or map type that it builds. The checker uses that type to check each output value. Names from a range clause are available to later clauses and the output, but not outside the comprehension.
 
@@ -77,7 +77,7 @@ type Package struct {
     Errors         []error
     Operations     map[string]types.TGoOperation
     Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-    Conditionals   map[*ast.CallExpr]*ast.IfStmt
+    Conditionals   map[*ast.CallExpr]ast.Stmt
     ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 ```

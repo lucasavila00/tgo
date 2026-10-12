@@ -30,7 +30,14 @@ types, nil, constants, generic inference, and runtime overflow.
 
 ## Evidence
 
-Planned: extend `TestValueExpressions`; run
-`go test ./tests -run '^TestValueExpressions$'`.
-Passing fixtures must match independent references. The feature is not
-implemented.
+`TestValueExpressions` includes `Switch`, `SwitchTypes`, and `SwitchControl`.
+Each input has a generated snapshot, expected output, and an independent Go
+reference. Run `go test ./tests -run '^TestValueExpressions$'`.
+
+The source checker tests accepted forms and rejected inputs, including source
+positions. The parser tests nested switches and source positions. Existing
+if-expression and lowering tests check regression behavior.
+
+Switch expressions with `default` are implemented. Enum declarations are not
+implemented. Verified enum coverage with `exhaustive:` remains a dependency;
+this implementation requires `default`.

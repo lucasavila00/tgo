@@ -155,16 +155,16 @@ func deleteKeyType(typ Type) Type {
 
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
 	// Branch statements can change state even without a call or receive.
-	// Array len, cap, and range must therefore evaluate an if value.
+	// Array len, cap, and range must therefore evaluate a conditional value.
 	check.hasCallOrRecv = true
 	x.expr = call
 	x.typ_ = Typ[Invalid]
-	body := call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
+	body := call.Args[0].(*ast.FuncLit).Body.List[0]
 	context := hint
 	if target != nil {
 		context = target.typ
 	}
-	values := check.conditionalBranches(body, context)
+	values := check.conditionalStatement(body, context)
 	if check.conditionalValues == nil {
 		check.conditionalValues = make(map[*ast.CallExpr][]*operand)
 	}
@@ -196,7 +196,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	}
 	if context != nil {
 		for _, branch := range values {
-			check.assignment(branch, context, "if expression branch")
+			check.assignment(branch, context, "conditional expression branch")
 			if !branch.isValid() {
 				return expression
 			}
@@ -211,7 +211,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 			continue
 		}
 		if typ != nil && !Identical(typ, candidate) {
-			check.error(call, IncompatibleAssign, "if branch types differ; add an explicit type annotation")
+			check.error(call, IncompatibleAssign, "conditional branch types differ; add an explicit type annotation")
 			return expression
 		}
 		typ = candidate
@@ -227,7 +227,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 		typ = untypedConditionalType(values)
 	}
 	if typ == nil {
-		check.error(call, IncompatibleAssign, "if result type is unknown; add an explicit type annotation")
+		check.error(call, IncompatibleAssign, "conditional result type is unknown; add an explicit type annotation")
 		return expression
 	}
 	x.mode_, x.typ_ = value, typ
@@ -260,7 +260,7 @@ func untypedConditionalType(values []*operand) Type {
 
 func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
 	for _, branch := range check.conditionalValues[call] {
-		check.assignment(branch, typ, "if expression branch")
+		check.assignment(branch, typ, "conditional expression branch")
 	}
 }
 
@@ -296,11 +296,15 @@ func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) [
 }
 
 func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*operand {
-	check.openScope(body, "if expression branch")
+	check.openScope(body, "conditional expression branch")
 	defer check.closeScope()
+	return check.conditionalBlockValues(body, context)
+}
+
+func (check *Checker) conditionalBlockValues(body *ast.BlockStmt, context Type) []*operand {
 	list := trimTrailingEmptyStmts(body.List)
 	if len(list) == 0 {
-		check.error(body, InvalidSyntaxTree, "if expression branch requires a final value")
+		check.error(body, InvalidSyntaxTree, "conditional expression branch requires a final value")
 		return []*operand{{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]}}
 	}
 	check.stmtList(check.statementContext, list[:len(list)-1])
@@ -341,19 +345,20 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 		check.hasLabel = true
 		last = labelled.Stmt
 	}
-	if conditional, ok := last.(*ast.IfStmt); ok {
-		return check.conditionalBranches(conditional, context)
+	switch last.(type) {
+	case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+		return check.conditionalStatement(last, context)
 	}
 	if statement, ok := last.(*ast.ExprStmt); ok {
 		branch := new(operand)
-		check.rawExpr(newTarget(context, "if expression branch"), branch, statement.X, nil, false)
+		check.rawExpr(newTarget(context, "conditional expression branch"), branch, statement.X, nil, false)
 		check.exclude(branch, 1<<builtin|1<<typexpr)
 		if branch.mode() == novalue && check.isTerminating(statement, "") {
 			return nil
 		}
 		check.singleValue(branch)
 		if branch.mode() == novalue && reachable {
-			check.error(statement, InvalidSyntaxTree, "if expression branch requires one value")
+			check.error(statement, InvalidSyntaxTree, "conditional expression branch requires one value")
 			branch.invalidate()
 		}
 		return []*operand{branch}
@@ -365,7 +370,7 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 	if branch, ok := last.(*ast.BranchStmt); ok && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {
 		return nil
 	}
-	check.error(last, InvalidSyntaxTree, "if expression branch requires a final value")
+	check.error(last, InvalidSyntaxTree, "conditional expression branch requires a final value")
 	return []*operand{{expr: &ast.BadExpr{From: last.Pos()}, typ_: Typ[Invalid]}}
 }
 
@@ -476,7 +481,7 @@ func (check *Checker) prepareConditionalArgument(expr ast.Expr) {
 		check.inferConditionals = make(map[*ast.CallExpr]bool)
 	}
 	check.inferConditionals[call] = true
-	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt))
+	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0])
 }
 
 func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
@@ -486,6 +491,16 @@ func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
 		if statement.Else != nil {
 			check.prepareConditionalTails(statement.Else)
 		}
+	case *ast.SwitchStmt:
+		for _, clause := range statement.Body.List {
+			check.prepareConditionalTails(clause)
+		}
+	case *ast.TypeSwitchStmt:
+		for _, clause := range statement.Body.List {
+			check.prepareConditionalTails(clause)
+		}
+	case *ast.CaseClause:
+		check.prepareConditionalTails(&ast.BlockStmt{List: statement.Body})
 	case *ast.BlockStmt:
 		if list := trimTrailingEmptyStmts(statement.List); len(list) != 0 {
 			check.prepareConditionalTails(list[len(list)-1])
@@ -597,6 +612,89 @@ func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.BranchStmt:
 		if node.Tok == token.CONTINUE && node.Label == nil && visitor.loops == 0 {
 			visitor.check.error(node, MisplacedContinue, "continue cannot advance a range before its collection is computed")
+		}
+	}
+	return visitor
+}
+
+type conditionalCase struct {
+	context Type
+	values  []*operand
+}
+
+func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*operand {
+	if statement, ok := statement.(*ast.IfStmt); ok {
+		return check.conditionalBranches(statement, context)
+	}
+	var switchBody *ast.BlockStmt
+	switch statement := statement.(type) {
+	case *ast.SwitchStmt:
+		switchBody = statement.Body
+	case *ast.TypeSwitchStmt:
+		switchBody = statement.Body
+	}
+	if check.conditionalCases == nil {
+		check.conditionalCases = make(map[*ast.CaseClause]*conditionalCase)
+	}
+	hasDefaultCase := false
+	for _, caseStatement := range switchBody.List {
+		clause := caseStatement.(*ast.CaseClause)
+		hasDefaultCase = hasDefaultCase || clause.List == nil
+		check.conditionalCases[clause] = &conditionalCase{context: context}
+	}
+	if !hasDefaultCase {
+		check.error(statement, InvalidSyntaxTree, "switch expression requires default")
+	}
+	// The first visited switch is the value switch, not a permitted break target.
+	ast.Walk(valueSwitchBreakVisitor{check: check, nestedBreakTargets: -1}, statement)
+	check.stmt(check.statementContext, statement)
+	var branchValues []*operand
+	for _, caseStatement := range switchBody.List {
+		clause := caseStatement.(*ast.CaseClause)
+		branchValues = append(branchValues, check.conditionalCases[clause].values...)
+		delete(check.conditionalCases, clause)
+	}
+	if !hasDefaultCase {
+		invalidBranch := &operand{expr: &ast.BadExpr{From: switchBody.Pos()}, typ_: Typ[Invalid]}
+		branchValues = append(branchValues, invalidBranch)
+	}
+	return branchValues
+}
+
+func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*operand {
+	enclosingContext := check.statementContext
+	check.statementContext &^= breakOk | fallthroughOk | finalSwitchCase
+	defer func() { check.statementContext = enclosingContext }()
+	caseBody := &ast.BlockStmt{Lbrace: clause.Colon, List: clause.Body, Rbrace: clause.End()}
+	branchValues := check.conditionalBlockValues(caseBody, context)
+	if check.Info != nil {
+		if check.TGoCases == nil {
+			check.TGoCases = make(map[*ast.CaseClause]bool)
+		}
+		check.TGoCases[clause] = check.TGoBranches[caseBody]
+	}
+	return branchValues
+}
+
+type valueSwitchBreakVisitor struct {
+	check              *Checker
+	nestedBreakTargets int
+}
+
+func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
+	switch node := node.(type) {
+	case nil, *ast.FuncLit:
+		return nil
+	case *ast.CallExpr:
+		if body := visitor.check.operationStatements(node); body != nil {
+			ast.Walk(visitor, body)
+			return nil
+		}
+	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
+		visitor.nestedBreakTargets++
+	case *ast.BranchStmt:
+		if node.Tok == token.BREAK && node.Label == nil && visitor.nestedBreakTargets == 0 {
+			visitor.check.error(node, InvalidSyntaxTree, "break cannot target a switch expression")
 		}
 	}
 	return visitor

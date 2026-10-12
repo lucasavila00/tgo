@@ -82,6 +82,8 @@
 //	}
 //	name := result
 //
+// Switch expressions use an ordinary Go switch and the same result storage.
+// The tag runs once. Cases are checked in order; default waits until they fail.
 // A branch that returns or jumps out needs no result assignment. A comprehension
 // becomes range loops that add values to a result slice or map. Inside a source
 // function, these rewrites keep statements in that function. Returns, deferred

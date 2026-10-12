@@ -77,11 +77,19 @@ func conditionalEnd(filename, source string, start int, tokens []sourceToken) in
 		if err != nil {
 			continue
 		}
-		if len(parsed.Decls) == 1 {
-			if function, ok := parsed.Decls[0].(*ast.FuncDecl); ok && len(function.Body.List) == 1 {
-				if conditional, ok := function.Body.List[0].(*ast.IfStmt); ok && set.Position(conditional.End()).Offset-len(prefix) == end-start {
-					return end
-				}
+		if len(parsed.Decls) != 1 {
+			continue
+		}
+		function, isFunction := parsed.Decls[0].(*ast.FuncDecl)
+		if !isFunction || len(function.Body.List) != 1 {
+			continue
+		}
+		conditional := function.Body.List[0]
+		switch conditional.(type) {
+		case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+			parsedEnd := set.Position(conditional.End()).Offset - len(prefix)
+			if parsedEnd == end-start {
+				return end
 			}
 		}
 	}
@@ -97,7 +105,7 @@ type conditionalEdit struct {
 // is prepared before its containing expression; ambiguous syntax uses AST recovery.
 func (s *mappedSource) prepareConditionals(filename string, original *token.File, used map[string]bool, conditionals map[string]token.Position) bool {
 	var starts []int
-	for offset, operand := range expressionIfTokens(s.text) {
+	for offset, operand := range expressionConditionalTokens(s.text) {
 		if operand {
 			starts = append(starts, offset)
 		}
