@@ -36,14 +36,14 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }
 
-func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]ast.Stmt, []ast.Expr) {
-	result := r.name()
-	typ := types.Default(r.input.source.inventory.Checked.TypesInfo.TypeOf(call))
-	declaration := variable(result, r.temporaryType(typ, call), nil)
-	r.recordTemporary(result, typ, call)
-	body := r.conditionalStatement(statement, result)
+func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) ([]ast.Stmt, []ast.Expr) {
+	resultVariable := r.name()
+	resultType := types.Default(r.input.source.inventory.Checked.TypesInfo.TypeOf(call))
+	declaration := variable(resultVariable, r.temporaryType(resultType, call), nil)
+	r.recordTemporary(resultVariable, resultType, call)
+	branchStatements := r.valueStatement(statement, resultVariable)
 	r.request.lowered[call] = true
-	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}
+	return append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable}
 }
 
 func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
@@ -112,7 +112,7 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 			tail = label.Stmt
 		}
 		switch tail.(type) {
-		case *ast.ExprStmt, *ast.IfStmt:
+		case *ast.ExprStmt, *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
 		default:
 			return r.statement(statement)
 		}
@@ -126,6 +126,10 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 		return []ast.Stmt{&labeled}
 	case *ast.IfStmt:
 		return r.conditionalStatement(statement, result)
+	case *ast.SwitchStmt:
+		return r.valueSwitchStatement(statement, result)
+	case *ast.TypeSwitchStmt:
+		return r.valueTypeSwitchStatement(statement, result)
 	case *ast.ExprStmt:
 		if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 			statements, values := r.expression(statement.X)
@@ -145,4 +149,16 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 		}
 	}
 	return r.statement(statement)
+}
+
+func (r *rewrite) valueStatement(statement ast.Stmt, result *ast.Ident) []ast.Stmt {
+	switch statement := statement.(type) {
+	case *ast.IfStmt:
+		return r.conditionalStatement(statement, result)
+	case *ast.SwitchStmt:
+		return r.valueSwitchStatement(statement, result)
+	case *ast.TypeSwitchStmt:
+		return r.valueTypeSwitchStatement(statement, result)
+	}
+	return nil
 }

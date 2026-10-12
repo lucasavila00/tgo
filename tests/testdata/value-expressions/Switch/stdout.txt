@@ -1,0 +1,12 @@
+package two
+init tag case1 case2 body 20
+tag conditional case2 default 99
+false true 20
+4
+4
+0
+first middle last 6
+false
+loop 0 loop 1 loop 
+return defer value after defer 7 8
+10

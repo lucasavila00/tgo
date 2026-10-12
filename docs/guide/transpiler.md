@@ -102,6 +102,55 @@ cannot be a `const` initializer or an array length. Ordinary if statements keep
 Go behavior. A `continue` cannot target a range while its collection is still
 being computed.
 
+## Use a switch expression as a value
+
+A switch value selects one case and uses its final expression:
+
+```text
+message := switch code {
+case 200:
+    audit(code)
+    "ok"
+default:
+    "error"
+}
+```
+
+Run any initializer before the tag, and evaluate the tag once. Cases are
+checked in Go order. The first match selects the branch. A `default` branch
+runs only after all cases fail, even if it appears before other cases.
+
+Switch values support Go headers, including an initializer such as
+`switch code := readCode(); code`, an expressionless header such as `switch`,
+and a type switch:
+
+```text
+size := switch item := input.(type) {
+case string:
+    len(item)
+case []byte:
+    len(item)
+default:
+    0
+}
+```
+
+Initializer names stay inside the switch. Type-switch names keep their Go
+types of each case. Each completing path supplies one final value after any
+preceding statements. A return or an outer jump needs no final value. Returns,
+defers, and propagation belong to the enclosing function.
+
+Switch values use the same type rules as if values. A use or conversion can
+supply the result type. Otherwise, typed branch values must have the same type,
+with Go's rules for untyped constants. `nil` cannot establish a type on its own.
+If every branch exits, context or conversion must supply the type. A switch value is
+not a constant and cannot be a `const` initializer or an array length.
+
+A switch value currently requires `default`. Verified enum coverage with
+`exhaustive:` depends on enum declarations, which are not yet implemented.
+A value switch cannot use `fallthrough` between its branches or `break` that
+targets the value switch. Breaks in nested loops and ordinary switch statements keep Go behavior.
+
 ## Build a slice or map
 
 State the collection type, then the output, range clauses, and filters:
@@ -122,7 +171,7 @@ Outputs follow Go assignment rules for the declared element, key, and value
 types. Named collection types and type parameters with a common slice or map
 shape are supported.
 
-Outputs, sources, and filters can use `if` values and propagation. Returns and
+Outputs, sources, and filters can use `if` and `switch` values and propagation. Returns and
 defers belong to the enclosing function. In a filter or output, an unlabeled
 `break` or `continue` targets the current generator. In a generator's source,
 a jump can target only an already active outer construct.

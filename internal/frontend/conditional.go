@@ -8,10 +8,10 @@ import (
 )
 
 func conditionalStart(file *ast.File, temporary *token.FileSet, source string) int {
-	candidates := expressionIfTokens(source)
+	candidates := expressionConditionalTokens(source)
 	start := -1
-	// Prepare inner operands first. Parser recovery can truncate an outer if
-	// when another if value remains inside parentheses in its branch.
+	// Prepare inner operands first. Parser recovery can truncate an outer
+	// conditional when a nested value remains in its branch.
 	for offset, operand := range candidates {
 		if operand && offset > start {
 			start = offset
@@ -33,7 +33,15 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr, *ast.SliceExpr:
 				syntaxOperand = true
 			}
-			if offset+2 <= len(source) && source[offset:offset+2] == "if" && (candidates[offset] || syntaxOperand) && offset > start {
+			startsConditional := false
+			if offset+2 <= len(source) {
+				startsConditional = source[offset:offset+2] == "if"
+			}
+			if offset+6 <= len(source) {
+				startsConditional = startsConditional || source[offset:offset+6] == "switch"
+			}
+			canStartOperand := candidates[offset] || syntaxOperand
+			if startsConditional && canStartOperand && offset > start {
 				start = offset
 			}
 		}
@@ -46,7 +54,7 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool, conditionals map[string]token.Position) error {
 	end := conditionalEnd(filename, s.text, start, sourceTokens(s.text))
 	if end < 0 {
-		return fmt.Errorf("%s: invalid if expression", original.Position(original.Pos(s.offsets[start])))
+		return fmt.Errorf("%s: invalid conditional expression", original.Position(original.Pos(s.offsets[start])))
 	}
 	name := ""
 	for n := 1; ; n++ {
@@ -65,9 +73,9 @@ func (s *mappedSource) wrapConditional(filename string, original *token.File, st
 	return nil
 }
 
-// expressionIfTokens distinguishes operand tokens from ordinary if statements.
+// expressionConditionalTokens distinguishes operand tokens from conditional statements.
 // Parser recovery after a bad operand can report later statements as operands.
-func expressionIfTokens(source string) map[int]bool {
+func expressionConditionalTokens(source string) map[int]bool {
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, len(source))
 	var scan scanner.Scanner
@@ -79,7 +87,7 @@ func expressionIfTokens(source string) map[int]bool {
 		if current == token.EOF {
 			return result
 		}
-		if current == token.IF {
+		if current == token.IF || current == token.SWITCH {
 			switch previous {
 			case token.ASSIGN, token.DEFINE, token.COMMA,
 				token.LPAREN, token.LBRACK, token.RETURN, token.RANGE,

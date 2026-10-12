@@ -108,7 +108,7 @@ func (r *rewrite) checkLoweredOperations() error {
 	}
 	for call := range r.input.conditionals {
 		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: if expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
+			return fmt.Errorf("%s: conditional expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
 	return nil

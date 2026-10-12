@@ -11,11 +11,12 @@
 // enclosing function's return type. It also checks nested uses, such as
 // outer(inner()!)!, within the same source package check.
 //
-// An if expression gets its type from its use or from the values in its
-// branches. For example, this assignment requires both branch values to fit int:
+// If and switch expressions get their type from their use or branch values.
+// For example, this assignment requires both branch values to fit int:
 //
 //	var count int = if ready { 1 } else { 0 }
 //
+// Switch cases keep Go scopes, including the types of type-switch bindings.
 // A branch that returns from the function does not supply a value. The shared
 // [control flow analysis] determines whether a branch can reach its end. Returns,
 // defers, and jumps inside added expressions belong to the source function,

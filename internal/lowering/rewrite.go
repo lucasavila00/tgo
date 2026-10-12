@@ -25,7 +25,7 @@ type loweringInput struct {
 	after          After
 	propagations   map[ast.Expr]Propagation
 	comprehensions map[*ast.CallExpr]*frontend.Comprehension
-	conditionals   map[*ast.CallExpr]*ast.IfStmt
+	conditionals   map[*ast.CallExpr]ast.Stmt
 	shortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 

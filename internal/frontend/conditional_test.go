@@ -188,3 +188,33 @@ func TestConditionalBatchIndependentOperands(t *testing.T) {
 		t.Fatalf("if values: %d, want 64", len(parsed.Conditionals))
 	}
 }
+
+func TestParseSwitchExpressions(t *testing.T) {
+	for _, source := range []string{
+		`func f(n int) int {return switch n {case 1: 2; default: 3}}`,
+		`func f(n int) {use(switch x:=n; x {case 1: x; default: 3})}`,
+		`func f(n int) {use(switch {case n>0: 1; default: 0})}`,
+		`func f(v any) {use(switch x:=v.(type) {case int: x; default: 0})}`,
+		`func f(n int) {use(switch n {case 1: switch n {case 1: 2; default: 3}; default: 4})}`,
+		`func f(n int) {use(if n>0 {switch n {case 1: 2; default: 3}} else {4})}`,
+		`func f(n int) {use(switch n {case if n>0 {1} else {2}: 3; default: 4})}`,
+		`func f(n int) {switch n {case 1: use(1); default: use(2)}; use(switch n {case 1: 2; default: 3})}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			input := "package p\n" + source
+			set := token.NewFileSet()
+			parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(parsed.Conditionals) == 0 {
+				t.Fatal("no conditional expressions")
+			}
+			for _, pos := range parsed.Conditionals {
+				if !strings.HasPrefix(input[pos.Offset:], "switch") && !strings.HasPrefix(input[pos.Offset:], "if") {
+					t.Fatalf("source position: %v", pos)
+				}
+			}
+		})
+	}
+}
