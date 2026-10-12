@@ -13,6 +13,9 @@ Revive supplies style checks. The formatter checks Go formatting.
 Go source lines are limited to 120 characters. Split long calls, conditions,
 and literals at clear boundaries.
 
+Each function has a cognitive complexity limit of 20. This check counts nested
+branches and loops. Split complex work into named steps.
+
 Each function is limited to 100 lines, including comments. Each tracked Go or
 TGo source file is limited to 700 lines, including comments and blank lines.
 Split work into steps with clear inputs and results when a limit is exceeded.
