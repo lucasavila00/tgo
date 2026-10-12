@@ -9,61 +9,8 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-type returnFrame struct {
-	function ast.Node
-	typ      *ast.FuncType
-	prepared bool
-	prefix   []ast.Stmt
-	values   []ast.Expr
-}
-
-func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType,
-	*ast.BlockStmt) {
-	functionRewrite := &rewrite{
-		input:         r.input,
-		request:       r.request,
-		file:          r.file,
-		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}, hasGoto: r.functionHasGoto(body)},
-	}
-	output := functionRewrite.block(body)
-	if functionRewrite.functionState.frame.prepared {
-		output.List = append(functionRewrite.functionState.frame.prefix, output.List...)
-	}
-	if functionRewrite.input.source.inventory.Checked.TypesInfo.TGoReturnBlocks[body] {
-		output = functionRewrite.returnBlock(typ, output)
-	}
-	if aliases := functionRewrite.file.aliasStatements[node]; len(aliases) != 0 {
-		output.List = append(aliases, output.List...)
-	}
-	return typ, output
-}
-
-// prepareReturns saves zero values for the results before the error.
-func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
-	if original.Results == nil {
-		panic("propagation requires an error return")
-	}
-	var prefix []ast.Stmt
-	for i, field := range original.Results.List {
-		count := len(field.Names)
-		if count == 0 {
-			count = 1
-		}
-		for j := 0; j < count; j++ {
-			if i == len(original.Results.List)-1 && j == count-1 {
-				break
-			}
-			value := r.nameFor("zero")
-			prefix = append(prefix, variable(value,
-				r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
-					original.End()), nil))
-			r.functionState.frame.values = append(r.functionState.frame.values, value)
-		}
-	}
-	return prefix
-}
-
-func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation, discardSuccess bool) expressionResult {
+func (r *rewrite) propagationExpression(marker *ast.CallExpr, operation Propagation,
+	discardSuccess bool) expressionResult {
 	call := marker.Args[0]
 	evaluation := r.expression(call)
 	saved := r.saveResults(evaluation.values[0], discardSuccess, true)
@@ -72,41 +19,25 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation, di
 		panic("propagation requires an error result")
 	}
 
-	signature := r.frameSignature()
-	returnErrorType := signature.Results().At(signature.Results().Len() - 1).Type()
+	returnErrorType := r.errorReturnType()
 	if _, ok := returnErrorType.Underlying().(*types.Interface); !ok || !types.AssignableTo(returnErrorType,
 		types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
-	if !r.functionState.frame.prepared {
-		r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)
-		r.functionState.frame.prepared = true
-	}
+	zeroResults := r.failureResults()
 
 	callError := saved.values[len(saved.values)-1]
 	failureStatements, failed := r.callFailure(callError, call)
 	statements = append(statements, failureStatements...)
 	errorValue := r.propagatedError(callError.expression, returnErrorType, operation, call)
-	results := append(append([]ast.Expr(nil), r.functionState.frame.values...), errorValue)
+	results := append(zeroResults, errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
-	r.request.inserted = true
-	r.request.lowered[marker] = true
+	r.completePropagation(marker)
 	if discardSuccess {
 		return expressionResult{statements: statements}
 	}
 	return expressionResult{statements: statements, values: saved.values[:len(saved.values)-1]}
-}
-
-func (r *rewrite) frameSignature() *types.Signature {
-	var signature *types.Signature
-	switch function := r.functionState.frame.function.(type) {
-	case *ast.FuncDecl:
-		signature = r.input.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
-	case *ast.FuncLit:
-		signature = r.input.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
-	}
-	return signature
 }
 
 func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type,

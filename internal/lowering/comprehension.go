@@ -15,40 +15,33 @@ type collectionDestination struct {
 	typ    types.Type
 }
 
-func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Comprehension) expressionResult {
-	if r.functionState.comprehensionRanges == nil {
-		r.functionState.comprehensionRanges = make(map[*ast.RangeStmt]bool)
-		r.functionState.collectionOutputs = make(map[string]*collectionDestination)
-	}
-
-	for _, loop := range record.Ranges {
-		r.functionState.comprehensionRanges[loop] = true
-	}
+func (r *rewrite) comprehensionExpression(call *ast.CallExpr, record *frontend.Comprehension) expressionResult {
 	result := r.name()
 	typ := r.typeOf(call)
-	r.functionState.collectionOutputs[record.Output] = &collectionDestination{result: result, typ: typ}
+	destination := &collectionDestination{result: result, typ: typ}
+	r.registerComprehension(record, destination)
 	r.comprehensionBindings(record.Body)
-	r.recordTemporary(result, typ, call)
 	empty := &ast.CompositeLit{Type: r.temporaryType(typ, call)}
-	output := []ast.Stmt{variable(result, r.temporaryType(typ, call), empty)}
+	declaration := r.resultStorage(result, typ, call, empty)
+	output := []ast.Stmt{declaration}
 	key, _ := types.ComprehensionTypes(typ)
 	if key == nil && r.builtinHidden("append") {
 		r.prepareSliceImport()
 		count := r.name()
-		r.functionState.collectionOutputs[record.Output].grow = count
+		destination.grow = count
 		output = append(output, variable(count, r.temporaryType(types.Typ[types.Int], call), integer(0)))
 	}
-	if exact := r.exactComprehension(call, record, result, typ); exact != nil {
+	if exact := r.exactComprehension(call, record, destination); exact != nil {
 		output = exact
 	} else {
 		output = append(output, r.block(record.Body))
 	}
-	r.request.lowered[call] = true
+	r.completeExpression(call)
 	return r.result(output, []ast.Expr{result})
 }
 
 func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) expressionResult {
-	r.request.lowered[call] = true
+	r.completeExpression(call)
 	beforeEvaluation := r.operands(call.Args)
 	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
 	keyType, element := types.ComprehensionTypes(destination.typ)
@@ -95,9 +88,6 @@ func (r *rewrite) builtinHidden(name string) bool {
 // comprehensionBindings gives generator variables fresh names. Checked object
 // identity keeps their output uses and closures separate from outer bindings.
 func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
-	if r.file.bindings == nil {
-		r.file.bindings = make(map[types.Object]string)
-	}
 	ast.Inspect(body, func(node ast.Node) bool {
 		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
 			return false
@@ -105,10 +95,7 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 		if loop, ok := node.(*ast.RangeStmt); ok {
 			for _, expression := range []ast.Expr{loop.Key, loop.Value} {
 				if id, ok := expression.(*ast.Ident); ok && id.Name != "_" {
-					if object := r.input.source.inventory.Checked.TypesInfo.Defs[id]; object != nil &&
-						r.file.bindings[object] == "" {
-						r.file.bindings[object] = r.nameFor(id.Name).Name
-					}
+					r.freshBinding(id)
 				}
 			}
 		}
@@ -118,9 +105,9 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 
 // growComprehension appends through slices.Grow when source hides append.
 func (r *rewrite) growComprehension(destination *collectionDestination, value ast.Expr) []ast.Stmt {
-	r.prepareSliceImport()
+	slicePackage := r.slicePackage()
 	result, count := destination.result, destination.grow
-	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Grow")},
+	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: slicePackage, Sel: ast.NewIdent("Grow")},
 		Args: []ast.Expr{result, integer(1)}}
 	extended := &ast.SliceExpr{X: result, High: &ast.BinaryExpr{X: count, Op: token.ADD, Y: integer(1)}}
 	slot := &ast.IndexExpr{X: result, Index: count}

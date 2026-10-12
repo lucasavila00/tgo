@@ -32,22 +32,22 @@ func (r *rewrite) expression(expr ast.Expr) expressionResult {
 
 func (r *rewrite) specialExpression(expr ast.Expr) (expressionResult, bool) {
 	if operation, ok := r.input.propagations[expr]; ok && !r.functionState.suppressed {
-		return r.propagatedCall(expr.(*ast.CallExpr), operation, false), true
+		return r.propagationExpression(expr.(*ast.CallExpr), operation, false), true
 	}
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
 		return expressionResult{}, false
 	}
 	if record := r.input.comprehensions[call]; record != nil {
-		return r.comprehensionCall(call, record), true
+		return r.comprehensionExpression(call, record), true
 	}
 	if identifier, ok := call.Fun.(*ast.Ident); ok {
-		if destination := r.functionState.collectionOutputs[identifier.Name]; destination != nil {
+		if destination := r.collectionDestination(identifier.Name); destination != nil {
 			return r.comprehensionOutput(call, destination), true
 		}
 	}
 	if statement := r.input.conditionals[call]; statement != nil {
-		return r.conditionalCall(call, statement), true
+		return r.valueExpression(call, statement), true
 	}
 	return expressionResult{}, false
 }

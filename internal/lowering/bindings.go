@@ -3,6 +3,8 @@ package lowering
 import (
 	"go/ast"
 	"reflect"
+
+	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
 // renameBindings copies paths to moved loop bindings. Object identity keeps
@@ -31,4 +33,22 @@ func (r *rewrite) renameBindings(node ast.Node) ast.Node {
 		return node
 	}
 	return rewritten.Interface().(ast.Node)
+}
+
+// freshBinding reserves one name per checked object, including closure uses.
+func (r *rewrite) freshBinding(identifier *ast.Ident) {
+	object := r.input.source.inventory.Checked.TypesInfo.Defs[identifier]
+	if object == nil {
+		return
+	}
+	if r.file.bindings == nil {
+		r.file.bindings = make(map[types.Object]string)
+	}
+	if r.file.bindings[object] == "" {
+		r.file.bindings[object] = r.nameFor(identifier.Name).Name
+	}
+}
+
+func (r *rewrite) bindingReference(object types.Object) *ast.Ident {
+	return ast.NewIdent(r.file.bindings[object])
 }
