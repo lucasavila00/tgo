@@ -62,12 +62,7 @@ func (r *rewrite) valueSwitchStatement(statement *ast.SwitchStmt, resultVariable
 }
 
 func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariable *ast.Ident, isValueExpression bool) []ast.Stmt {
-	headerNodes := []ast.Node{statement.Init, statement.Tag}
-	for _, caseStatement := range statement.Body.List {
-		for _, caseExpression := range caseStatement.(*ast.CaseClause).List {
-			headerNodes = append(headerNodes, caseExpression)
-		}
-	}
+	headerNodes := switchHeaderNodes(statement)
 	exit := r.prepareBreakExit(statement, headerNodes...)
 	rewrittenSwitch := *statement
 	var initializerStatements []ast.Stmt
@@ -247,4 +242,14 @@ func firstExpression(node ast.Node) ast.Expr {
 		return true
 	})
 	return result
+}
+
+func switchHeaderNodes(statement *ast.SwitchStmt) []ast.Node {
+	headerNodes := []ast.Node{statement.Init, statement.Tag}
+	for _, caseStatement := range statement.Body.List {
+		for _, caseExpression := range caseStatement.(*ast.CaseClause).List {
+			headerNodes = append(headerNodes, caseExpression)
+		}
+	}
+	return headerNodes
 }

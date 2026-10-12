@@ -25,30 +25,7 @@ func TestParseConditionalExpressions(t *testing.T) {
 		`func f() { turns:=0; again: for i:=if turns<2 {turns++;0} else {0}; i<1;i++ { _=int(if turns<2 {goto again} else {break again}) } }`,
 	} {
 		t.Run(source, func(t *testing.T) {
-			input := "package p\n" + source
-			set := token.NewFileSet()
-			parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(parsed.Conditionals) == 0 {
-				t.Fatal("no conditional expressions")
-			}
-			for _, pos := range parsed.Conditionals {
-				if input[pos.Offset:pos.Offset+2] != "if" {
-					t.Fatalf("conditional position: %v", pos)
-				}
-			}
-			ast.Inspect(parsed.File, func(node ast.Node) bool {
-				id, ok := node.(*ast.Ident)
-				if ok && id.Name == "use" && !strings.HasPrefix(id.Name, "tgo") {
-					pos := set.Position(id.Pos())
-					if input[pos.Offset:pos.Offset+len(id.Name)] != id.Name {
-						t.Errorf("source position: %v", pos)
-					}
-				}
-				return true
-			})
+			checkConditionalPositions(t, source)
 		})
 	}
 }
@@ -217,4 +194,32 @@ func TestParseSwitchExpressions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func checkConditionalPositions(t *testing.T, source string) {
+	t.Helper()
+	input := "package p\n" + source
+	set := token.NewFileSet()
+	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Conditionals) == 0 {
+		t.Fatal("no conditional expressions")
+	}
+	for _, pos := range parsed.Conditionals {
+		if input[pos.Offset:pos.Offset+2] != "if" {
+			t.Fatalf("conditional position: %v", pos)
+		}
+	}
+	ast.Inspect(parsed.File, func(node ast.Node) bool {
+		id, ok := node.(*ast.Ident)
+		if ok && id.Name == "use" && !strings.HasPrefix(id.Name, "tgo") {
+			pos := set.Position(id.Pos())
+			if input[pos.Offset:pos.Offset+len(id.Name)] != id.Name {
+				t.Errorf("source position: %v", pos)
+			}
+		}
+		return true
+	})
 }

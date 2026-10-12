@@ -90,25 +90,7 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.AssignStmt:
-			if n.Tok == token.DEFINE {
-				for _, lhs := range n.Lhs {
-					if name, ok := lhs.(*ast.Ident); ok && strings.HasPrefix(name.Name, "tgo") {
-						t.Errorf("generated temporary uses :=: %s", name.Name)
-					}
-				}
-			}
-		case *ast.ValueSpec:
-			for _, name := range n.Names {
-				if strings.HasPrefix(name.Name, "tgo") && n.Type == nil {
-					t.Errorf("generated temporary has no explicit type: %s", name.Name)
-				}
-			}
-		}
-		return true
-	})
+	checkTemporaryDeclarations(t, file)
 	want, err := os.ReadFile(filepath.Join(fixture, "stdout.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -122,6 +104,34 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 		}
 		if !bytes.Equal(actual, want) {
 			t.Fatalf("output: %q, want %q", actual, want)
+		}
+	}
+}
+
+func checkTemporaryDeclarations(t *testing.T, file *ast.File) {
+	t.Helper()
+	ast.Inspect(file, func(node ast.Node) bool {
+		checkTemporaryDeclaration(t, node)
+		return true
+	})
+}
+
+func checkTemporaryDeclaration(t *testing.T, node ast.Node) {
+	t.Helper()
+	switch n := node.(type) {
+	case *ast.AssignStmt:
+		if n.Tok == token.DEFINE {
+			for _, lhs := range n.Lhs {
+				if name, ok := lhs.(*ast.Ident); ok && strings.HasPrefix(name.Name, "tgo") {
+					t.Errorf("generated temporary uses :=: %s", name.Name)
+				}
+			}
+		}
+	case *ast.ValueSpec:
+		for _, name := range n.Names {
+			if strings.HasPrefix(name.Name, "tgo") && n.Type == nil {
+				t.Errorf("generated temporary has no explicit type: %s", name.Name)
+			}
 		}
 	}
 }

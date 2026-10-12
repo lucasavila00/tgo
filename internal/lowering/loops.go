@@ -125,8 +125,8 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 			return nil
 		}
 		if branch.Label != nil {
-			if label, ok := node.(*ast.LabeledStmt); ok && r.input.source.inventory.Checked.TypesInfo.Defs[label.Label] == r.input.source.inventory.Checked.TypesInfo.Uses[branch.Label] {
-				return label.Stmt
+			if target := r.labeledBranchTarget(node, branch.Label); target != nil {
+				return target
 			}
 			continue
 		}
@@ -143,6 +143,13 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 				return node.(ast.Stmt)
 			}
 		}
+	}
+	return nil
+}
+
+func (r *rewrite) labeledBranchTarget(node ast.Node, label *ast.Ident) ast.Stmt {
+	if statement, ok := node.(*ast.LabeledStmt); ok && r.input.source.inventory.Checked.TypesInfo.Defs[statement.Label] == r.input.source.inventory.Checked.TypesInfo.Uses[label] {
+		return statement.Stmt
 	}
 	return nil
 }

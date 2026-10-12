@@ -100,30 +100,8 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 		x.mode_, x.typ_ = value, context
 		return expression
 	}
-	var typ Type
-	for _, branch := range values {
-		candidate := branch.typ()
-		if isUntyped(candidate) {
-			continue
-		}
-		if typ != nil && !Identical(typ, candidate) {
-			check.error(call, IncompatibleAssign, "conditional branch types differ; add an explicit type annotation")
-			return expression
-		}
-		typ = candidate
-	}
-	if typ != nil {
-		check.convertConditional(call, typ)
-		for _, branch := range values {
-			if !branch.isValid() {
-				return expression
-			}
-		}
-	} else {
-		typ = untypedConditionalType(values)
-	}
+	typ := check.conditionalResultType(call, values)
 	if typ == nil {
-		check.error(call, IncompatibleAssign, "conditional result type is unknown; add an explicit type annotation")
 		return expression
 	}
 	x.mode_, x.typ_ = value, typ
@@ -585,4 +563,34 @@ func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
 		}
 	}
 	return visitor
+}
+
+func (check *Checker) conditionalResultType(call *ast.CallExpr, values []*operand) Type {
+	var typ Type
+	for _, branch := range values {
+		candidate := branch.typ()
+		if isUntyped(candidate) {
+			continue
+		}
+		if typ != nil && !Identical(typ, candidate) {
+			check.error(call, IncompatibleAssign, "conditional branch types differ; add an explicit type annotation")
+			return nil
+		}
+		typ = candidate
+	}
+	if typ != nil {
+		check.convertConditional(call, typ)
+		for _, branch := range values {
+			if !branch.isValid() {
+				return nil
+			}
+		}
+	} else {
+		typ = untypedConditionalType(values)
+	}
+	if typ == nil {
+		check.error(call, IncompatibleAssign, "conditional result type is unknown; add an explicit type annotation")
+		return nil
+	}
+	return typ
 }

@@ -23,16 +23,7 @@ type Comprehension struct {
 // Every retained source byte keeps its original position.
 func (s *mappedSource) prepareComprehension(original *token.File, used map[string]bool, records map[string]*Comprehension) (bool, error) {
 	tokens := sourceTokens(s.text)
-	blocks := make(map[int]bool)
-	set := token.NewFileSet()
-	if file, _ := parser.ParseFile(set, "", s.text, parser.AllErrors|parser.SkipObjectResolution); file != nil {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if block, ok := node.(*ast.BlockStmt); ok {
-				blocks[set.Position(block.Lbrace).Offset] = true
-			}
-			return true
-		})
-	}
+	blocks := statementBlockOffsets(s.text)
 	for first := len(tokens) - 1; first >= 0; first-- {
 		if tokens[first].kind != token.FOR {
 			continue
@@ -251,4 +242,18 @@ func (s *mappedSource) validComprehensionClause(tokens []sourceToken, clause, st
 		return false
 	}
 	return true
+}
+
+func statementBlockOffsets(text string) map[int]bool {
+	blocks := make(map[int]bool)
+	set := token.NewFileSet()
+	if file, _ := parser.ParseFile(set, "", text, parser.AllErrors|parser.SkipObjectResolution); file != nil {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if block, ok := node.(*ast.BlockStmt); ok {
+				blocks[set.Position(block.Lbrace).Offset] = true
+			}
+			return true
+		})
+	}
+	return blocks
 }

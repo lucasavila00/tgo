@@ -133,26 +133,8 @@ func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node, site *Sit
 			if s.Checked.Conditionals[call] == nil && s.Checked.Comprehensions[call] == nil {
 				enclosingFunction = parent
 			}
-		case *ast.GenDecl:
-			if parent.Tok == token.CONST {
-				site.Reason = "constant declaration"
-			}
-		case *ast.ArrayType:
-			if contains(parent.Len, expr) {
-				site.Reason = "array length"
-			}
-		case *ast.RangeStmt:
-			if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
-				site.Reason = "range expression is not evaluated"
-			}
-		case *ast.GoStmt:
-			if parent.Call == expr {
-				site.Reason = "call executes in another goroutine"
-			}
-		case *ast.DeferStmt:
-			if parent.Call == expr {
-				site.Reason = "call executes when the function returns"
-			}
+		default:
+			s.recordEvaluationContext(stack[i], expr, site)
 		}
 		if enclosingFunction != nil {
 			return enclosingFunction
@@ -187,5 +169,30 @@ func (s *Inventory) recordReturnTarget(enclosingFunction ast.Node, site *Site) {
 		}
 	} else {
 		site.ReturnReason = "no enclosing function"
+	}
+}
+
+func (s *Inventory) recordEvaluationContext(node ast.Node, expr ast.Expr, site *Site) {
+	switch parent := node.(type) {
+	case *ast.GenDecl:
+		if parent.Tok == token.CONST {
+			site.Reason = "constant declaration"
+		}
+	case *ast.ArrayType:
+		if contains(parent.Len, expr) {
+			site.Reason = "array length"
+		}
+	case *ast.RangeStmt:
+		if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
+			site.Reason = "range expression is not evaluated"
+		}
+	case *ast.GoStmt:
+		if parent.Call == expr {
+			site.Reason = "call executes in another goroutine"
+		}
+	case *ast.DeferStmt:
+		if parent.Call == expr {
+			site.Reason = "call executes when the function returns"
+		}
 	}
 }

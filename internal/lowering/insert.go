@@ -110,10 +110,8 @@ func (r *rewrite) contains(node ast.Node) bool {
 	if contains(node, r.input.target) {
 		return true
 	}
-	for statement := range r.input.shortReturns {
-		if contains(node, statement) {
-			return true
-		}
+	if r.containsShortReturn(node) {
+		return true
 	}
 	for expression := range r.input.propagations {
 		if contains(node, expression) {
@@ -236,4 +234,13 @@ func (r *rewrite) containsElement(node ast.Node) bool {
 		return !found
 	})
 	return found
+}
+
+func (r *rewrite) containsShortReturn(node ast.Node) bool {
+	for statement := range r.input.shortReturns {
+		if contains(node, statement) {
+			return true
+		}
+	}
+	return false
 }

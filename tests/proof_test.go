@@ -52,29 +52,7 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 				continue
 			}
 			t.Run(fmt.Sprintf("%s:%d", filepath.Base(site.File), site.Start), func(t *testing.T) {
-				for _, returning := range []bool{false, true} {
-					if (neutral && returning) || (returnCheck && !returning) {
-						continue
-					}
-					if returning && !site.ErrorReturn {
-						continue
-					}
-					after := proofStatements(neutral, returning, returnCheck)
-					files, err := source.InsertAfter(site, after)
-					expected := rejections[fmt.Sprintf("%s:%d:%d", site.File, site.Start, site.End)]
-					if expected != "" {
-						if err == nil || !strings.Contains(err.Error(), expected) {
-							t.Fatalf("rejection: %v, want %s", err, expected)
-						}
-						continue
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					count++
-					variant := writeProofVariant(t, dir, count, files, source.Package.Name, site, neutral, returnCheck)
-					t.Logf("%s: return=%t", variant, returning)
-				}
+				count = checkProofSite(t, source, site, dir, count, rejections, neutral, returnCheck)
 			})
 		}
 	}
@@ -312,4 +290,32 @@ func TestProofReference(t *testing.T) {
 	if err != nil {
 		t.Fatalf("proof references: %v\n%s", err, output)
 	}
+}
+
+func checkProofSite(t *testing.T, source *transpiler.Source, site transpiler.Site, dir string, count int, rejections map[string]string, neutral, returnCheck bool) int {
+	t.Helper()
+	for _, returning := range []bool{false, true} {
+		if (neutral && returning) || (returnCheck && !returning) {
+			continue
+		}
+		if returning && !site.ErrorReturn {
+			continue
+		}
+		after := proofStatements(neutral, returning, returnCheck)
+		files, err := source.InsertAfter(site, after)
+		expected := rejections[fmt.Sprintf("%s:%d:%d", site.File, site.Start, site.End)]
+		if expected != "" {
+			if err == nil || !strings.Contains(err.Error(), expected) {
+				t.Fatalf("rejection: %v, want %s", err, expected)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		count++
+		variant := writeProofVariant(t, dir, count, files, source.Package.Name, site, neutral, returnCheck)
+		t.Logf("%s: return=%t", variant, returning)
+	}
+	return count
 }
