@@ -32,9 +32,12 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	if nameCheck.problem != "" {
 		if r.request.err == nil {
 			errorPosition := r.temporaryTypeErrorPosition(original)
-			r.request.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the "+
-				"type with an accessible name",
-				errorPosition, typ, nameCheck.problem)
+			r.request.err = fmt.Errorf(
+				"%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name",
+				errorPosition,
+				typ,
+				nameCheck.problem,
+			)
 		}
 		return ast.NewIdent("invalid")
 	}
@@ -49,16 +52,20 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		if alias == nil {
 			alias = r.nameFor(pkg.Name())
 			r.file.typeImports[pkg] = alias
-			r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: alias,
-				Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
+			r.file.extraImports = append(
+				r.file.extraImports,
+				&ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}},
+			)
 		}
 		return alias.Name
 	})
 	var unsafeAlias *ast.Ident
 	if nameCheck.unsafePointer {
 		unsafeAlias = r.nameFor("unsafe")
-		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: unsafeAlias,
-			Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
+		r.file.extraImports = append(
+			r.file.extraImports,
+			&ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}},
+		)
 	}
 	result, err := parser.ParseExpr(text)
 	if err != nil {
@@ -82,76 +89,68 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	return result
 }
 
-func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr,
-	parameterNames map[*types.TypeParam]string, unsafeAlias *ast.Ident) {
-	// Follow checked types so equal spellings do not merge different bindings.
-	var rename func(types.Type, ast.Expr)
-
-	rename = func(typ types.Type, expr ast.Expr) {
-		for {
-			parenthesized, ok := expr.(*ast.ParenExpr)
-			if !ok {
-				break
-			}
-			expr = parenthesized.X
-		}
-		switch t := typ.(type) {
-		case *types.TypeParam:
-			if name := parameterNames[t]; name != "" {
-				expr.(*ast.Ident).Name = name
-			}
-		case *types.Basic:
-			if t.Kind() == types.UnsafePointer {
-				expr.(*ast.SelectorExpr).X = unsafeAlias
-			}
-		case *types.Named, *types.Alias:
-			renameTypeArguments(t, expr, rename)
-		case *types.Pointer:
-			rename(t.Elem(), expr.(*ast.StarExpr).X)
-		case *types.Array:
-			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
-		case *types.Slice:
-			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
-		case *types.Map:
-			e := expr.(*ast.MapType)
-			rename(t.Key(), e.Key)
-			rename(t.Elem(), e.Value)
-		case *types.Chan:
-			rename(t.Elem(), expr.(*ast.ChanType).Value)
-		case *types.Struct:
-			for i, field := range expr.(*ast.StructType).Fields.List {
-				rename(t.Field(i).Type(), field.Type)
-			}
-		case *types.Signature:
-			e := expr.(*ast.FuncType)
-			renameTupleFields(t.Params(), e.Params, rename)
-			renameTupleFields(t.Results(), e.Results, rename)
-		case *types.Interface:
-			list := expr.(*ast.InterfaceType).Methods.List
-			for i := 0; i < t.NumExplicitMethods(); i++ {
-				rename(t.ExplicitMethod(i).Type(), list[i].Type)
-			}
-			for i := 0; i < t.NumEmbeddeds(); i++ {
-				rename(t.EmbeddedType(i), list[t.NumExplicitMethods()+i].Type)
-			}
-		}
-	}
-	rename(types.Default(typ), result)
+func (r *rewrite) renameTypeBindings(
+	typ types.Type,
+	result ast.Expr,
+	parameterNames map[*types.TypeParam]string,
+	unsafeAlias *ast.Ident,
+) {
+	names := typeBindingNames{parameterNames: parameterNames, unsafeAlias: unsafeAlias}
+	names.rename(types.Default(typ), result)
 }
 
-func renameTypeArguments(typ types.Type, expr ast.Expr, rename func(types.Type, ast.Expr)) {
-	var args *types.TypeList
-	if named, ok := typ.(*types.Named); ok {
-		args = named.TypeArgs()
-	} else {
-		args = typ.(*types.Alias).TypeArgs()
+type typeBindingNames struct {
+	parameterNames map[*types.TypeParam]string
+	unsafeAlias    *ast.Ident
+}
+
+// rename follows checked types so equal spellings keep separate bindings.
+func (names typeBindingNames) rename(typ types.Type, expr ast.Expr) {
+	for {
+		parenthesized, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expr = parenthesized.X
 	}
-	switch e := expr.(type) {
-	case *ast.IndexExpr:
-		rename(args.At(0), e.Index)
-	case *ast.IndexListExpr:
-		for i, index := range e.Indices {
-			rename(args.At(i), index)
+	switch t := typ.(type) {
+	case *types.TypeParam:
+		if name := names.parameterNames[t]; name != "" {
+			expr.(*ast.Ident).Name = name
+		}
+	case *types.Basic:
+		if t.Kind() == types.UnsafePointer {
+			expr.(*ast.SelectorExpr).X = names.unsafeAlias
+		}
+	case *types.Named, *types.Alias:
+		renameTypeArguments(t, expr, names.rename)
+	case *types.Pointer:
+		names.rename(t.Elem(), expr.(*ast.StarExpr).X)
+	case *types.Array:
+		names.rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+	case *types.Slice:
+		names.rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+	case *types.Map:
+		e := expr.(*ast.MapType)
+		names.rename(t.Key(), e.Key)
+		names.rename(t.Elem(), e.Value)
+	case *types.Chan:
+		names.rename(t.Elem(), expr.(*ast.ChanType).Value)
+	case *types.Struct:
+		for i, field := range expr.(*ast.StructType).Fields.List {
+			names.rename(t.Field(i).Type(), field.Type)
+		}
+	case *types.Signature:
+		e := expr.(*ast.FuncType)
+		renameTupleFields(t.Params(), e.Params, names.rename)
+		renameTupleFields(t.Results(), e.Results, names.rename)
+	case *types.Interface:
+		list := expr.(*ast.InterfaceType).Methods.List
+		for i := 0; i < t.NumExplicitMethods(); i++ {
+			names.rename(t.ExplicitMethod(i).Type(), list[i].Type)
+		}
+		for i := 0; i < t.NumEmbeddeds(); i++ {
+			names.rename(t.EmbeddedType(i), list[t.NumExplicitMethods()+i].Type)
 		}
 	}
 }
@@ -168,5 +167,22 @@ func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(type
 			typ = typ.(*types.Slice).Elem()
 		}
 		rename(typ, expr)
+	}
+}
+
+func renameTypeArguments(typ types.Type, expr ast.Expr, rename func(types.Type, ast.Expr)) {
+	var args *types.TypeList
+	if named, ok := typ.(*types.Named); ok {
+		args = named.TypeArgs()
+	} else {
+		args = typ.(*types.Alias).TypeArgs()
+	}
+	switch e := expr.(type) {
+	case *ast.IndexExpr:
+		rename(args.At(0), e.Index)
+	case *ast.IndexListExpr:
+		for i, index := range e.Indices {
+			rename(args.At(i), index)
+		}
 	}
 }

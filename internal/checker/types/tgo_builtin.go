@@ -51,14 +51,7 @@ func (check *Checker) collectionArgumentType(call *ast.CallExpr, id builtinId, a
 
 // numericBuiltinArguments lets another argument supply a terminating if's type.
 func (check *Checker) numericBuiltinArguments(call *ast.CallExpr) []*operand {
-	conditional := false
-	for _, expression := range call.Args {
-		if marker, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
-			if operation, found := check.tgoOperation(marker); found && operation.Conditional {
-				conditional = true
-			}
-		}
-	}
+	conditional := check.hasConditionalArgument(call)
 	if !conditional {
 		return check.exprList(call.Args)
 	}
@@ -99,4 +92,16 @@ func deleteKeyType(typ Type) Type {
 		return nil
 	}
 	return key
+}
+
+func (check *Checker) hasConditionalArgument(call *ast.CallExpr) bool {
+	conditional := false
+	for _, expression := range call.Args {
+		if marker, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
+			if operation, found := check.tgoOperation(marker); found && operation.Conditional {
+				conditional = true
+			}
+		}
+	}
+	return conditional
 }

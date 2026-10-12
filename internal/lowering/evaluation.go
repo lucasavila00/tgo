@@ -34,14 +34,8 @@ func (r *rewrite) save(value expressionValue) expressionResult {
 	if value.temporary {
 		count = 1
 	}
-	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil &&
-		!value.temporary {
-		if pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
-			if _,
-				pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
-				return r.materializeKey(expr.(*ast.CompositeLit), literal)
-			}
-		}
+	if literal := r.implicitMapKey(value); literal != nil {
+		return r.materializeKey(expr.(*ast.CompositeLit), literal)
 	}
 	typ := value.typ
 	if !value.temporary {
@@ -145,9 +139,24 @@ func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
 			return false
 		}
 	}
-	if _, identifier := value.(*ast.Ident); identifier &&
-		r.input.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
+	if _, identifier := value.(*ast.Ident); identifier && r.input.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
 		return false
 	}
 	return true
+}
+
+func (r *rewrite) implicitMapKey(value expressionValue) *ast.CompositeLit {
+	original := value.original
+	literal, ok := original.(*ast.CompositeLit)
+	if !ok || literal.Type != nil || value.temporary {
+		return nil
+	}
+	pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
+	if !ok || pair.Key != original {
+		return nil
+	}
+	if _, pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); pointer {
+		return nil
+	}
+	return literal
 }

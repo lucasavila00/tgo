@@ -21,19 +21,13 @@ type Comprehension struct {
 
 // prepareComprehension replaces the innermost comprehension with a marker.
 // Every retained source byte keeps its original position.
-func (s *mappedSource) prepareComprehension(original *token.File, used map[string]bool,
-	records map[string]*Comprehension) (bool, error) {
+func (s *mappedSource) prepareComprehension(
+	original *token.File,
+	used map[string]bool,
+	records map[string]*Comprehension,
+) (bool, error) {
 	tokens := sourceTokens(s.text)
-	blocks := make(map[int]bool)
-	set := token.NewFileSet()
-	if file, _ := parser.ParseFile(set, "", s.text, parser.AllErrors|parser.SkipObjectResolution); file != nil {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if block, ok := node.(*ast.BlockStmt); ok {
-				blocks[set.Position(block.Lbrace).Offset] = true
-			}
-			return true
-		})
-	}
+	blocks := statementBlockOffsets(s.text)
 	for first := len(tokens) - 1; first >= 0; first-- {
 		if tokens[first].kind != token.FOR {
 			continue
@@ -46,13 +40,7 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 			blocks[tokens[open].offset] {
 			continue
 		}
-		// An earlier for at this depth is the first clause of the same literal.
-		for i := open + 1; i < first; i++ {
-			if tokens[i].kind == token.FOR && tokens[i].depth == tokens[first].depth {
-				first = i
-				break
-			}
-		}
+		first = firstComprehensionClause(tokens, open, first)
 		start := s.comprehensionTypeStart(tokens, open)
 		if start < 0 {
 			continue
@@ -62,8 +50,10 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 			end++
 		}
 		if end == len(tokens) {
-			return false, fmt.Errorf("%s: comprehension requires a closing brace",
-				original.Position(original.Pos(s.offsets[start])))
+			return false, fmt.Errorf(
+				"%s: comprehension requires a closing brace",
+				original.Position(original.Pos(s.offsets[start])),
+			)
 		}
 		clauses, valid := s.comprehensionClauses(tokens, first, end)
 		if !valid {
@@ -76,21 +66,6 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 		return true, nil
 	}
 	return false, nil
-}
-
-func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) int {
-	start := -1
-	for i := open - 1; i >= 0; i-- {
-		expr, err := parser.ParseExpr(s.text[tokens[i].offset:tokens[open].offset] + "{}")
-		if _, ok := expr.(*ast.CompositeLit); err == nil && ok {
-			start = tokens[i].offset
-		}
-		if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON ||
-			tokens[i].kind == token.ASSIGN || tokens[i].kind == token.DEFINE {
-			break
-		}
-	}
-	return start
 }
 
 func clauseEnd(tokens []sourceToken, start, end int) int {
@@ -113,8 +88,12 @@ func freshComprehensionName(used map[string]bool) string {
 	}
 }
 
-func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, first, end int, name, output string,
-	clauses []int) {
+func (s *mappedSource) wrapComprehension(
+	tokens []sourceToken,
+	start, open, first, end int,
+	name, output string,
+	clauses []int,
+) {
 	var text strings.Builder
 	var offsets []int
 	insert := func(value string, at int) {
@@ -125,28 +104,7 @@ func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, firs
 		text.WriteString(s.text[from:to])
 		offsets = append(offsets, s.offsets[from:to]...)
 	}
-	comments := func(from, to int) {
-		set := token.NewFileSet()
-		file := set.AddFile("", -1, to-from)
-		var scan scanner.Scanner
-		scan.Init(file, []byte(s.text[from:to]), nil, scanner.ScanComments)
-		for {
-			position, kind, literal := scan.Scan()
-			if kind == token.EOF {
-				break
-			}
-			if kind == token.COMMENT {
-				begin := from + file.Offset(position)
-				length := len(literal)
-				if strings.HasPrefix(s.text[begin:to], "/*") {
-					length = strings.Index(s.text[begin:to], "*/") + 2
-				}
-				retain(begin, begin+length)
-				insert("\n", begin)
-			}
-		}
-	}
-
+	comments := func(from, to int) { s.retainComprehensionComments(from, to, retain, insert) }
 	insert(name+"(", start)
 	retain(start, tokens[open].offset)
 	insert(",func(){", tokens[open].offset)
@@ -156,15 +114,7 @@ func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, firs
 			stop = clauses[i+1]
 		}
 		from, to := tokens[clause].offset, clauseEnd(tokens, clause, stop)
-		expressionOffset := tokens[clause].end
-		if tokens[clause].kind == token.FOR {
-			for j := clause + 1; j < stop; j++ {
-				if tokens[j].kind == token.RANGE && tokens[j].depth == tokens[clause].depth {
-					expressionOffset = tokens[j].end
-					break
-				}
-			}
-		}
+		expressionOffset := comprehensionOperandOffset(tokens, clause, stop)
 		retain(from, expressionOffset)
 		insert(" (", expressionOffset)
 		retain(expressionOffset, to)
@@ -216,23 +166,108 @@ func (s *mappedSource) comprehensionClauses(tokens []sourceToken, first, end int
 		if i+1 < len(clauses) {
 			stop = clauses[i+1]
 		}
-		expressionIndex := clause + 1
-		if tokens[clause].kind == token.FOR {
-			for expressionIndex < stop && tokens[expressionIndex].kind != token.RANGE {
-				expressionIndex++
-			}
-			if expressionIndex == stop {
-				return nil, false
-			}
-			expressionIndex++
-		}
-		if expressionIndex >= stop {
-			return nil, false
-		}
-		last := clauseEnd(tokens, expressionIndex, stop)
-		if _, err := parser.ParseExpr(s.text[tokens[expressionIndex].offset:last]); err != nil {
+		if !s.validComprehensionClause(tokens, clause, stop) {
 			return nil, false
 		}
 	}
 	return clauses, true
+}
+
+func firstComprehensionClause(tokens []sourceToken, open, first int) int {
+	// An earlier for at this depth is the first clause of the same literal.
+	for i := open + 1; i < first; i++ {
+		if tokens[i].kind == token.FOR && tokens[i].depth == tokens[first].depth {
+			first = i
+			break
+		}
+	}
+
+	return first
+}
+
+func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) int {
+	start := -1
+	for i := open - 1; i >= 0; i-- {
+		expr, err := parser.ParseExpr(s.text[tokens[i].offset:tokens[open].offset] + "{}")
+		if _, ok := expr.(*ast.CompositeLit); err == nil && ok {
+			start = tokens[i].offset
+		}
+		if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON || tokens[i].kind == token.ASSIGN ||
+			tokens[i].kind == token.DEFINE {
+			break
+		}
+	}
+
+	return start
+}
+
+func (s *mappedSource) retainComprehensionComments(from, to int, retain func(int, int), insert func(string, int)) {
+
+	set := token.NewFileSet()
+	file := set.AddFile("", -1, to-from)
+	var scan scanner.Scanner
+	scan.Init(file, []byte(s.text[from:to]), nil, scanner.ScanComments)
+	for {
+		position, kind, literal := scan.Scan()
+		if kind == token.EOF {
+			break
+		}
+		if kind == token.COMMENT {
+			begin := from + file.Offset(position)
+			length := len(literal)
+			if strings.HasPrefix(s.text[begin:to], "/*") {
+				length = strings.Index(s.text[begin:to], "*/") + 2
+			}
+			retain(begin, begin+length)
+			insert("\n", begin)
+		}
+	}
+}
+
+func comprehensionOperandOffset(tokens []sourceToken, clause, stop int) int {
+	expressionOffset := tokens[clause].end
+	if tokens[clause].kind == token.FOR {
+		for j := clause + 1; j < stop; j++ {
+			if tokens[j].kind == token.RANGE && tokens[j].depth == tokens[clause].depth {
+				expressionOffset = tokens[j].end
+				break
+			}
+		}
+	}
+	return expressionOffset
+}
+
+func (s *mappedSource) validComprehensionClause(tokens []sourceToken, clause, stop int) bool {
+	expressionIndex := clause + 1
+	if tokens[clause].kind == token.FOR {
+		for expressionIndex < stop && tokens[expressionIndex].kind != token.RANGE {
+			expressionIndex++
+		}
+		if expressionIndex == stop {
+			return false
+		}
+		expressionIndex++
+	}
+	if expressionIndex >= stop {
+		return false
+	}
+	last := clauseEnd(tokens, expressionIndex, stop)
+	if _, err := parser.ParseExpr(s.text[tokens[expressionIndex].offset:last]); err != nil {
+		return false
+	}
+	return true
+}
+
+func statementBlockOffsets(text string) map[int]bool {
+	blocks := make(map[int]bool)
+	set := token.NewFileSet()
+	if file, _ := parser.ParseFile(set, "", text, parser.AllErrors|parser.SkipObjectResolution); file != nil {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if block, ok := node.(*ast.BlockStmt); ok {
+				blocks[set.Position(block.Lbrace).Offset] = true
+			}
+			return true
+		})
+	}
+	return blocks
 }

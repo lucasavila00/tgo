@@ -56,17 +56,22 @@ func run() {
 			rewrite := newRewrite(source)
 			evaluated := rewrite.expression(expression)
 			saved := rewrite.save(evaluated.values[0])
-			if len(saved.values) != len(test.types) {
-				t.Fatalf("got %d values, want %d", len(saved.values), len(test.types))
-			}
-			for i, value := range saved.values {
-				if value.typ == nil || value.typ.String() != test.types[i] {
-					t.Errorf("value %d has type %v, want %s", i, value.typ, test.types[i])
-				}
-				if value.original != expression {
-					t.Errorf("value %d lost its source expression", i)
-				}
-			}
+			checkExpressionValues(t, saved.values, expression, test.types)
 		})
+	}
+}
+
+func checkExpressionValues(t *testing.T, values []expressionValue, original ast.Expr, expectedTypes []string) {
+	t.Helper()
+	if len(values) != len(expectedTypes) {
+		t.Fatalf("got %d values, want %d", len(values), len(expectedTypes))
+	}
+	for i, value := range values {
+		if value.typ == nil || value.typ.String() != expectedTypes[i] {
+			t.Errorf("value %d has type %v, want %s", i, value.typ, expectedTypes[i])
+		}
+		if value.original != original {
+			t.Errorf("value %d lost its source expression", i)
+		}
 	}
 }

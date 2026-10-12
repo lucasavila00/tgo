@@ -58,35 +58,11 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
 	}
-	var scan scanner.Scanner
-	scan.Init(original, input, nil, scanner.ScanComments)
-	for {
-		_, tok, literal := scan.Scan()
-		if tok == token.IDENT {
-			used[literal] = true
-		}
-		if tok == token.EOF {
-			break
-		}
-	}
+	reserveIdentifiers(original, input, used)
 	source := prepareSource(sourceName, input, used, result.Propagations)
 	for {
-		for {
-			shortReturn, err := source.prepareShortReturn(original, used, result.ShortReturns)
-			if err != nil {
-				return nil, err
-			}
-			if shortReturn {
-				continue
-			}
-			conditional := source.prepareConditionals(filename, original, used, result.Conditionals)
-			changed, err := source.prepareComprehension(original, used, result.Comprehensions)
-			if err != nil {
-				return nil, err
-			}
-			if !changed && !conditional {
-				break
-			}
+		if err := source.prepareExpressions(filename, original, used, result); err != nil {
+			return nil, err
 		}
 		temporary := token.NewFileSet()
 		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|
@@ -151,18 +127,7 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 	offsets []int) *Parsed {
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
 	result.File = file
-	ast.Inspect(file, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok {
-				if record := result.Comprehensions[id.Name]; record != nil {
-					record.Type = call.Args[0]
-					record.Body = call.Args[1].(*ast.FuncLit).Body
-					record.Ranges = comprehensionRanges(record.Body)
-				}
-			}
-		}
-		return true
-	})
+	result.recordComprehensions(file)
 	for expression, operation := range MarkerExpressions(fset, file, result.Propagations) {
 		result.Propagations[operation.Name] = operation
 		WrapMarker(file, expression, operation)
@@ -211,4 +176,59 @@ func mapPositions(node ast.Node, prepared, original *token.File, offsets []int, 
 			}
 		}
 	}
+}
+
+func reserveIdentifiers(original *token.File, input []byte, used map[string]bool) {
+	var scan scanner.Scanner
+	scan.Init(original, input, nil, scanner.ScanComments)
+	for {
+		_, tok, literal := scan.Scan()
+		if tok == token.IDENT {
+			used[literal] = true
+		}
+		if tok == token.EOF {
+			break
+		}
+	}
+}
+
+func (s *mappedSource) prepareExpressions(
+	filename string,
+	original *token.File,
+	used map[string]bool,
+	result *Parsed,
+) error {
+	for {
+		shortReturn, err := s.prepareShortReturn(original, used, result.ShortReturns)
+		if err != nil {
+			return err
+		}
+		if shortReturn {
+			continue
+		}
+		conditional := s.prepareConditionals(filename, original, used, result.Conditionals)
+		changed, err := s.prepareComprehension(original, used, result.Comprehensions)
+		if err != nil {
+			return err
+		}
+		if !changed && !conditional {
+			break
+		}
+	}
+	return nil
+}
+
+func (result *Parsed) recordComprehensions(file *ast.File) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				if record := result.Comprehensions[id.Name]; record != nil {
+					record.Type = call.Args[0]
+					record.Body = call.Args[1].(*ast.FuncLit).Body
+					record.Ranges = comprehensionRanges(record.Body)
+				}
+			}
+		}
+		return true
+	})
 }

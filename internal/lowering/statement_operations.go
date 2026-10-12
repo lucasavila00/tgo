@@ -167,20 +167,24 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 		}
 	}
 	if !jump {
-		if len(statements) == 1 {
-			if block, ok := statements[0].(*ast.BlockStmt); ok {
-				last := len(block.List) - 1
-				output.Stmt = block.List[last]
-				block.List[last] = &output
-				return statements
-			}
-		}
-		output.Stmt = statements[len(statements)-1]
-		return append(statements[:len(statements)-1], &output)
+		return labelFinalStatement(&output, statements)
 	}
 	if inner != nil {
 		attachLabel(statements, inner)
 	}
 	output.Stmt = &ast.BlockStmt{List: statements}
 	return []ast.Stmt{&output}
+}
+
+func labelFinalStatement(output *ast.LabeledStmt, statements []ast.Stmt) []ast.Stmt {
+	if len(statements) == 1 {
+		if block, ok := statements[0].(*ast.BlockStmt); ok {
+			last := len(block.List) - 1
+			output.Stmt = block.List[last]
+			block.List[last] = output
+			return statements
+		}
+	}
+	output.Stmt = statements[len(statements)-1]
+	return append(statements[:len(statements)-1], output)
 }
