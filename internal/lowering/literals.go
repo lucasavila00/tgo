@@ -48,41 +48,7 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 		wrapper.Elts = []ast.Expr{value}
 		access = &ast.IndexExpr{Index: integer(0)}
 	case *types.Map:
-		pair := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
-		if pair.Key == original {
-			r.prepareCollectionImports()
-			empty := r.contextLiteral(&ast.CompositeLit{Type: container.Type}, container)
-			if pointer {
-				empty = &ast.StarExpr{X: empty}
-			}
-			values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{empty}}
-			wrapper.Elts = []ast.Expr{&ast.KeyValueExpr{Key: value, Value: r.sequenceZero(values)}}
-			var mapValue ast.Expr = wrapper
-			if container.Type == nil {
-				mapValue = r.contextLiteral(wrapper, container)
-			}
-			if pointer {
-				mapValue = &ast.StarExpr{X: mapValue}
-			}
-			keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{mapValue}}
-			r.prepareSliceImport()
-			collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{keys}}
-			return &ast.IndexExpr{X: collected, Index: integer(0)}
-		}
-		key := r.zeroMapKey(container, pointer)
-		wrapper.Elts = []ast.Expr{&ast.KeyValueExpr{Key: key, Value: value}}
-		r.prepareCollectionImports()
-		var mapValue ast.Expr = wrapper
-		if container.Type == nil {
-			mapValue = r.contextLiteral(wrapper, container)
-		}
-		if pointer {
-			mapValue = &ast.StarExpr{X: mapValue}
-		}
-		values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{mapValue}}
-		r.prepareSliceImport()
-		collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{values}}
-		return &ast.IndexExpr{X: collected, Index: integer(0)}
+		return r.contextMapLiteral(value, original, container, wrapper, pointer)
 	default:
 		return value
 	}
@@ -101,6 +67,44 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 		a.X = wrapped
 	}
 	return access
+}
+
+func (r *rewrite) contextMapLiteral(value, original ast.Expr, container, wrapper *ast.CompositeLit, pointer bool) ast.Expr {
+	pair := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
+	if pair.Key == original {
+		r.prepareCollectionImports()
+		empty := r.contextLiteral(&ast.CompositeLit{Type: container.Type}, container)
+		if pointer {
+			empty = &ast.StarExpr{X: empty}
+		}
+		values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{empty}}
+		wrapper.Elts = []ast.Expr{&ast.KeyValueExpr{Key: value, Value: r.sequenceZero(values)}}
+		var mapValue ast.Expr = wrapper
+		if container.Type == nil {
+			mapValue = r.contextLiteral(wrapper, container)
+		}
+		if pointer {
+			mapValue = &ast.StarExpr{X: mapValue}
+		}
+		keys := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Keys")}, Args: []ast.Expr{mapValue}}
+		r.prepareSliceImport()
+		collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{keys}}
+		return &ast.IndexExpr{X: collected, Index: integer(0)}
+	}
+	key := r.zeroMapKey(container, pointer)
+	wrapper.Elts = []ast.Expr{&ast.KeyValueExpr{Key: key, Value: value}}
+	r.prepareCollectionImports()
+	var mapValue ast.Expr = wrapper
+	if container.Type == nil {
+		mapValue = r.contextLiteral(wrapper, container)
+	}
+	if pointer {
+		mapValue = &ast.StarExpr{X: mapValue}
+	}
+	values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{mapValue}}
+	r.prepareSliceImport()
+	collected := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Collect")}, Args: []ast.Expr{values}}
+	return &ast.IndexExpr{X: collected, Index: integer(0)}
 }
 
 // materializeKey constructs a struct or array key without hashing it early.
