@@ -1,6 +1,6 @@
 package main
 
-import fmt_tgo9 "fmt"
+import fmt_tgo15 "fmt"
 
 import (
 	"errors"
@@ -13,9 +13,13 @@ func fail() error {
 	return failure
 }
 
+func advance(i int) (int, error) {
+	return i + 1, nil
+}
+
 func outer[T any](initial T, innerFails bool) (T, error) {
 	type tgo3 = T
-	var tgo7 T
+	var tgo10 T
 	value := func() (T, error) {
 		if innerFails {
 			return initial, failure
@@ -34,33 +38,71 @@ func outer[T any](initial T, innerFails bool) (T, error) {
 			}
 			_ = tgo1
 		}
-	Loop:
-		for i := 0; i < 2; i++ {
-			if i == 0 {
-				continue Loop
+		{
+			var tgo7 bool = 0 == 0
+		Loop:
+			for i := 0; ; {
+				if tgo7 {
+					tgo7 = 0 != 0
+				} else {
+					var tgo5 int
+					var tgo6 error
+					tgo5, tgo6 = advance(i)
+					if tgo6 != nil {
+						return tgo4, tgo6
+					}
+					i = tgo5
+				}
+				if !(i < 2) {
+					break
+				}
+				{
+					if i == 0 {
+						continue Loop
+					}
+				}
 			}
 		}
 		return T, nil
 	}
-Loop:
-	for i := 0; i < 2; i++ {
-		{
-			var tgo5 int
-			var tgo6 error
-			tgo5, tgo6 = inner()
-			if tgo6 != nil {
-				return tgo7, tgo6
+	{
+		var tgo13 bool = 0 == 0
+	Loop:
+		for i := 0; ; {
+			if tgo13 {
+				tgo13 = 0 != 0
+			} else {
+				var tgo11 int
+				var tgo12 error
+				tgo11, tgo12 = advance(i)
+				if tgo12 != nil {
+					return tgo10, tgo12
+				}
+				i = tgo11
 			}
-			_ = tgo5
-		}
-		if i == 0 {
-			continue Loop
+			if !(i < 2) {
+				break
+			}
+			{
+				{
+					var tgo8 int
+					var tgo9 error
+					tgo8, tgo9 = inner()
+					if tgo9 != nil {
+						return tgo10, tgo9
+					}
+					_ = tgo8
+				}
+				if i == 0 {
+					continue Loop
+				}
+			}
 		}
 	}
 	{
-		var tgo8 error = fail()
-		if tgo8 != nil {
-			return tgo7, fmt_tgo9.Errorf("fail: %w", tgo8)
+		var tgo14 error = fail()
+		if tgo14 != nil {
+			return tgo10, fmt_tgo15.Errorf("fail: %w", tgo14)
 		}
 	}
 	return initial, nil
