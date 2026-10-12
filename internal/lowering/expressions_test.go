@@ -40,8 +40,8 @@ func main() { use(left(), right()) }
 		t.Fatal("missing expression")
 	}
 	r := newRewrite(source)
-	r.input.target = target
-	r.input.after = func([]ast.Expr) []ast.Stmt {
+	r.Input.Target = target
+	r.Input.After = func([]ast.Expr) []ast.Stmt {
 		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"),
 			Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
 	}
@@ -50,8 +50,8 @@ func main() { use(left(), right()) }
 	for i, decl := range file.Decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "main" {
 			copy := *fn
-			beforeEvaluation := r.expression(fn.Body.List[0].(*ast.ExprStmt).X)
-			before, refs := beforeEvaluation.statements, beforeEvaluation.expressions()
+			beforeEvaluation := r.Expression(fn.Body.List[0].(*ast.ExprStmt).X)
+			before, refs := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 			copy.Body = &ast.BlockStmt{List: append(before, &ast.ExprStmt{X: refs[0]})}
 			file.Decls[i] = &copy
 		}

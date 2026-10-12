@@ -1,6 +1,7 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/lowering/shared"
 	"go/ast"
 	"os"
 	"path/filepath"
@@ -54,23 +55,23 @@ func run() {
 				t.Fatal("expression not found")
 			}
 			rewrite := newRewrite(source)
-			evaluated := rewrite.expression(expression)
-			saved := rewrite.save(evaluated.values[0])
-			checkExpressionValues(t, saved.values, expression, test.types)
+			evaluated := rewrite.Expression(expression)
+			saved := rewrite.Save(evaluated.Values[0])
+			checkExpressionValues(t, saved.Values, expression, test.types)
 		})
 	}
 }
 
-func checkExpressionValues(t *testing.T, values []expressionValue, original ast.Expr, expectedTypes []string) {
+func checkExpressionValues(t *testing.T, values []shared.Value, original ast.Expr, expectedTypes []string) {
 	t.Helper()
 	if len(values) != len(expectedTypes) {
 		t.Fatalf("got %d values, want %d", len(values), len(expectedTypes))
 	}
 	for i, value := range values {
-		if value.typ == nil || value.typ.String() != expectedTypes[i] {
-			t.Errorf("value %d has type %v, want %s", i, value.typ, expectedTypes[i])
+		if value.Type == nil || value.Type.String() != expectedTypes[i] {
+			t.Errorf("value %d has type %v, want %s", i, value.Type, expectedTypes[i])
 		}
-		if value.original != original {
+		if value.Original != original {
 			t.Errorf("value %d lost its source expression", i)
 		}
 	}

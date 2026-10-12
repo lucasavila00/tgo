@@ -6,85 +6,15 @@
 import "github.com/lucasavila00/tgo/internal/lowering"
 ```
 
-Package lowering replaces checked TGo expressions with equivalent Go code.
+Package lowering turns checked TGo expressions into ordinary Go code.
 
-Lowering means turning an expression that Go cannot execute directly into ordinary Go statements. This package uses the types and name declarations from the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>). It returns formatted file contents; the [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) writes those contents to disk.
+TGo lets a call return an error from its enclosing function and lets branches and loops produce values inside expressions. Go needs statements for these operations. Lowering puts those statements where the source expression runs, using checked types as input. It copies changed syntax so one checked source can support independent rewrites. The driver writes the formatted output.
 
-### Follow the rewrite
+The dispatcher selects [propagation](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/propagation/readme.md>), [comprehensions](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/comprehensions/readme.md>), or [value expressions](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/valueexpr/readme.md>). Each rule owns its TGo transformation. The [shared operations](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/shared/readme.md>) handle evaluation, typed value storage, assignments, and ordinary Go control flow. This boundary lets a rule use the same ordering and storage decisions as other rules. The [source inventory](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source/readme.md>) retains checked input facts; the [name allocator](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/names/readme.md>) reserves source names and supplies fresh generated names.
 
-The [source inventory](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source/readme.md>) records expressions and their parents in the checked syntax. It also records where evaluation cannot accept inserted statements. These facts belong to the input and stay available after a rewrite.
+For use\(first\(\), fetch\(\)\!, last\(\)\), shared evaluation saves first before the propagation rule checks fetch. A failure returns before last or use runs. The rule chooses the error action; shared operations preserve the evaluation point and the enclosing function's return target.
 
-Input facts and selected operations stay unchanged during emission. Request state records completed operations and allocates names across all files. Each file owns its added imports, declarations, and renamed source bindings. Each function owns its return target, labels, jumps, and temporary values. A nested function gets new function state and shares its file state. Thus a closure can still refer to renamed outer variables and outer type aliases. Package initializer wrappers also get their own function state. The [name allocator](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/names/readme.md>) reserves source names before generation starts.
-
-Expression lowering returns one result: statements that must run first, and values with their checked types and source expressions. Operand handling keeps these records together until the caller builds the Go AST. A call that supplies several values keeps its tuple type until it is evaluated into separate locals. The caller puts the statements at the expression's evaluation point. For use\(first\(\), fetch\(\)\!, last\(\)\), operands saves first before it adds the statements for fetch. Statement lowering then places the final use call after these statements.
-
-A store destination uses place instead of ordinary expression lowering. place saves destination operands without reading the destination. This keeps assignment order and lets a later store retain its possible panic.
-
-### Feature boundaries
-
-specialExpression selects one feature entry: propagationExpression evaluates the call and returns on error; comprehensionExpression builds the collection; valueExpression assigns the result of an if or switch expression. Statement lowering uses the same propagation entry when success values are discarded. comprehensionOutput belongs to the active collection.
-
-Feature code calls expression and operands for ordered evaluation, save for evaluated values, and resultStorage for typed result declarations. place and orderedStores preserve source assignment storage. Fresh names come from name and nameFor. Features use statement, rangeStatement, and the switch operations to retain source jump targets; they do not create a new source function.
-
-Shared code owns state changes. functions.go owns function entry and failure results; initializers.go owns package initializer wrappers. bindings.go owns renamed object names. Import operations own file aliases. Collection state connects output calls to their destination in the current function. completeExpression records a completed feature operation.
-
-Keep these operations in lowering: they need its checked source, types, and execution context. Feature rules call shared operations. Shared evaluation selects feature rules only at specialExpression. The source and names packages do not depend on feature rules or rewrite state. Add a package only when its responsibility can stand without those dependencies.
-
-### Add a lowering rule
-
-First decide when the source operation runs and which source function owns its returns and jumps. A special TGo expression starts in specialExpression. An ordinary Go expression starts in expressionSyntax. Both paths return to expression, which handles insertion and result storage. A statement starts in statementInner and can delegate to a helper for its source construct.
-
-Return the statements that must run first and result references through operands. That function saves earlier operands before it adds statements from a later one. Keep statements that run conditionally inside their source branch or clause.
-
-Use save for evaluated values and place for store destinations. Read types and parent links from the inventory, and copy nodes before changing them. Add a runtime fixture that records evaluation order and failure behavior. Compare the generated bytes with the saved snapshot. For a refactor, retain the snapshots and use the hosted full test suite to check the complete change.
-
-### Preserve when expressions run
-
-Consider this TGo call, where fetch returns a value and an error:
-
-```
-use(first(), fetch()!, last())
-```
-
-The generated code must call first before fetch, and call fetch only once. If fetch fails, the function must return before last or use runs. The lowerer saves earlier results in local variables so inserted error checks do not change this order.
-
-Conditional execution must also stay conditional. In left\(\) && right\(\)\!, right runs only if left returns true. In a loop condition, an inserted check must run each time the condition runs. A continue must still execute the loop's post statement before the next condition check.
-
-Assignment needs the same care. The generated code first evaluates the destination expressions and the values, then performs the stores in order. It must not move a possible store panic before an earlier error return.
-
-### Keep statements in their source function
-
-An if expression becomes branches that assign to a result variable. For example, this source:
-
-```
-name := if ready { "ready" } else { "waiting" }
-```
-
-has the behavior of:
-
-```
-var result string
-if ready {
-    result = "ready"
-} else {
-    result = "waiting"
-}
-name := result
-```
-
-Switch expressions use an ordinary Go switch and the same result storage. The tag runs once. Cases are checked in order; default waits until they fail. A branch that returns or jumps out needs no result assignment. A comprehension becomes range loops that add values to a result slice or map. Inside a source function, these rewrites keep statements in that function. Returns, deferred calls, and jumps must retain their original function and targets.
-
-### Preserve types and errors
-
-Saved values use their checked types. For example, saving 1 \<\< n as an int can change a result that the source computes as uint64. Generated names and import aliases must also avoid names already used by the source.
-
-Check an error before converting it to the enclosing function's result type. A nil pointer converted to an error interface becomes a non\-nil interface. Checking after that conversion would incorrectly treat success as failure. An error interface that already holds a nil pointer is non\-nil and is a failure.
-
-The \! operator returns the original error. The \!\! operator adds the call name with Go's %w error wrapping, so errors.Is and errors.As can find the original error. Other function results receive zero values of their declared types.
-
-Short returns become ordinary explicit returns. Leading .. uses fresh typed zero values for success results. Trailing .. adds a nil error; multiple\-result calls are evaluated once into locals before the final return.
-
-The ordinary\-Go InsertAfter API uses the same statement generation rules. See the [public API](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md>) for an example. Rewrites leave the loaded syntax unchanged, so callers can produce independent changes from one load. The [runtime tests](<https://github.com/lucasavila00/tgo/blob/main/tests/readme.md>) compare generated behavior with handwritten Go, including order and jumps.
+A context is the state used while rewriting one function. Nested functions get their own return and jump state, while sharing file imports and names. Rules can contain other rules. Shared evaluation calls back to this dispatcher with the current context instead of importing rule packages. This keeps package dependencies in one direction and preserves function ownership during recursive rewrites. See [shared operations](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/shared/readme.md>) for the local branch callback used by value switches.
 
 ## type After
 
