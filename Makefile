@@ -14,5 +14,6 @@ docs-check: prepare
 
 lint: prepare
 	go run ./scripts/check-source-size.go
+	sh scripts/check-dead-code.sh
 	golangci-lint run ./...
 	golangci-lint fmt --diff ./...
