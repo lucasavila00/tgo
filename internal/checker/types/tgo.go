@@ -234,30 +234,6 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	return expression
 }
 
-func untypedConditionalType(values []*operand) Type {
-	var typ Type
-	for _, branch := range values {
-		if branch.isNil() {
-			continue
-		}
-		if typ == nil {
-			typ = branch.typ()
-		} else {
-			typ = maxType(typ, branch.typ())
-			if typ == nil {
-				break
-			}
-		}
-	}
-	for _, branch := range values {
-		if branch.isNil() && typ != nil {
-			typ = nil
-			break
-		}
-	}
-	return typ
-}
-
 func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
 	for _, branch := range check.conditionalValues[call] {
 		check.assignment(branch, typ, "conditional expression branch")
