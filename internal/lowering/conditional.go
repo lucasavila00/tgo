@@ -7,44 +7,12 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-func (r *rewrite) packageConditional(expression ast.Expr) bool {
-	found := false
-	ast.Inspect(expression, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok &&
-			(r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil) {
-			found = true
-			return false
-		}
-		_, function := node.(*ast.FuncLit)
-		return !function
-	})
-	return found
-}
-
-func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
-	initializer := &rewrite{input: r.input, request: r.request, file: r.file, functionState: &functionState{}}
-	typ := initializer.typeOf(expression)
-	results := &ast.FieldList{}
-	if tuple, ok := typ.(*types.Tuple); ok {
-		for i := 0; i < tuple.Len(); i++ {
-			results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(tuple.At(i).Type(), expression)})
-		}
-	} else {
-		results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(typ, expression)})
-	}
-	beforeEvaluation := initializer.expression(expression)
-	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
-	body := &ast.BlockStmt{List: append(before, &ast.ReturnStmt{Results: values})}
-	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
-}
-
-func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) expressionResult {
+func (r *rewrite) valueExpression(call *ast.CallExpr, statement ast.Stmt) expressionResult {
 	resultVariable := r.name()
-	resultType := types.Default(r.input.source.inventory.Checked.TypesInfo.TypeOf(call))
-	declaration := variable(resultVariable, r.temporaryType(resultType, call), nil)
-	r.recordTemporary(resultVariable, resultType, call)
+	resultType := types.Default(r.typeOf(call))
+	declaration := r.resultStorage(resultVariable, resultType, call, nil)
 	branchStatements := r.valueStatement(statement, resultVariable)
-	r.request.lowered[call] = true
+	r.completeExpression(call)
 	return r.result(append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable})
 }
 

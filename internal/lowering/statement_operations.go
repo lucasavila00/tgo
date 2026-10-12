@@ -46,7 +46,7 @@ func (r *rewrite) discardedPropagation(expression ast.Expr) ([]ast.Stmt, bool) {
 		expression = parenthesized.X
 	}
 	if operation, ok := r.input.propagations[expression]; ok && !r.functionState.suppressed {
-		evaluation := r.propagatedCall(expression.(*ast.CallExpr), operation, true)
+		evaluation := r.propagationExpression(expression.(*ast.CallExpr), operation, true)
 		return evaluation.Statements, true
 	}
 	return nil, false
