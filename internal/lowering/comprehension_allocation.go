@@ -11,8 +11,9 @@ import (
 
 // exactComprehension allocates once when one slice or array range emits one value
 // on every visit. It leaves filters, nested ranges, and source jumps on append.
-func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Comprehension, result *ast.Ident,
-	typ types.Type) []ast.Stmt {
+func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Comprehension,
+	destination *collectionDestination) []ast.Stmt {
+	result, typ := destination.result, destination.typ
 	key, _ := types.ComprehensionTypes(typ)
 	loop := r.exactComprehensionLoop(record, key)
 	if loop == nil {
@@ -42,13 +43,13 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 		index := r.name()
 		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
 			object := r.input.source.inventory.Checked.TypesInfo.Defs[sourceKey]
-			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.file.bindings[object]))
+			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), r.bindingReference(object))
 			output.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
 		} else {
 			output.Key = index
 			output.Tok = token.DEFINE
 		}
-		r.functionState.collectionOutputs[record.Output].index = index
+		destination.index = index
 	}
 	return append(before, &ast.BlockStmt{List: r.rangeStatement(&output)})
 }

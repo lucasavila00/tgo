@@ -30,6 +30,31 @@
 // place saves destination operands without reading the destination. This keeps
 // assignment order and lets a later store retain its possible panic.
 //
+// # Feature boundaries
+//
+// specialExpression selects one feature entry: propagationExpression evaluates
+// the call and returns on error; comprehensionExpression builds the collection;
+// valueExpression assigns the result of an if or switch expression.
+// comprehensionOutput belongs to the active collection, not a separate feature.
+//
+// Feature code calls expression and operands for ordered evaluation, save for
+// evaluated values, and resultStorage for typed result declarations. place and
+// orderedStores preserve source assignment storage. Fresh names come from name
+// and nameFor. Features use statement, rangeStatement, and the switch operations
+// to retain source jump targets; they do not create a new source function.
+//
+// Shared code owns state changes. functions.go owns function entry and failure
+// results; initializers.go owns package initializer wrappers. bindings.go owns
+// renamed object names. Import operations own file aliases. Collection state
+// connects output calls to their destination in the current function.
+// completeExpression records a completed feature operation.
+//
+// Keep these operations in lowering: they need its checked source, types, and
+// execution context. Feature rules call shared operations. Shared evaluation
+// selects feature rules only at specialExpression. The source and names packages
+// do not depend on feature rules or rewrite state. Add a package only when its
+// responsibility can stand without those dependencies.
+//
 // # Add a lowering rule
 //
 // First decide when the source operation runs and which source function owns
