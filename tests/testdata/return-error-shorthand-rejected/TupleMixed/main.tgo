@@ -1,0 +1,7 @@
+package rejected
+
+func pair() (int, int) { return 1, 2 }
+
+func run() (int, int, int, error) {
+	return pair(), 3 ..
+}

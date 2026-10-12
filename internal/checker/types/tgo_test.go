@@ -18,6 +18,9 @@ func checkTGo(t *testing.T, source string) (*types.Info, error) {
 		t.Fatal(err)
 	}
 	config := types.Config{TGo: make(map[string]types.TGoOperation)}
+	for name, record := range parsed.ShortReturns {
+		config.TGo[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess, Position: record.Position}
+	}
 	for name, position := range parsed.Conditionals {
 		config.TGo[name] = types.TGoOperation{Conditional: true, Position: position}
 	}

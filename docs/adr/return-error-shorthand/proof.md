@@ -2,41 +2,35 @@
 
 ## Behavior checks
 
-Add fixtures under `tests/testdata/return-error-shorthand/`, with generated
-Go snapshots and independent Go references. Require identical values, error
-identity, and call order.
+`TestReturnErrorShorthand` compiles `.tgo` fixtures, checks committed Go snapshots,
+and runs output and independent Go references against expected output.
 
-Check all three forms, generic zeros, multiple-result calls, and typed nil
-errors. In `(int, error)`, `return .. err` must return `0, err`. Test
-propagation, operand returns, panics, defers, and jumps: reached operands
-run once; early exits skip later operands.
+Nine groups cover all three forms, every zero-value category, generic and
+concrete error types, typed nil conversions, tuple calls, contextual shifts,
+operand order, propagation, and imported private tuple types. Control cases cover defers, panics, jumps,
+early returns, and skipped operands. Function literals have their own return
+signatures, including inside package initializers and unevaluated operands.
 
 ## Rejected inputs
 
-Reject both forms with named results, including `_` and grouped names.
-Reject bare `return ..`, both operator positions together, wrong result
-counts, incompatible operands, final non-error types, and nil incompatible
-with the final type. Diagnostics must identify the original `.tgo` position.
+Rejection fixtures check named results, including `_` and grouped names;
+wrong counts and types; missing error results; invalid nil conversions;
+overflow; and invalid syntax. Diagnostics must identify the original TGo
+source. Checker tests verify exact positions for named results and overflow.
 
 ## Regression checks
 
-Cover contextual constants, shifts, nested functions, comments, multiline
-syntax, floats, selectors, `...`, and shadowed `nil`, `error`, and type
-names. Check termination analysis and ordinary returns with named results.
+Cover ordinary named-result returns, nested functions, comments, multiline
+syntax, floats, variadic calls, and shadowed names. Generated names and types
+must keep the same source bindings.
 
-Compare automatic fixes before and after execution. Leave named-result
-functions, effectful calls, non-nil collections, nonzero interface
-conversions, and unproved values unchanged.
+Automatic modernization requires proof that omitted values and effects stay
+unchanged.
 
 ## Evidence
-
-These feature checks are planned. Add `TestReturnErrorShorthand` and run:
 
 ```sh
 go test ./tests -run '^TestReturnErrorShorthand$'
 ```
 
-A passing test must verify output compilation, reference behavior,
-snapshots, and diagnostics.
-
-[WHAT](what.md) states behavior. [HOW](how.md) explains lowering.
+The focused fixture and checker tests pass. [HOW](how.md) explains lowering.

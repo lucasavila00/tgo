@@ -86,3 +86,15 @@ The pull request workflow runs these steps in order:
 Build preparation generates the private checker before these checks. Use CI for
 the full suite. A successful final Go check is one part of correctness; the
 runtime references and tests check the source behavior it cannot prove.
+
+## Short returns
+
+`TestReturnErrorShorthand` reads `.tgo` inputs under
+`testdata/return-error-shorthand/`, compiles them, and checks their committed Go
+snapshots. It runs the output and independent Go references against `stdout.txt`.
+Rejected inputs under `testdata/return-error-shorthand-rejected/` must report the
+expected diagnostic at the original TGo file.
+
+```sh
+go test ./tests -run '^TestReturnErrorShorthand$'
+```
