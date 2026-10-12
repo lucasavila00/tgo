@@ -56,6 +56,21 @@ func (r *rewrite) nameFor(sourceName string) *ast.Ident {
 	return r.names.Fresh(sourceName)
 }
 
+func (r *rewrite) recordOrigin(expression, original ast.Expr) {
+	if r.origins == nil {
+		r.origins = make(map[ast.Expr]ast.Expr)
+	}
+	r.origins[expression] = original
+}
+
+func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	}
+	r.temporaryTypes[expression] = typ
+	r.recordOrigin(expression, original)
+}
+
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	original := expr
 	if origin := r.origins[expr]; origin != nil {
@@ -84,9 +99,6 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		refs[i] = r.name()
 	}
 	var statements []ast.Stmt
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
 	for i, ref := range refs {
 		resultType := typ
 		if tuple, ok := typ.(*types.Tuple); ok {
@@ -99,11 +111,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			value = expr
 		}
 		statements = append(statements, variable(ref.(*ast.Ident), r.temporaryType(resultType, original), value))
-		r.temporaryTypes[ref] = types.Default(resultType)
-		if r.origins == nil {
-			r.origins = make(map[ast.Expr]ast.Expr)
-		}
-		r.origins[ref] = original
+		r.recordTemporary(ref, types.Default(resultType), original)
 	}
 	if count != 1 {
 		statements = append(statements, &ast.AssignStmt{Lhs: refs, Tok: token.ASSIGN, Rhs: []ast.Expr{expr}})
@@ -146,27 +154,44 @@ func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	var statements []ast.Stmt
 	var values []ast.Expr
 	for _, expr := range input {
-		before, refs := r.expression(expr)
-		if len(before) != 0 {
-			for i, value := range values {
-				if r.functionName(value) {
-					continue
-				}
-				if tv, ok := r.source.inventory.Checked.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin() || tv.IsNil()) {
-					continue
-				}
-				if _, ok := value.(*ast.Ident); ok && r.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
-					continue
-				}
-				saveSetup, savedValues := r.save(value)
-				statements = append(statements, saveSetup...)
-				values[i] = savedValues[0]
-			}
-			statements = append(statements, before...)
+		operandStatements, operandValues := r.expression(expr)
+		if len(operandStatements) != 0 {
+			var saveStatements []ast.Stmt
+			saveStatements, values = r.savePreviousOperands(values)
+			statements = append(statements, saveStatements...)
+			statements = append(statements, operandStatements...)
 		}
-		values = append(values, refs...)
+		values = append(values, operandValues...)
 	}
 	return statements, values
+}
+
+func (r *rewrite) savePreviousOperands(values []ast.Expr) ([]ast.Stmt, []ast.Expr) {
+	var statements []ast.Stmt
+	for i, value := range values {
+		if !r.operandNeedsSaving(value) {
+			continue
+		}
+		saveStatements, savedValues := r.save(value)
+		statements = append(statements, saveStatements...)
+		values[i] = savedValues[0]
+	}
+	return statements, values
+}
+
+func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
+	if r.functionName(value) {
+		return false
+	}
+	if typeAndValue, ok := r.source.inventory.Checked.TypesInfo.Types[value]; ok {
+		if typeAndValue.Value != nil || typeAndValue.IsType() || typeAndValue.IsBuiltin() || typeAndValue.IsNil() {
+			return false
+		}
+	}
+	if _, identifier := value.(*ast.Ident); identifier && r.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
+		return false
+	}
+	return true
 }
 
 func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
@@ -176,62 +201,81 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if !r.contains(expr) {
 		return nil, []ast.Expr{expr}
 	}
+	if statements, values, special := r.specialExpression(expr); special {
+		return statements, values
+	}
+	if parenthesized, ok := expr.(*ast.ParenExpr); ok {
+		statements, values := r.expression(parenthesized.X)
+		if len(values) != 1 {
+			return statements, values
+		}
+		output := *parenthesized
+		output.X = values[0]
+		return r.finishExpression(expr, statements, &output)
+	}
+	statements, result := r.expressionSyntax(expr)
+	return r.finishExpression(expr, statements, result)
+}
+
+func (r *rewrite) specialExpression(expr ast.Expr) ([]ast.Stmt, []ast.Expr, bool) {
 	if operation, ok := r.propagations[expr]; ok && !r.suppressed {
-		return r.propagatedCall(expr.(*ast.CallExpr), operation)
+		statements, values := r.propagatedCall(expr.(*ast.CallExpr), operation)
+		return statements, values, true
 	}
-	if call, ok := expr.(*ast.CallExpr); ok {
-		if record := r.comprehensions[call]; record != nil {
-			return r.comprehensionCall(call, record)
-		}
-		if id, ok := call.Fun.(*ast.Ident); ok && r.collectionOutputs[id.Name] != nil {
-			return r.comprehensionOutput(call, r.collectionOutputs[id.Name])
-		}
-		if statement := r.conditionals[call]; statement != nil {
-			return r.conditionalCall(call, statement)
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return nil, nil, false
+	}
+	if record := r.comprehensions[call]; record != nil {
+		statements, values := r.comprehensionCall(call, record)
+		return statements, values, true
+	}
+	if identifier, ok := call.Fun.(*ast.Ident); ok {
+		if destination := r.collectionOutputs[identifier.Name]; destination != nil {
+			statements, values := r.comprehensionOutput(call, destination)
+			return statements, values, true
 		}
 	}
+	if statement := r.conditionals[call]; statement != nil {
+		statements, values := r.conditionalCall(call, statement)
+		return statements, values, true
+	}
+	return nil, nil, false
+}
+
+func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	switch e := expr.(type) {
 	case *ast.FuncLit:
-		copy := *e
+		function := *e
 		labels := r.labels
 		r.labels = nil
-		copy.Type, copy.Body = r.function(e, e.Type, e.Body)
+		function.Type, function.Body = r.function(e, e.Type, e.Body)
 		r.labels = labels
-		result = &copy
+		result = &function
 	case *ast.CallExpr:
 		if r.unsafeOperand(e) {
 			before, result = r.unevaluatedCall(e)
 			break
 		}
-		copy := *e
+		call := *e
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr
 		before, values = r.operands(operands)
-		copy.Fun = values[0]
-		copy.Args = values[1:]
-		result = &copy
-	case *ast.ParenExpr:
-		copy := *e
-		var values []ast.Expr
-		before, values = r.expression(e.X)
-		if len(values) == 1 {
-			copy.X = values[0]
-			result = &copy
-		} else {
-			return before, values
-		}
+		call.Fun = values[0]
+		call.Args = values[1:]
+		result = &call
 	case *ast.UnaryExpr:
-		copy := *e
+		unary := *e
 		if e.Op == token.AND {
 			before, result = r.address(e.X)
 			break
 		}
 		var values []ast.Expr
 		before, values = r.expression(e.X)
-		copy.X = values[0]
-		result = &copy
+		unary.X = values[0]
+		result = &unary
 	case *ast.BinaryExpr:
 		before, result = r.binaryExpression(e)
 	case *ast.SelectorExpr:
@@ -239,37 +283,34 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	case *ast.IndexExpr:
 		before, result = r.indexExpression(e)
 	case *ast.StarExpr:
-		copy := *e
+		dereference := *e
 		var values []ast.Expr
 		before, values = r.expression(e.X)
-		copy.X = values[0]
-		result = &copy
+		dereference.X = values[0]
+		result = &dereference
 	case *ast.TypeAssertExpr:
-		copy := *e
+		assertion := *e
 		var values []ast.Expr
 		before, values = r.expression(e.X)
-		copy.X = values[0]
-		result = &copy
+		assertion.X = values[0]
+		result = &assertion
 	case *ast.IndexListExpr:
-		copy := *e
+		indexList := *e
 		var values []ast.Expr
 		before, values = r.expression(e.X)
-		copy.X = values[0]
-		result = &copy
+		indexList.X = values[0]
+		result = &indexList
 	case *ast.SliceExpr:
 		before, result = r.sliceExpression(e)
 	case *ast.CompositeLit:
 		before, result = r.compositeExpression(e)
 	}
-	return r.finishExpression(expr, before, result)
+	return before, result
 }
 
 func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if result != expr {
-		if r.origins == nil {
-			r.origins = make(map[ast.Expr]ast.Expr)
-		}
-		r.origins[result] = expr
+		r.recordOrigin(result, expr)
 	}
 	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true

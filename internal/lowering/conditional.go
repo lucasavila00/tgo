@@ -39,14 +39,7 @@ func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]
 	result := r.name()
 	typ := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
 	declaration := variable(result, r.temporaryType(typ, call), nil)
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.temporaryTypes[result] = typ
-	r.origins[result] = call
+	r.recordTemporary(result, typ, call)
 	body := r.conditionalStatement(statement, result)
 	r.lowered[call] = true
 	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}

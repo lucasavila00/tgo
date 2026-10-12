@@ -97,13 +97,6 @@ func (r *rewrite) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 
 func (r *rewrite) typedAddress(value, original ast.Expr) ast.Expr {
 	expr := &ast.UnaryExpr{Op: token.AND, X: value}
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	r.temporaryTypes[expr] = types.NewPointer(r.typeOf(original))
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.origins[expr] = original
+	r.recordTemporary(expr, types.NewPointer(r.typeOf(original)), original)
 	return expr
 }

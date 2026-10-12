@@ -125,14 +125,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 		values = append(values, refs[0])
 	}
 	key := r.name()
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	r.temporaryTypes[key] = r.typeOf(original)
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.origins[key] = original
+	r.recordTemporary(key, r.typeOf(original), original)
 	before = append(before, variable(key, r.temporaryType(r.typeOf(original), original), nil))
 	index := 0
 	for i, element := range value.Elts {
