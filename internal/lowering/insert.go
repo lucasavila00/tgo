@@ -3,11 +3,12 @@ package lowering
 import (
 	"bytes"
 	"fmt"
-	"github.com/lucasavila00/tgo/internal/lowering/source"
 	"go/ast"
 	"go/format"
 	"go/token"
 	"reflect"
+
+	"github.com/lucasavila00/tgo/internal/lowering/source"
 )
 
 // InsertAfter returns Go files with the callback's statements after the selected expression.
@@ -35,7 +36,15 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, propagations: make(map[ast.Expr]Propagation), comprehensions: s.inventory.Checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.inventory.Checked.Conditionals, lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{
+		source:              s,
+		propagations:        make(map[ast.Expr]Propagation),
+		comprehensions:      s.inventory.Checked.Comprehensions,
+		comprehensionRanges: make(map[*ast.RangeStmt]bool),
+		collectionOutputs:   make(map[string]*collectionDestination),
+		conditionals:        s.inventory.Checked.Conditionals,
+		lowered:             make(map[ast.Expr]bool),
+	}
 	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -58,10 +67,18 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	if err != nil {
 		return nil, err
 	}
+	if err := r.checkLoweredOperations(); err != nil {
+		return nil, err
+	}
+	return output, nil
+}
+
+func (r *rewrite) checkLoweredOperations() error {
+	s := r.source
 	for _, site := range s.Sites {
 		expression := s.inventory.Expressions[source.Site(site)]
 		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
-			return nil, fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
+			return fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
 		}
 	}
 	for _, file := range s.inventory.Checked.Syntax {
@@ -75,20 +92,20 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return missing == nil
 		})
 		if missing != nil {
-			return nil, missing
+			return missing
 		}
 	}
 	for call := range r.comprehensions {
 		if !r.lowered[call] {
-			return nil, fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
+			return fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
-			return nil, fmt.Errorf("%s: if expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
+			return fmt.Errorf("%s: if expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
-	return output, nil
+	return nil
 }
 
 func (r *rewrite) contains(node ast.Node) bool {
@@ -144,31 +161,36 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 	r.names.ReserveSyntax(r.source.inventory.Checked.Syntax)
 	output := make(map[string][]byte)
 	for _, file := range r.source.inventory.Checked.Syntax {
-		r.extraImports = nil
-		r.extraDeclarations = nil
-		r.formatAlias = nil
-		r.zeroSequence = nil
-		r.iterAlias = nil
-		r.mapAlias = nil
-		r.sliceAlias = nil
-		r.reflectAlias = nil
-		r.typeImports = nil
-		copy := r.functionBodies(file).(*ast.File)
+		r.startFile()
+		outputFile := r.functionBodies(file).(*ast.File)
 		if r.err != nil {
 			return nil, r.err
 		}
 
-		copy.Decls = append(copy.Decls, r.extraDeclarations...)
+		outputFile.Decls = append(outputFile.Decls, r.extraDeclarations...)
 		for _, spec := range r.extraImports {
-			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
+			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
+			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.inventory.Checked.Fset, r.renameBindings(copy)); err != nil {
+		if err := format.Node(&buf, r.source.inventory.Checked.Fset, r.renameBindings(outputFile)); err != nil {
 			return nil, err
 		}
 		output[r.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
+}
+
+func (r *rewrite) startFile() {
+	r.extraImports = nil
+	r.extraDeclarations = nil
+	r.formatAlias = nil
+	r.zeroSequence = nil
+	r.iterAlias = nil
+	r.mapAlias = nil
+	r.sliceAlias = nil
+	r.reflectAlias = nil
+	r.typeImports = nil
 }
 
 // functionBodies visits the same typed syntax tree as the expression inventory.
