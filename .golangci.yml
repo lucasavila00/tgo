@@ -28,7 +28,7 @@ linters:
     gocognit:
       min-complexity: 20
     gocyclo:
-      min-complexity: 30
+      min-complexity: 20
   exclusions:
     paths:
       - tests/testdata
