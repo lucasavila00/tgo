@@ -37,7 +37,7 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 
 func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]ast.Stmt, []ast.Expr) {
 	result := r.name()
-	typ := types.Default(r.source.checked.TypesInfo.TypeOf(call))
+	typ := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
 	declaration := variable(result, r.temporaryType(typ, call), nil)
 	if r.temporaryTypes == nil {
 		r.temporaryTypes = make(map[ast.Expr]types.Type)
@@ -85,7 +85,7 @@ func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident)
 func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
 	copy := *body
 	copy.List = nil
-	if completes, recorded := r.source.checked.TypesInfo.TGoBranches[body]; recorded && !completes {
+	if completes, recorded := r.source.inventory.Checked.TypesInfo.TGoBranches[body]; recorded && !completes {
 		result = nil
 	}
 	last := len(body.List) - 1
@@ -132,7 +132,7 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 	case *ast.IfStmt:
 		return r.conditionalStatement(statement, result)
 	case *ast.ExprStmt:
-		if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
+		if tv := r.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 			before, values := r.expression(statement.X)
 			if result == nil {
 				for _, value := range values {

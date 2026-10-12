@@ -2,33 +2,21 @@ package lowering
 
 import (
 	"fmt"
-	"github.com/lucasavila00/tgo/internal/checker/types"
+	"github.com/lucasavila00/tgo/internal/lowering/source"
 	"go/ast"
-	"go/token"
-	"path/filepath"
 
 	"github.com/lucasavila00/tgo/internal/checker"
 	"golang.org/x/tools/go/packages"
 )
 
 // Site identifies an expression in the original source. Offsets are bytes.
-type Site struct {
-	File         string `json:"file"`
-	Start        int    `json:"start"`
-	End          int    `json:"end"`
-	Kind         string `json:"kind"`
-	Reason       string `json:"reason,omitempty"`
-	ErrorReturn  bool   `json:"error_return"`
-	ReturnReason string `json:"return_reason,omitempty"`
-}
+type Site source.Site
 
 // Source contains the original syntax and its type information.
 type Source struct {
-	Package     *packages.Package
-	checked     *checker.Package
-	Sites       []Site
-	expressions map[Site]ast.Expr
-	parents     map[ast.Node]ast.Node
+	Package   *packages.Package
+	Sites     []Site
+	inventory source.Inventory
 }
 
 // Load reads and type-checks one Go package selected by pattern in dir.
@@ -68,144 +56,16 @@ func SourceFromPackage(p *packages.Package, dir string) (*Source, error) {
 
 // SourceFromCheckedPackage records expressions from private source checking.
 func SourceFromCheckedPackage(p *checker.Package, dir string) (*Source, error) {
-	s := &Source{checked: p, expressions: make(map[Site]ast.Expr), parents: make(map[ast.Node]ast.Node)}
-	for _, file := range p.Syntax {
-		s.inventory(file, dir)
+	inventory := source.New(p, dir)
+	var sites []Site
+	for _, site := range inventory.Sites {
+		sites = append(sites, Site(site))
 	}
-	return s, nil
-}
-
-func (s *Source) inventory(file *ast.File, dir string) {
-	var stack []ast.Node
-	ast.Inspect(file, func(n ast.Node) bool {
-		if n == nil {
-			stack = stack[:len(stack)-1]
-			return true
-		}
-		if len(stack) != 0 {
-			s.parents[n] = stack[len(stack)-1]
-		}
-		if expr, ok := n.(ast.Expr); ok {
-			// Use physical file names and offsets for expression sites.
-			start := s.checked.Fset.PositionFor(expr.Pos(), false)
-			end := s.checked.Fset.PositionFor(expr.End(), false)
-			name, err := filepath.Rel(dir, start.Filename)
-			if err != nil {
-				name = start.Filename
-			}
-			site := Site{File: name, Start: start.Offset, End: end.Offset, Kind: fmt.Sprintf("%T", expr)}
-			tv, hasType := s.checked.TypesInfo.Types[expr]
-			switch {
-			case hasType && tv.IsBuiltin():
-				site.Reason = "builtin name"
-			case hasType && tv.IsType():
-				site.Reason = "type syntax"
-			case !hasType:
-				site.Reason = "name or syntax without a value"
-			}
-			if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
-				site.Reason = "type switch assertion syntax"
-			}
-			var fn ast.Node
-			for i := len(stack) - 1; i >= 0; i-- {
-				switch parent := stack[i].(type) {
-				case *ast.FuncDecl:
-					fn = parent
-				case *ast.FuncLit:
-					call, _ := s.parents[parent].(*ast.CallExpr)
-					if s.checked.Conditionals[call] == nil && s.checked.Comprehensions[call] == nil {
-						fn = parent
-					}
-				case *ast.GenDecl:
-					if parent.Tok == token.CONST {
-						site.Reason = "constant declaration"
-					}
-				case *ast.ArrayType:
-					if contains(parent.Len, expr) {
-						site.Reason = "array length"
-					}
-				case *ast.RangeStmt:
-					if contains(parent.X, expr) && s.rangeElided(parent) {
-						site.Reason = "range expression is not evaluated"
-					}
-				case *ast.GoStmt:
-					if parent.Call == expr {
-						site.Reason = "call executes in another goroutine"
-					}
-				case *ast.DeferStmt:
-					if parent.Call == expr {
-						site.Reason = "call executes when the function returns"
-					}
-				}
-				if fn != nil {
-					break
-				}
-			}
-			if fn == nil && site.Reason == "" {
-				site.Reason = "package scope"
-			}
-			if fn != nil {
-				var typ *ast.FuncType
-				switch f := fn.(type) {
-				case *ast.FuncDecl:
-					typ = f.Type
-				case *ast.FuncLit:
-					typ = f.Type
-				}
-				sig, _ := s.checked.TypesInfo.TypeOf(typ).(*types.Signature)
-				if sig == nil {
-					if f, ok := fn.(*ast.FuncDecl); ok {
-						sig, _ = s.checked.TypesInfo.Defs[f.Name].Type().(*types.Signature)
-					}
-					if f, ok := fn.(*ast.FuncLit); ok {
-						sig, _ = s.checked.TypesInfo.TypeOf(f).(*types.Signature)
-					}
-				}
-				if sig != nil && sig.Results().Len() == 1 {
-					site.ErrorReturn = types.Identical(sig.Results().At(0).Type(), types.Universe.Lookup("error").Type())
-				}
-				if !site.ErrorReturn {
-					site.ReturnReason = "function does not return only error"
-				}
-			} else {
-				site.ReturnReason = "no enclosing function"
-			}
-			s.Sites = append(s.Sites, site)
-			s.expressions[site] = expr
-		}
-		stack = append(stack, n)
-		return true
-	})
+	return &Source{Sites: sites, inventory: *inventory}, nil
 }
 
 func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
-	if statement.Value != nil {
-		return false
-	}
-	if tv := s.checked.TypesInfo.Types[statement.X]; tv.Value != nil {
-		return true
-	}
-	typ := s.checked.TypesInfo.TypeOf(statement.X).Underlying()
-	if pointer, ok := typ.(*types.Pointer); ok {
-		typ = pointer.Elem().Underlying()
-	}
-	if _, ok := typ.(*types.Array); !ok {
-		return false
-	}
-	constantLength := true
-	ast.Inspect(statement.X, func(n ast.Node) bool {
-		if _, ok := n.(*ast.FuncLit); ok {
-			return false
-		}
-		if call, ok := n.(*ast.CallExpr); ok && s.checked.TypesInfo.Types[call].Value == nil && !s.checked.TypesInfo.Types[call.Fun].IsType() {
-			constantLength = false
-		}
-		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.ARROW {
-			constantLength = false
-		}
-		return true
-	})
-	return constantLength
+	return source.RangeElided(s.inventory.Checked, statement)
 }
 
 func contains(parent, child ast.Node) bool {

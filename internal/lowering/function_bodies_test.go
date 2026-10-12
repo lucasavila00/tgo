@@ -38,9 +38,9 @@ var functions = []func() int{func() int { return next() }}
 		t.Fatal(err)
 	}
 	var target Site
-	for site := range source.expressions {
+	for site := range source.inventory.Expressions {
 		if input[site.Start:site.End] == "next()" {
-			target = site
+			target = Site(site)
 		}
 	}
 	if target.Kind == "" {
@@ -99,7 +99,7 @@ var functions = []func() error{func() error { next()!; return nil }}
 		t.Fatal(err)
 	}
 	var before bytes.Buffer
-	if err := format.Node(&before, source.checked.Fset, source.checked.Syntax[0]); err != nil {
+	if err := format.Node(&before, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0]); err != nil {
 		t.Fatal(err)
 	}
 	operations := make(map[string]Propagation)
@@ -119,7 +119,7 @@ var functions = []func() error{func() error { next()!; return nil }}
 		t.Fatalf("propagation changed across calls:\n%s\n%s", first[name], second[name])
 	}
 	var after bytes.Buffer
-	if err := format.Node(&after, source.checked.Fset, source.checked.Syntax[0]); err != nil {
+	if err := format.Node(&after, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0]); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(before.Bytes(), after.Bytes()) {

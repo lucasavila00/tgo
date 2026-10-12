@@ -3,6 +3,7 @@ package lowering
 import (
 	"bytes"
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/lowering/source"
 	"go/ast"
 	"go/format"
 	"go/token"
@@ -12,14 +13,14 @@ import (
 // InsertAfter returns Go files with the callback's statements after the selected expression.
 // The callback receives saved results; the original syntax tree stays unchanged.
 func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) {
-	target, ok := s.expressions[site]
+	target, ok := s.inventory.Expressions[source.Site(site)]
 	if !ok {
 		return nil, fmt.Errorf("expression site does not belong to this source")
 	}
 	if site.Reason != "" {
 		return nil, fmt.Errorf("expression has no current-function evaluation: %s", site.Reason)
 	}
-	r := &rewrite{source: s, target: target, after: after, names: make(map[string]bool)}
+	r := &rewrite{source: s, target: target, after: after}
 	output, err := r.emit()
 	if err != nil {
 		return nil, err
@@ -34,8 +35,19 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, shortReturns: s.checked.ShortReturns, loweredReturns: make(map[*ast.ReturnStmt]bool), lowered: make(map[ast.Expr]bool)}
-	for site, expression := range s.expressions {
+	checked := s.inventory.Checked
+	r := &rewrite{
+		source:              s,
+		propagations:        make(map[ast.Expr]Propagation),
+		comprehensions:      checked.Comprehensions,
+		comprehensionRanges: make(map[*ast.RangeStmt]bool),
+		collectionOutputs:   make(map[string]*collectionDestination),
+		conditionals:        checked.Conditionals,
+		shortReturns:        checked.ShortReturns,
+		loweredReturns:      make(map[*ast.ReturnStmt]bool),
+		lowered:             make(map[ast.Expr]bool),
+	}
+	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
 			continue
@@ -58,17 +70,17 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 		return nil, err
 	}
 	for _, site := range s.Sites {
-		expression := s.expressions[site]
+		expression := s.inventory.Expressions[source.Site(site)]
 		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
-			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
+			return nil, fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
 		}
 	}
-	for _, file := range s.checked.Syntax {
+	for _, file := range s.inventory.Checked.Syntax {
 		var missing error
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.checked.Operations[id.Name].Element && !r.lowered[call] {
-					missing = fmt.Errorf("%s: comprehension output was not lowered", s.checked.Fset.Position(call.Pos()))
+				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.lowered[call] {
+					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 				}
 			}
 			return missing == nil
@@ -79,17 +91,17 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	}
 	for call := range r.comprehensions {
 		if !r.lowered[call] {
-			return nil, fmt.Errorf("%s: comprehension was not lowered", s.checked.Fset.Position(call.Pos()))
+			return nil, fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
 	for statement := range r.shortReturns {
 		if !r.loweredReturns[statement] {
-			return nil, fmt.Errorf("%s: short return was not lowered", s.checked.Fset.Position(statement.Pos()))
+			return nil, fmt.Errorf("%s: short return was not lowered", s.inventory.Checked.Fset.Position(statement.Pos()))
 		}
 	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
-			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
+			return nil, fmt.Errorf("%s: if expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
 	return output, nil
@@ -120,7 +132,7 @@ func (r *rewrite) contains(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(child ast.Node) bool {
 		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.source.checked.Operations[id.Name].Element {
+			if id, ok := call.Fun.(*ast.Ident); ok && r.source.inventory.Checked.Operations[id.Name].Element {
 				found = true
 			}
 		}
@@ -150,16 +162,9 @@ func (r *rewrite) isTarget(expression ast.Expr) bool {
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {
-	for _, file := range r.source.checked.Syntax {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if id, ok := node.(*ast.Ident); ok {
-				r.names[id.Name] = true
-			}
-			return true
-		})
-	}
+	r.names.ReserveSyntax(r.source.inventory.Checked.Syntax)
 	output := make(map[string][]byte)
-	for _, file := range r.source.checked.Syntax {
+	for _, file := range r.source.inventory.Checked.Syntax {
 		r.extraImports = nil
 		r.extraDeclarations = nil
 		r.formatAlias = nil
@@ -179,10 +184,10 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.checked.Fset, r.renameBindings(copy)); err != nil {
+		if err := format.Node(&buf, r.source.inventory.Checked.Fset, r.renameBindings(copy)); err != nil {
 			return nil, err
 		}
-		output[r.source.checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
+		output[r.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
 }

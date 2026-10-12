@@ -1,9 +1,10 @@
-package lowering
+package names
 
 import "testing"
 
 func TestFreshGeneratedNames(t *testing.T) {
-	r := &rewrite{names: map[string]bool{"fmt": true, "fmt_tgo1": true, "tgo3": true}}
+	allocator := &Allocator{}
+	allocator.Reserve("fmt", "fmt_tgo1", "tgo3")
 	for _, test := range []struct {
 		source, want string
 	}{
@@ -12,7 +13,7 @@ func TestFreshGeneratedNames(t *testing.T) {
 		{"fmt", "fmt_tgo5"},
 		{"value", "value_tgo6"},
 	} {
-		if got := r.nameFor(test.source).Name; got != test.want {
+		if got := allocator.Fresh(test.source).Name; got != test.want {
 			t.Fatalf("name for %q: got %q, want %q", test.source, got, test.want)
 		}
 	}

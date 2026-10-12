@@ -36,7 +36,7 @@ func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 }
 
 func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
-	scope := r.source.checked.Types.Scope().Innermost(statement.Pos())
+	scope := r.source.inventory.Checked.Types.Scope().Innermost(statement.Pos())
 	_, object := scope.LookupParent("nil", statement.Pos())
 	if object == types.Universe.Lookup("nil") {
 		return nil, ast.NewIdent("nil")
@@ -51,9 +51,9 @@ func (r *rewrite) shortReturnResults() *types.Tuple {
 	var signature *types.Signature
 	switch function := r.frame.function.(type) {
 	case *ast.FuncDecl:
-		signature = r.source.checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
+		signature = r.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
 	case *ast.FuncLit:
-		signature = r.source.checked.TypesInfo.TypeOf(function).(*types.Signature)
+		signature = r.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
 	}
 	return signature.Results()
 }

@@ -29,8 +29,8 @@ func (check *Checker) tgoOperation(call *ast.CallExpr) (TGoOperation, bool) {
 	if !ok {
 		return TGoOperation{}, false
 	}
-	op, found := check.conf.TGo[id.Name]
-	return op, found
+	operation, found := check.conf.TGo[id.Name]
+	return operation, found
 }
 
 // expressionType passes context through operators whose result has that type.
@@ -377,12 +377,12 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 	if !x.isValid() {
 		return expression
 	}
-	results, ok := x.typ().(*Tuple)
-	last := x.typ()
-	if ok && results.Len() != 0 {
-		last = results.At(results.Len() - 1).Type()
+	results, hasTupleResults := x.typ().(*Tuple)
+	errorResultType := x.typ()
+	if hasTupleResults && results.Len() != 0 {
+		errorResultType = results.At(results.Len() - 1).Type()
 	}
-	if !AssignableTo(last, Universe.Lookup("error").Type()) {
+	if !AssignableTo(errorResultType, Universe.Lookup("error").Type()) {
 		check.error(position, IncompatibleAssign, "propagation requires a final error result")
 		x.invalidate()
 		return expression
@@ -392,26 +392,26 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 		x.invalidate()
 		return expression
 	}
-	returned := last
+	returnedErrorType := errorResultType
 	operator := "!"
 	if operation.Wrap {
-		returned = Universe.Lookup("error").Type()
+		returnedErrorType = Universe.Lookup("error").Type()
 		operator = "!!"
 	}
-	target := check.sig.Results().At(check.sig.Results().Len() - 1).Type()
-	if _, ok := target.Underlying().(*Interface); !ok || !AssignableTo(target, Universe.Lookup("error").Type()) {
+	returnErrorType := check.sig.Results().At(check.sig.Results().Len() - 1).Type()
+	if _, ok := returnErrorType.Underlying().(*Interface); !ok || !AssignableTo(returnErrorType, Universe.Lookup("error").Type()) {
 		check.error(position, IncompatibleAssign, "propagation requires a final error interface return")
 		x.invalidate()
 		return expression
 	}
-	if !AssignableTo(returned, target) {
-		check.errorf(position, IncompatibleAssign, "%s cannot return error of type %s as %s", operator, returned, target)
+	if !AssignableTo(returnedErrorType, returnErrorType) {
+		check.errorf(position, IncompatibleAssign, "%s cannot return error of type %s as %s", operator, returnedErrorType, returnErrorType)
 		x.invalidate()
 		return expression
 	}
 	x.mode_ = value
 	switch {
-	case !ok || results.Len() == 1:
+	case !hasTupleResults || results.Len() == 1:
 		x.mode_ = novalue
 		x.typ_ = NewTuple()
 	case results.Len() == 2:

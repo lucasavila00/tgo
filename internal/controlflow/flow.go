@@ -47,13 +47,13 @@ func Branch(body *ast.BlockStmt, syntax Syntax) Result {
 	seen := make(map[*point]bool)
 	pending := []*point{entry}
 	for len(pending) > 0 {
-		n := pending[len(pending)-1]
+		currentPoint := pending[len(pending)-1]
 		pending = pending[:len(pending)-1]
-		if n == nil || seen[n] {
+		if currentPoint == nil || seen[currentPoint] {
 			continue
 		}
-		seen[n] = true
-		pending = append(pending, n.next...)
+		seen[currentPoint] = true
+		pending = append(pending, currentPoint.next...)
 	}
 	return Result{Tail: seen[g.tailPoint], End: seen[done]}
 }
@@ -116,7 +116,9 @@ func (g *graph) statementInner(s ast.Stmt, next *point, t targets, label string)
 	case *ast.ExprStmt:
 		return g.expression(s.X, next, t)
 	case *ast.AssignStmt:
-		return g.expressions(append(append([]ast.Expr{}, s.Lhs...), s.Rhs...), next, t)
+		operands := append([]ast.Expr{}, s.Lhs...)
+		operands = append(operands, s.Rhs...)
+		return g.expressions(operands, next, t)
 	case *ast.DeclStmt:
 		if decl, ok := s.Decl.(*ast.GenDecl); ok {
 			for i := len(decl.Specs) - 1; i >= 0; i-- {
@@ -205,7 +207,8 @@ func (g *graph) expressions(exprs []ast.Expr, next *point, t targets) *point {
 	return next
 }
 func (g *graph) callOperands(call *ast.CallExpr, next *point, t targets) *point {
-	return g.expression(call.Fun, g.expressions(call.Args, next, t), t)
+	argumentsEntry := g.expressions(call.Args, next, t)
+	return g.expression(call.Fun, argumentsEntry, t)
 }
 func (g *graph) forStatement(s *ast.ForStmt, next *point, t targets, label string) *point {
 	cond := &point{}
@@ -231,9 +234,9 @@ func (g *graph) rangeStatement(s *ast.RangeStmt, next *point, t targets, label s
 		g.jumps[label] = inner
 		defer delete(g.jumps, label)
 	}
-	body := g.statement(s.Body, step, inner, "")
-	body = g.expressions([]ast.Expr{s.Key, s.Value}, body, inner)
-	step.next = []*point{body, next}
+	bodyEntry := g.statement(s.Body, step, inner, "")
+	assignmentEntry := g.expressions([]ast.Expr{s.Key, s.Value}, bodyEntry, inner)
+	step.next = []*point{assignmentEntry, next}
 	if g.syntax.RangeSourceOutside != nil && g.syntax.RangeSourceOutside(s) {
 		inner = t
 	}
