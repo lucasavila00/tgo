@@ -11,11 +11,44 @@ linters:
     - funlen
     - lll
     - gocyclo
+    - depguard
     - nolintlint
   settings:
     nolintlint:
       require-specific: true
       require-explanation: true
+    depguard:
+      rules:
+        internal:
+          files:
+            - "**/internal/**"
+          deny:
+            - pkg: github.com/lucasavila00/tgo/pkg/transpiler
+              desc: The public API calls internal packages, not the reverse.
+            - pkg: github.com/lucasavila00/tgo/cmd/tgo
+              desc: The command calls the public API, not the reverse.
+        compiler:
+          files:
+            - "**/internal/**"
+            - "!**/internal/driver/**"
+          deny:
+            - pkg: github.com/lucasavila00/tgo/internal/driver
+              desc: The driver calls compiler layers, not the reverse.
+        source:
+          files:
+            - "**/internal/frontend/**"
+            - "**/internal/controlflow/**"
+          deny:
+            - pkg: github.com/lucasavila00/tgo/internal/checker
+              desc: Source syntax and control flow do not depend on type checking.
+            - pkg: github.com/lucasavila00/tgo/internal/lowering
+              desc: Source syntax and control flow do not depend on code generation.
+        checker:
+          files:
+            - "**/internal/checker/**"
+          deny:
+            - pkg: github.com/lucasavila00/tgo/internal/lowering
+              desc: Lowering reads checked source, not the reverse.
     staticcheck:
       checks: ["SA*"]
     revive:
