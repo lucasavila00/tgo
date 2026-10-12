@@ -72,26 +72,7 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 					if returning && !site.ErrorReturn {
 						continue
 					}
-					after := func([]ast.Expr) []ast.Stmt {
-						return []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "0"}}}}
-					}
-					if neutral {
-						after = func([]ast.Expr) []ast.Stmt {
-							return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("proofMark")}}}
-						}
-					}
-					if returning {
-						after = func([]ast.Expr) []ast.Stmt {
-							exit := &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}}
-							if returnCheck {
-								return []ast.Stmt{
-									&ast.IncDecStmt{X: ast.NewIdent("proofVisits"), Tok: token.INC},
-									&ast.IfStmt{Cond: &ast.BinaryExpr{X: ast.NewIdent("proofVisits"), Op: token.EQL, Y: ast.NewIdent("proofExit")}, Body: &ast.BlockStmt{List: []ast.Stmt{exit}}},
-								}
-							}
-							return []ast.Stmt{exit}
-						}
-					}
+					after := proofStatements(neutral, returning, returnCheck)
 					files, err := source.InsertAfter(site, after)
 					expected := rejections[fmt.Sprintf("%s:%d:%d", site.File, site.Start, site.End)]
 					if expected != "" {
@@ -128,6 +109,30 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 		t.Skip("no expression sites selected")
 	}
 	checkProofVariants(t, dir)
+}
+
+func proofStatements(neutral, returning, returnCheck bool) func([]ast.Expr) []ast.Stmt {
+	after := func([]ast.Expr) []ast.Stmt {
+		return []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "0"}}}}
+	}
+	if neutral {
+		after = func([]ast.Expr) []ast.Stmt {
+			return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("proofMark")}}}
+		}
+	}
+	if returning {
+		after = func([]ast.Expr) []ast.Stmt {
+			exit := &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}}
+			if returnCheck {
+				return []ast.Stmt{
+					&ast.IncDecStmt{X: ast.NewIdent("proofVisits"), Tok: token.INC},
+					&ast.IfStmt{Cond: &ast.BinaryExpr{X: ast.NewIdent("proofVisits"), Op: token.EQL, Y: ast.NewIdent("proofExit")}, Body: &ast.BlockStmt{List: []ast.Stmt{exit}}},
+				}
+			}
+			return []ast.Stmt{exit}
+		}
+	}
+	return after
 }
 
 func checkProofVariants(t *testing.T, dir string) {
