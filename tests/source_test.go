@@ -39,47 +39,52 @@ func run(err error) error {
 	text := files["input.go"]
 	found := map[string]bool{}
 	for _, site := range source.Sites {
-		expression := text[site.Start:site.End]
-		switch expression {
-		case "(*[2]int)(nil)":
-			if site.Reason != "range expression is not evaluated" {
-				t.Fatalf("range conversion: %+v", site)
-			}
-			found["range conversion"] = true
-		case "1":
-			if site.Reason != "package scope" {
-				t.Fatalf("global: %+v", site)
-			}
-			found["global"] = true
-		case "2":
-			if site.Reason == "range expression is not evaluated" {
-				break
-			}
-			if site.Reason != "constant declaration" {
-				t.Fatalf("constant: %+v", site)
-			}
-			found["constant"] = true
-		case "3":
-			if site.ErrorReturn {
-				t.Fatalf("closure has integer return: %+v", site)
-			}
-			found["integer closure"] = true
-		case "err":
-			if site.Reason == "" && !site.ErrorReturn {
-				t.Fatalf("error return target: %+v", site)
-			}
-		case "run(err)":
-			if site.Reason == "call executes in another goroutine" {
-				found["go"] = true
-			}
-			if site.Reason == "call executes when the function returns" {
-				found["defer"] = true
-			}
-		}
+		checkSourceReturnSite(t, text, site, found)
 	}
 	for _, name := range []string{"global", "constant", "integer closure", "go", "defer", "range conversion"} {
 		if !found[name] {
 			t.Errorf("missing %s", name)
+		}
+	}
+}
+
+func checkSourceReturnSite(t *testing.T, text string, site transpiler.Site, found map[string]bool) {
+	t.Helper()
+	expression := text[site.Start:site.End]
+	switch expression {
+	case "(*[2]int)(nil)":
+		if site.Reason != "range expression is not evaluated" {
+			t.Fatalf("range conversion: %+v", site)
+		}
+		found["range conversion"] = true
+	case "1":
+		if site.Reason != "package scope" {
+			t.Fatalf("global: %+v", site)
+		}
+		found["global"] = true
+	case "2":
+		if site.Reason == "range expression is not evaluated" {
+			break
+		}
+		if site.Reason != "constant declaration" {
+			t.Fatalf("constant: %+v", site)
+		}
+		found["constant"] = true
+	case "3":
+		if site.ErrorReturn {
+			t.Fatalf("closure has integer return: %+v", site)
+		}
+		found["integer closure"] = true
+	case "err":
+		if site.Reason == "" && !site.ErrorReturn {
+			t.Fatalf("error return target: %+v", site)
+		}
+	case "run(err)":
+		if site.Reason == "call executes in another goroutine" {
+			found["go"] = true
+		}
+		if site.Reason == "call executes when the function returns" {
+			found["defer"] = true
 		}
 	}
 }

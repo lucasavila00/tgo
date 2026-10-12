@@ -47,22 +47,7 @@ func TestPropagationFixtures(t *testing.T) {
 			if inputs == 0 {
 				t.Fatal("fixture has no TGo input")
 			}
-			for name, content := range files {
-				if !strings.HasSuffix(name, ".go") {
-					continue
-				}
-				if *updateSnapshots {
-					if !bytes.Equal(source[name], content) {
-						writeFiles(t, input, map[string][]byte{name: content})
-					}
-					continue
-				}
-				if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
-					t.Errorf("generated %s differs from snapshot; inspect output before using "+
-						"-update-snapshots\nSAVED:\n%s\nGENERATED:\n%s",
-						name, saved, content)
-				}
-			}
+			checkPropagationSnapshots(t, input, source, files)
 			command := exec.Command("go", "run", ".")
 			command.Dir = work
 			actual, err := command.CombinedOutput()
@@ -88,6 +73,26 @@ func TestPropagationFixtures(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func checkPropagationSnapshots(t *testing.T, input string, source, files map[string][]byte) {
+	t.Helper()
+	for name, content := range files {
+		if !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		if *updateSnapshots {
+			if !bytes.Equal(source[name], content) {
+				writeFiles(t, input, map[string][]byte{name: content})
+			}
+			continue
+		}
+		if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
+			t.Errorf("generated %s differs from snapshot; inspect output before using "+
+				"-update-snapshots\nSAVED:\n%s\nGENERATED:\n%s",
+				name, saved, content)
+		}
 	}
 }
 

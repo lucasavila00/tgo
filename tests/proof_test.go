@@ -35,21 +35,8 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rejectionsData, err := os.ReadFile("testdata/proof/rejections.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var rejections map[string]string
-	if err := json.Unmarshal(rejectionsData, &rejections); err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
-	if artifacts := os.Getenv("TGO_PROOF_ARTIFACTS"); artifacts != "" {
-		dir = filepath.Join(artifacts, t.Name())
-		if err := os.MkdirAll(dir, 0700); err != nil {
-			t.Fatal(err)
-		}
-	}
+	rejections := readProofRejections(t)
+	dir := proofDirectory(t)
 	module := fmt.Sprintf("module example.com/variants\n\ngo 1.27.1\n\nrequire "+
 		"github.com/lucasavila00/tgo v0.0.0\nreplace github.com/lucasavila00/tgo => "+
 		"%s\n",
@@ -88,21 +75,7 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 						t.Fatal(err)
 					}
 					count++
-					variant := filepath.Join(dir, fmt.Sprintf("v%d", count))
-					if err := os.Mkdir(variant, 0700); err != nil {
-						t.Fatal(err)
-					}
-					for name, content := range files {
-						if err := os.WriteFile(filepath.Join(variant, filepath.Base(name)), content, 0600); err != nil {
-							t.Fatal(err)
-						}
-					}
-					if neutral {
-						writeNeutralChecks(t, variant, source.Package.Name, site)
-					}
-					if returnCheck {
-						writeReturnChecks(t, variant, site)
-					}
+					variant := writeProofVariant(t, dir, count, files, source.Package.Name, site, neutral, returnCheck)
 					t.Logf("%s: return=%t", variant, returning)
 				}
 			})
@@ -112,6 +85,58 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 		t.Skip("no expression sites selected")
 	}
 	checkProofVariants(t, dir)
+}
+
+func readProofRejections(t *testing.T) map[string]string {
+	t.Helper()
+	rejectionsData, err := os.ReadFile("testdata/proof/rejections.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rejections map[string]string
+	if err := json.Unmarshal(rejectionsData, &rejections); err != nil {
+		t.Fatal(err)
+	}
+	return rejections
+}
+
+func writeProofVariant(t *testing.T,
+	dir string,
+	count int,
+	files map[string][]byte,
+	packageName string,
+	site transpiler.Site,
+	neutral,
+	returnCheck bool) string {
+	t.Helper()
+	variant := filepath.Join(dir, fmt.Sprintf("v%d", count))
+	if err := os.Mkdir(variant, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(variant, filepath.Base(name)), content, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if neutral {
+		writeNeutralChecks(t, variant, packageName, site)
+	}
+	if returnCheck {
+		writeReturnChecks(t, variant, site)
+	}
+	return variant
+}
+
+func proofDirectory(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if artifacts := os.Getenv("TGO_PROOF_ARTIFACTS"); artifacts != "" {
+		dir = filepath.Join(artifacts, t.Name())
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
 }
 
 func proofStatements(neutral, returning, returnCheck bool) func([]ast.Expr) []ast.Stmt {

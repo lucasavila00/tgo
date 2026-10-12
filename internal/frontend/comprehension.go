@@ -53,17 +53,7 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 				break
 			}
 		}
-		start := -1
-		for i := open - 1; i >= 0; i-- {
-			expr, err := parser.ParseExpr(s.text[tokens[i].offset:tokens[open].offset] + "{}")
-			if _, ok := expr.(*ast.CompositeLit); err == nil && ok {
-				start = tokens[i].offset
-			}
-			if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON ||
-				tokens[i].kind == token.ASSIGN || tokens[i].kind == token.DEFINE {
-				break
-			}
-		}
+		start := s.comprehensionTypeStart(tokens, open)
 		if start < 0 {
 			continue
 		}
@@ -86,6 +76,21 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 		return true, nil
 	}
 	return false, nil
+}
+
+func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) int {
+	start := -1
+	for i := open - 1; i >= 0; i-- {
+		expr, err := parser.ParseExpr(s.text[tokens[i].offset:tokens[open].offset] + "{}")
+		if _, ok := expr.(*ast.CompositeLit); err == nil && ok {
+			start = tokens[i].offset
+		}
+		if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON ||
+			tokens[i].kind == token.ASSIGN || tokens[i].kind == token.DEFINE {
+			break
+		}
+	}
+	return start
 }
 
 func clauseEnd(tokens []sourceToken, start, end int) int {
