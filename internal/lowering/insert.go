@@ -180,8 +180,8 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			return nil, r.err
 		}
 
-		outputFile.Decls = append(outputFile.Decls, r.extraDeclarations...)
-		for _, spec := range r.extraImports {
+		outputFile.Decls = append(outputFile.Decls, r.file.extraDeclarations...)
+		for _, spec := range r.file.extraImports {
 			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
 			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
 		}
@@ -195,15 +195,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 }
 
 func (r *rewrite) startFile() {
-	r.extraImports = nil
-	r.extraDeclarations = nil
-	r.formatAlias = nil
-	r.zeroSequence = nil
-	r.iterAlias = nil
-	r.mapAlias = nil
-	r.sliceAlias = nil
-	r.reflectAlias = nil
-	r.typeImports = nil
+	r.file = &fileState{}
 }
 
 // functionBodies visits the same typed syntax tree as the expression inventory.

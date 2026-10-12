@@ -6,14 +6,14 @@ import (
 )
 
 func (r *rewrite) sequenceZero(sequence ast.Expr) ast.Expr {
-	if r.zeroSequence == nil {
-		r.zeroSequence, r.iterAlias = r.name(), r.nameFor("iter")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.iterAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"iter"`}})
+	if r.file.zeroSequence == nil {
+		r.file.zeroSequence, r.file.iterAlias = r.name(), r.nameFor("iter")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.iterAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"iter"`}})
 		parameter, argument, zero := r.name(), r.name(), r.name()
-		typ := &ast.IndexExpr{X: &ast.SelectorExpr{X: r.iterAlias, Sel: ast.NewIdent("Seq")}, Index: parameter}
-		r.extraDeclarations = append(r.extraDeclarations, zeroDeclaration(r.zeroSequence, parameter, argument, zero, typ))
+		typ := &ast.IndexExpr{X: &ast.SelectorExpr{X: r.file.iterAlias, Sel: ast.NewIdent("Seq")}, Index: parameter}
+		r.file.extraDeclarations = append(r.file.extraDeclarations, zeroDeclaration(r.file.zeroSequence, parameter, argument, zero, typ))
 	}
-	return &ast.CallExpr{Fun: r.zeroSequence, Args: []ast.Expr{sequence}}
+	return &ast.CallExpr{Fun: r.file.zeroSequence, Args: []ast.Expr{sequence}}
 }
 
 func zeroDeclaration(name, parameter, argument, zero *ast.Ident, input ast.Expr) *ast.FuncDecl {

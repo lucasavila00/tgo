@@ -106,13 +106,13 @@ func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type
 	if !types.AssignableTo(types.Universe.Lookup("error").Type(), returnErrorType) {
 		panic("wrapped errors do not fit the function return type")
 	}
-	if r.formatAlias == nil {
-		r.formatAlias = r.nameFor("fmt")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
+	if r.file.formatAlias == nil {
+		r.file.formatAlias = r.nameFor("fmt")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 	}
 	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
 	return &ast.CallExpr{
-		Fun:  &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")},
+		Fun:  &ast.SelectorExpr{X: r.file.formatAlias, Sel: ast.NewIdent("Errorf")},
 		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},
 	}
 }

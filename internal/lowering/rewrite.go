@@ -12,6 +12,7 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
+	file                *fileState
 	source              *Source
 	target              ast.Expr
 	after               After
@@ -31,21 +32,12 @@ type rewrite struct {
 	shortReturns        map[*ast.ReturnStmt]frontend.ShortReturn
 	loweredReturns      map[*ast.ReturnStmt]bool
 	frame               *returnFrame
-	formatAlias         *ast.Ident
 	suppressed          bool
-	extraImports        []*ast.ImportSpec
-	extraDeclarations   []ast.Decl
-	zeroSequence        *ast.Ident
-	iterAlias           *ast.Ident
-	mapAlias            *ast.Ident
-	sliceAlias          *ast.Ident
 	origins             map[ast.Expr]ast.Expr
 	parameterAliases    map[*types.TypeParam]*ast.Ident
 	aliasStatements     map[ast.Node][]ast.Stmt
-	reflectAlias        *ast.Ident
 	deferredBases       map[ast.Expr]bool
 	temporaryTypes      map[ast.Expr]types.Type
-	typeImports         map[*types.Package]*ast.Ident
 	err                 error
 }
 
@@ -56,4 +48,17 @@ func (r *rewrite) name() *ast.Ident {
 // nameFor adds the source name to a fresh generated identifier.
 func (r *rewrite) nameFor(sourceName string) *ast.Ident {
 	return r.names.Fresh(sourceName)
+}
+
+// fileState owns imports and declarations added to one output file.
+type fileState struct {
+	formatAlias       *ast.Ident
+	extraImports      []*ast.ImportSpec
+	extraDeclarations []ast.Decl
+	zeroSequence      *ast.Ident
+	iterAlias         *ast.Ident
+	mapAlias          *ast.Ident
+	sliceAlias        *ast.Ident
+	reflectAlias      *ast.Ident
+	typeImports       map[*types.Package]*ast.Ident
 }

@@ -46,21 +46,21 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		if pkg == r.source.inventory.Checked.Types {
 			return ""
 		}
-		if r.typeImports == nil {
-			r.typeImports = make(map[*types.Package]*ast.Ident)
+		if r.file.typeImports == nil {
+			r.file.typeImports = make(map[*types.Package]*ast.Ident)
 		}
-		alias := r.typeImports[pkg]
+		alias := r.file.typeImports[pkg]
 		if alias == nil {
 			alias = r.nameFor(pkg.Name())
-			r.typeImports[pkg] = alias
-			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
+			r.file.typeImports[pkg] = alias
+			r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
 		}
 		return alias.Name
 	})
 	var unsafeAlias *ast.Ident
 	if nameCheck.unsafePointer {
 		unsafeAlias = r.nameFor("unsafe")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
 	}
 	result, err := parser.ParseExpr(text)
 	if err != nil {

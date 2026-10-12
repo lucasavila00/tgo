@@ -68,11 +68,11 @@ func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 }
 
 func (r *rewrite) reflectPackage() *ast.Ident {
-	if r.reflectAlias == nil {
-		r.reflectAlias = r.nameFor("reflect")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
+	if r.file.reflectAlias == nil {
+		r.file.reflectAlias = r.nameFor("reflect")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
 	}
-	return r.reflectAlias
+	return r.file.reflectAlias
 }
 
 // genericBase keeps array storage and saves slice or map headers.

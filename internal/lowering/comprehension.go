@@ -110,7 +110,7 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 func (r *rewrite) growComprehension(destination *collectionDestination, value ast.Expr) []ast.Stmt {
 	r.prepareSliceImport()
 	result, count := destination.result, destination.grow
-	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{result, integer(1)}}
+	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{result, integer(1)}}
 	extended := &ast.SliceExpr{X: result, High: &ast.BinaryExpr{X: count, Op: token.ADD, Y: integer(1)}}
 	slot := &ast.IndexExpr{X: result, Index: count}
 	return []ast.Stmt{
