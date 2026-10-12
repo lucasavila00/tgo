@@ -68,15 +68,15 @@ func (r *rewrite) selectReceiveExpression(original *ast.ExprStmt) ([]ast.Stmt, a
 	channelStatements, channel := r.capture(receive.X)
 	receiveExpression := *receive
 	receiveExpression.X = channel
-	if receive != ast.Unparen(r.target) {
+	if receive != ast.Unparen(r.input.target) {
 		return channelStatements, &ast.ExprStmt{X: &receiveExpression}, nil
 	}
 
-	r.inserted = true
+	r.request.inserted = true
 	value := r.name()
 	statements := append(channelStatements, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
 	communication := &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
-	body := r.after([]ast.Expr{value})
+	body := r.input.after([]ast.Expr{value})
 	body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 	return statements, communication, body
 }
@@ -97,9 +97,9 @@ func (r *rewrite) selectReceiveAssignment(original *ast.AssignStmt) ([]ast.Stmt,
 	communication := &ast.AssignStmt{Lhs: values, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
 
 	var body []ast.Stmt
-	if receive == ast.Unparen(r.target) {
-		r.inserted = true
-		body = append(body, r.after(values)...)
+	if receive == ast.Unparen(r.input.target) {
+		r.request.inserted = true
+		body = append(body, r.input.after(values)...)
 	}
 	store := *original
 	store.Rhs = values

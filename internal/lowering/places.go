@@ -9,7 +9,7 @@ import (
 func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	before, values := r.expression(expr)
 	value := values[0]
-	if tv := r.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+	if tv := r.input.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 		return before, value
 	}
 	if len(before) != 0 && r.isTarget(expr) {
@@ -23,7 +23,7 @@ func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
-	if call, ok := expr.(*ast.CallExpr); ok && r.comprehensions[call] != nil {
+	if call, ok := expr.(*ast.CallExpr); ok && r.input.comprehensions[call] != nil {
 		statements, values := r.expression(call)
 		return statements, values[0]
 	}
@@ -41,8 +41,8 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &dereference
 	case *ast.IndexExpr:
 		index := *e
-		kind := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(e.X))
-		if kind == arrayStorage|otherStorage && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
+		kind := storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X))
+		if kind == arrayStorage|otherStorage && r.input.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 			before, index.X = r.genericBase(e.X)
 		} else if kind == arrayStorage {
 			before, index.X = r.place(e.X)
@@ -55,26 +55,26 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &index
 	case *ast.SelectorExpr:
 		selector := *e
-		if r.source.inventory.Checked.TypesInfo.Selections[e] == nil {
+		if r.input.source.inventory.Checked.TypesInfo.Selections[e] == nil {
 			result = &selector
 			break
 		}
-		if _, pointer := r.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
+		if _, pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
 			before, selector.X = r.capture(e.X)
 		} else {
 			before, selector.X = r.place(e.X)
 		}
 		result = &selector
 	}
-	if expr == r.target && expr != r.suppressedRoot {
-		r.inserted = true
-		if r.suppressedRoot != nil {
+	if expr == r.input.target && expr != r.functionState.suppressedRoot {
+		r.request.inserted = true
+		if r.functionState.suppressedRoot != nil {
 			saved, values := r.save(r.typedAddress(result, expr))
 			before = append(before, saved...)
 			result = &ast.StarExpr{X: values[0]}
-			before = append(before, r.after([]ast.Expr{result})...)
+			before = append(before, r.input.after([]ast.Expr{result})...)
 		} else {
-			before = append(before, r.after(nil)...)
+			before = append(before, r.input.after(nil)...)
 		}
 	}
 	return before, result
@@ -82,15 +82,15 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 
 // address completes address checks before it inserts statements.
 func (r *rewrite) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	previous := r.suppressedRoot
-	r.suppressedRoot = expr
+	previous := r.functionState.suppressedRoot
+	r.functionState.suppressedRoot = expr
 	before, place := r.place(expr)
-	r.suppressedRoot = previous
+	r.functionState.suppressedRoot = previous
 	saved, values := r.save(r.typedAddress(place, expr))
 	before = append(before, saved...)
-	if expr == r.target {
-		r.inserted = true
-		before = append(before, r.after([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
+	if expr == r.input.target {
+		r.request.inserted = true
+		before = append(before, r.input.after([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
 	}
 	return before, values[0]
 }

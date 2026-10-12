@@ -13,11 +13,11 @@ func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 	returnMarker := statement.Results[0].(*ast.CallExpr)
 	statements, returnValues := r.operands(returnMarker.Args)
 	if record.ZeroSuccess {
-		if !r.frame.prepared {
-			r.frame.prefix = r.prepareReturns(r.frame.typ)
-			r.frame.prepared = true
+		if !r.functionState.frame.prepared {
+			r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)
+			r.functionState.frame.prepared = true
 		}
-		zeroValues := append([]ast.Expr(nil), r.frame.values...)
+		zeroValues := append([]ast.Expr(nil), r.functionState.frame.values...)
 		returnValues = append(zeroValues, returnValues...)
 	} else {
 		if len(returnValues) == 1 && r.resultCount(returnMarker.Args[0]) > 1 {
@@ -31,12 +31,12 @@ func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 	}
 	returnStatement := *statement
 	returnStatement.Results = returnValues
-	r.loweredReturns[statement] = true
+	r.request.loweredReturns[statement] = true
 	return append(statements, &returnStatement)
 }
 
 func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
-	scope := r.source.inventory.Checked.Types.Scope().Innermost(statement.Pos())
+	scope := r.input.source.inventory.Checked.Types.Scope().Innermost(statement.Pos())
 	_, nilBinding := scope.LookupParent("nil", statement.Pos())
 	if nilBinding == types.Universe.Lookup("nil") {
 		return nil, ast.NewIdent("nil")

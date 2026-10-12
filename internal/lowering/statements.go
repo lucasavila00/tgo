@@ -19,12 +19,12 @@ func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
 
 func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
 	if branch, ok := statement.(*ast.BranchStmt); ok {
-		if exit := r.breakExits[branch]; exit != nil {
+		if exit := r.functionState.breakExits[branch]; exit != nil {
 			return []ast.Stmt{&ast.BranchStmt{Tok: token.GOTO, Label: exit}}
 		}
 	}
 	if branch, ok := statement.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO {
-		if name := r.labels[branch.Label.Name]; name != "" {
+		if name := r.functionState.labels[branch.Label.Name]; name != "" {
 			output := *branch
 			output.Label = ast.NewIdent(name)
 			return []ast.Stmt{&output}
@@ -69,7 +69,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 	case *ast.ExprStmt:
 		return r.expressionStatement(s)
 	case *ast.ReturnStmt:
-		if record, found := r.shortReturns[s]; found {
+		if record, found := r.input.shortReturns[s]; found {
 			return r.shortReturnStatement(s, record)
 		}
 		output := *s
@@ -118,8 +118,8 @@ func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
-			call, _ := r.source.inventory.Parents[n].(*ast.CallExpr)
-			if r.conditionals[call] == nil && r.comprehensions[call] == nil {
+			call, _ := r.input.source.inventory.Parents[n].(*ast.CallExpr)
+			if r.input.conditionals[call] == nil && r.input.comprehensions[call] == nil {
 				return false
 			}
 		}
@@ -134,7 +134,7 @@ func (r *rewrite) hasLabelBranch(node ast.Node, label string) bool {
 func (r *rewrite) hasMappedBranch(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
-		if branch, ok := n.(*ast.BranchStmt); ok && r.breakExits[branch] != nil {
+		if branch, ok := n.(*ast.BranchStmt); ok && r.functionState.breakExits[branch] != nil {
 			found = true
 		}
 		return !found
@@ -142,7 +142,7 @@ func (r *rewrite) hasMappedBranch(node ast.Node) bool {
 	if found {
 		return true
 	}
-	for label := range r.labels {
+	for label := range r.functionState.labels {
 		if r.hasLabelBranch(node, label) {
 			return true
 		}
@@ -160,7 +160,7 @@ func (r *rewrite) header(statement ast.Stmt) []ast.Stmt {
 func (r *rewrite) hasGoto(label *ast.LabeledStmt) bool {
 	var node ast.Node = label
 	for {
-		parent := r.source.inventory.Parents[node]
+		parent := r.input.source.inventory.Parents[node]
 		if parent == nil {
 			break
 		}

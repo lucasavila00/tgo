@@ -20,11 +20,11 @@ func (r *rewrite) prepareBreakExit(target ast.Stmt, roots ...ast.Node) *ast.Iden
 			if ok && branch.Tok == token.BREAK && r.branchTarget(branch) == target {
 				if exit == nil {
 					exit = r.name()
-					if r.breakExits == nil {
-						r.breakExits = make(map[*ast.BranchStmt]*ast.Ident)
+					if r.functionState.breakExits == nil {
+						r.functionState.breakExits = make(map[*ast.BranchStmt]*ast.Ident)
 					}
 				}
-				r.breakExits[branch] = exit
+				r.functionState.breakExits[branch] = exit
 			}
 			return true
 		})
@@ -37,10 +37,10 @@ func (r *rewrite) withBreakExit(source, target ast.Stmt, output []ast.Stmt, exit
 	if exit == nil {
 		return output
 	}
-	if r.controlTargets == nil {
-		r.controlTargets = make(map[ast.Stmt]ast.Stmt)
+	if r.functionState.controlTargets == nil {
+		r.functionState.controlTargets = make(map[ast.Stmt]ast.Stmt)
 	}
-	r.controlTargets[source] = target
+	r.functionState.controlTargets[source] = target
 	inner := &ast.BlockStmt{List: output}
 	if len(output) == 1 {
 		if block, ok := output[0].(*ast.BlockStmt); ok {

@@ -8,38 +8,38 @@ import (
 )
 
 func (r *rewrite) recordOrigin(expression, original ast.Expr) {
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
+	if r.functionState.origins == nil {
+		r.functionState.origins = make(map[ast.Expr]ast.Expr)
 	}
-	r.origins[expression] = original
+	r.functionState.origins[expression] = original
 }
 
 func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	if r.functionState.temporaryTypes == nil {
+		r.functionState.temporaryTypes = make(map[ast.Expr]types.Type)
 	}
-	r.temporaryTypes[expression] = typ
+	r.functionState.temporaryTypes[expression] = typ
 	r.recordOrigin(expression, original)
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	original := expr
-	if origin := r.origins[expr]; origin != nil {
+	if origin := r.functionState.origins[expr]; origin != nil {
 		original = origin
 	}
 	count := r.resultCount(original)
-	if r.temporaryTypes[expr] != nil {
+	if r.functionState.temporaryTypes[expr] != nil {
 		count = 1
 	}
-	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && r.temporaryTypes[expr] == nil {
-		if pair, ok := r.source.inventory.Parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
-			if _, pointer := r.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
+	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && r.functionState.temporaryTypes[expr] == nil {
+		if pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
+			if _, pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
 				return r.materializeKey(expr.(*ast.CompositeLit), literal)
 			}
 		}
 	}
 	typ := r.typeOf(expr)
-	if r.temporaryTypes[expr] == nil {
+	if r.functionState.temporaryTypes[expr] == nil {
 		expr = r.contextLiteral(expr, original)
 	}
 	if count == 0 {
@@ -74,19 +74,19 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
-	if tuple, ok := r.source.inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
+	if tuple, ok := r.input.source.inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
 		return tuple.Len()
 	}
-	if r.source.inventory.Checked.TypesInfo.Types[expr].HasOk() {
+	if r.input.source.inventory.Checked.TypesInfo.Types[expr].HasOk() {
 		var node ast.Node = expr
 		for {
-			if parenthesized, ok := r.source.inventory.Parents[node].(*ast.ParenExpr); ok {
+			if parenthesized, ok := r.input.source.inventory.Parents[node].(*ast.ParenExpr); ok {
 				node = parenthesized
 			} else {
 				break
 			}
 		}
-		switch parent := r.source.inventory.Parents[node].(type) {
+		switch parent := r.input.source.inventory.Parents[node].(type) {
 		case *ast.AssignStmt:
 			if len(parent.Rhs) == 1 && len(parent.Lhs) == 2 {
 				return 2
@@ -134,12 +134,12 @@ func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
 	if r.functionName(value) {
 		return false
 	}
-	if typeAndValue, ok := r.source.inventory.Checked.TypesInfo.Types[value]; ok {
+	if typeAndValue, ok := r.input.source.inventory.Checked.TypesInfo.Types[value]; ok {
 		if typeAndValue.Value != nil || typeAndValue.IsType() || typeAndValue.IsBuiltin() || typeAndValue.IsNil() {
 			return false
 		}
 	}
-	if _, identifier := value.(*ast.Ident); identifier && r.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
+	if _, identifier := value.(*ast.Ident); identifier && r.input.source.inventory.Checked.TypesInfo.TypeOf(value) == nil {
 		return false
 	}
 	return true

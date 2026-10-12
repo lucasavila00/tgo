@@ -38,9 +38,11 @@ func main() { use(left(), right()) }
 	if target == nil {
 		t.Fatal("missing expression")
 	}
-	r := &rewrite{source: source, target: target, after: func([]ast.Expr) []ast.Stmt {
+	r := newRewrite(source)
+	r.input.target = target
+	r.input.after = func([]ast.Expr) []ast.Stmt {
 		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
-	}}
+	}
 	file := *source.Package.Syntax[0]
 	file.Decls = append([]ast.Decl(nil), file.Decls...)
 	for i, decl := range file.Decls {

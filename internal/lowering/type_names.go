@@ -8,17 +8,17 @@ import (
 )
 
 func (r *rewrite) temporaryTypeErrorPosition(original ast.Expr) token.Position {
-	position := r.source.inventory.Checked.Fset.Position(original.Pos())
+	position := r.input.source.inventory.Checked.Fset.Position(original.Pos())
 	var selected token.Pos
 	var best int
-	for expression, operation := range r.propagations {
+	for expression, operation := range r.input.propagations {
 		distance := int(expression.Pos() - original.Pos())
 		if distance < 0 {
 			distance = -distance
 		}
 		closer := selected == 0 || distance < best
 		earlierAtSameDistance := distance == best && operation.Position.Offset < position.Offset
-		if operation.Position.IsValid() && r.frame != nil && contains(r.frame.function, expression) && (closer || earlierAtSameDistance) {
+		if operation.Position.IsValid() && r.functionState.frame != nil && contains(r.functionState.frame.function, expression) && (closer || earlierAtSameDistance) {
 			position = operation.Position
 			selected = expression.Pos()
 			best = distance
@@ -55,7 +55,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 		}
 		c.visitName(types.Universe.Lookup(types.Default(typ).String()).(*types.TypeName))
 	case *types.TypeParam:
-		scope := c.rewrite.source.inventory.Checked.Types.Scope().Innermost(c.position)
+		scope := c.rewrite.input.source.inventory.Checked.Types.Scope().Innermost(c.position)
 		_, resolved := scope.LookupParent(typ.Obj().Name(), c.position)
 		if resolved != typ.Obj() {
 			c.parameterNames[typ] = c.rewrite.parameterAlias(typ).Name
@@ -96,7 +96,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 }
 
 func (c *typeNameCheck) visitName(object *types.TypeName) {
-	checked := c.rewrite.source.inventory.Checked
+	checked := c.rewrite.input.source.inventory.Checked
 	if object.Pkg() != nil && object.Pkg() != checked.Types {
 		if !object.Exported() {
 			c.problem = "the type is private to " + object.Pkg().Path()
@@ -113,7 +113,7 @@ func (c *typeNameCheck) visitName(object *types.TypeName) {
 func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 	for i := 0; i < typ.NumFields(); i++ {
 		field := typ.Field(i)
-		if field.Pkg() != nil && field.Pkg() != c.rewrite.source.inventory.Checked.Types && !field.Exported() {
+		if field.Pkg() != nil && field.Pkg() != c.rewrite.input.source.inventory.Checked.Types && !field.Exported() {
 			c.problem = "the type has a private field from " + field.Pkg().Path()
 		}
 		c.visit(field.Type())
@@ -123,7 +123,7 @@ func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 func (c *typeNameCheck) visitInterface(typ *types.Interface) {
 	for i := 0; i < typ.NumExplicitMethods(); i++ {
 		method := typ.ExplicitMethod(i)
-		if method.Pkg() != nil && method.Pkg() != c.rewrite.source.inventory.Checked.Types && !method.Exported() {
+		if method.Pkg() != nil && method.Pkg() != c.rewrite.input.source.inventory.Checked.Types && !method.Exported() {
 			c.problem = "the type has a private method from " + method.Pkg().Path()
 		}
 		c.visit(method.Type())
