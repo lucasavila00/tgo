@@ -31,7 +31,8 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 	} else {
 		results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(typ, expression)})
 	}
-	before, values := initializer.expression(expression)
+	beforeEvaluation := initializer.expression(expression)
+	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
 	body := &ast.BlockStmt{List: append(before, &ast.ReturnStmt{Results: values})}
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }

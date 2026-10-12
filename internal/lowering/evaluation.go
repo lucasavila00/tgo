@@ -8,42 +8,45 @@ import (
 )
 
 func (r *rewrite) recordOrigin(expression, original ast.Expr) {
-	if r.functionState.origins == nil {
-		r.functionState.origins = make(map[ast.Expr]ast.Expr)
+	value := r.value(expression)
+	value.original = original
+	if !value.temporary {
+		value.typ = r.input.source.inventory.Checked.TypesInfo.TypeOf(original)
 	}
-	r.functionState.origins[expression] = original
+	r.recordValue(value)
 }
 
 func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
-	if r.functionState.temporaryTypes == nil {
-		r.functionState.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	r.functionState.temporaryTypes[expression] = typ
-	r.recordOrigin(expression, original)
+	r.recordValue(expressionValue{expression: expression, typ: typ, original: original, temporary: true})
 }
 
-func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	return r.saveResults(expr, false, false)
+func (r *rewrite) recordValue(value expressionValue) {
+	if r.functionState.values == nil {
+		r.functionState.values = make(map[ast.Expr]expressionValue)
+	}
+	r.functionState.values[value.expression] = value
 }
 
-func (r *rewrite) saveResults(expr ast.Expr, discardSuccess, errorResult bool) ([]ast.Stmt, []ast.Expr) {
-	original := expr
-	if origin := r.functionState.origins[expr]; origin != nil {
-		original = origin
-	}
+func (r *rewrite) save(value expressionValue) expressionResult {
+	return r.saveResults(value, false, false)
+}
+
+func (r *rewrite) saveResults(value expressionValue, discardSuccess, errorResult bool) expressionResult {
+	expr := value.expression
+	original := value.original
 	count := r.resultCount(original)
-	if r.functionState.temporaryTypes[expr] != nil {
+	if value.temporary {
 		count = 1
 	}
-	if literal := r.implicitMapKey(original, expr); literal != nil {
+	if literal := r.implicitMapKey(value); literal != nil {
 		return r.materializeKey(expr.(*ast.CompositeLit), literal)
 	}
-	typ := r.typeOf(expr)
-	if r.functionState.temporaryTypes[expr] == nil {
+	typ := value.typ
+	if !value.temporary {
 		expr = r.contextLiteral(expr, original)
 	}
 	if count == 0 {
-		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
+		return r.result([]ast.Stmt{&ast.ExprStmt{X: expr}}, nil)
 	}
 	refs := r.savedReferences(count, discardSuccess, errorResult)
 	var statements []ast.Stmt
@@ -68,9 +71,11 @@ func (r *rewrite) saveResults(expr ast.Expr, discardSuccess, errorResult bool) (
 		statements = append(statements, &ast.AssignStmt{Lhs: refs, Tok: token.ASSIGN, Rhs: []ast.Expr{expr}})
 	}
 	if count == 1 && r.untypedBoolean(original) {
-		return statements, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+		comparison := &ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}
+		r.recordValue(expressionValue{expression: comparison, typ: types.Typ[types.UntypedBool], original: original})
+		return r.result(statements, []ast.Expr{comparison})
 	}
-	return statements, refs
+	return r.result(statements, refs)
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
@@ -101,33 +106,32 @@ func (r *rewrite) resultCount(expr ast.Expr) int {
 }
 
 // operands saves earlier values before a later operand adds statements.
-func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	var statements []ast.Stmt
-	var values []ast.Expr
-	for _, expr := range input {
-		operandStatements, operandValues := r.expression(expr)
-		if len(operandStatements) != 0 {
-			var saveStatements []ast.Stmt
-			saveStatements, values = r.savePreviousOperands(values)
-			statements = append(statements, saveStatements...)
-			statements = append(statements, operandStatements...)
+func (r *rewrite) operands(input []ast.Expr) expressionResult {
+	var result expressionResult
+	for _, expression := range input {
+		operand := r.expression(expression)
+		if len(operand.statements) != 0 {
+			saved := r.savePreviousOperands(result.values)
+			result.values = saved.values
+			result.statements = append(result.statements, saved.statements...)
+			result.statements = append(result.statements, operand.statements...)
 		}
-		values = append(values, operandValues...)
+		result.values = append(result.values, operand.values...)
 	}
-	return statements, values
+	return result
 }
 
-func (r *rewrite) savePreviousOperands(values []ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	var statements []ast.Stmt
+func (r *rewrite) savePreviousOperands(values []expressionValue) expressionResult {
+	result := expressionResult{values: values}
 	for i, value := range values {
-		if !r.operandNeedsSaving(value) {
+		if !r.operandNeedsSaving(value.expression) {
 			continue
 		}
-		saveStatements, savedValues := r.save(value)
-		statements = append(statements, saveStatements...)
-		values[i] = savedValues[0]
+		saved := r.save(value)
+		result.statements = append(result.statements, saved.statements...)
+		result.values[i] = saved.values[0]
 	}
-	return statements, values
+	return result
 }
 
 func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
@@ -160,9 +164,10 @@ func (r *rewrite) savedReferences(count int, discardSuccess, errorResult bool) [
 	return refs
 }
 
-func (r *rewrite) implicitMapKey(original, expr ast.Expr) *ast.CompositeLit {
+func (r *rewrite) implicitMapKey(value expressionValue) *ast.CompositeLit {
+	original := value.original
 	literal, ok := original.(*ast.CompositeLit)
-	if !ok || literal.Type != nil || r.functionState.temporaryTypes[expr] != nil {
+	if !ok || literal.Type != nil || value.temporary {
 		return nil
 	}
 	pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
