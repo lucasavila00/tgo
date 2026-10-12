@@ -113,20 +113,20 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 			elements = append(elements, element)
 		}
 	}
-	var before []ast.Stmt
+	var statements []ast.Stmt
 	var values []ast.Expr
 	for _, element := range elements {
 		if tv, ok := r.source.inventory.Checked.TypesInfo.Types[element]; ok && (tv.Value != nil || tv.IsNil()) {
 			values = append(values, element)
 			continue
 		}
-		setup, refs := r.save(element)
-		before = append(before, setup...)
+		saveStatements, refs := r.save(element)
+		statements = append(statements, saveStatements...)
 		values = append(values, refs[0])
 	}
 	key := r.name()
 	r.recordTemporary(key, r.typeOf(original), original)
-	before = append(before, variable(key, r.temporaryType(r.typeOf(original), original), nil))
+	statements = append(statements, variable(key, r.temporaryType(r.typeOf(original), original), nil))
 	index := 0
 	for i, element := range value.Elts {
 		var place ast.Expr
@@ -147,9 +147,9 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 			place = &ast.IndexExpr{X: key, Index: position}
 			index++
 		}
-		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{place}, Tok: token.ASSIGN, Rhs: []ast.Expr{values[i]}})
+		statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{place}, Tok: token.ASSIGN, Rhs: []ast.Expr{values[i]}})
 	}
-	return before, []ast.Expr{key}
+	return statements, []ast.Expr{key}
 }
 
 func (r *rewrite) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr {

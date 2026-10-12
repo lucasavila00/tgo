@@ -201,31 +201,31 @@ func (r *rewrite) functionBodies(node ast.Node) ast.Node {
 	}
 	switch fn := node.(type) {
 	case *ast.ValueSpec:
-		copy := *fn
-		copy.Values = append([]ast.Expr(nil), fn.Values...)
+		valueSpec := *fn
+		valueSpec.Values = append([]ast.Expr(nil), fn.Values...)
 		for i, value := range fn.Values {
 			if r.packageConditional(value) {
-				copy.Values[i] = r.packageInitializer(value)
+				valueSpec.Values[i] = r.packageInitializer(value)
 			} else {
-				copy.Values[i] = r.functionBodies(value).(ast.Expr)
+				valueSpec.Values[i] = r.functionBodies(value).(ast.Expr)
 			}
 		}
-		return &copy
+		return &valueSpec
 	case *ast.FuncDecl:
-		copy := *fn
-		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)
-		return &copy
+		function := *fn
+		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
+		return &function
 	case *ast.FuncLit:
-		copy := *fn
-		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)
-		return &copy
+		function := *fn
+		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
+		return &function
 	}
 	original := reflect.ValueOf(node).Elem()
-	copy := reflect.New(original.Type())
-	copy.Elem().Set(original)
+	rewritten := reflect.New(original.Type())
+	rewritten.Elem().Set(original)
 	for i := 0; i < original.NumField(); i++ {
 		field := original.Field(i)
-		output := copy.Elem().Field(i)
+		output := rewritten.Elem().Field(i)
 		if child, ok := field.Interface().(ast.Node); ok {
 			if (field.Kind() == reflect.Pointer || field.Kind() == reflect.Interface) && field.IsNil() {
 				continue
@@ -249,5 +249,5 @@ func (r *rewrite) functionBodies(node ast.Node) ast.Node {
 			}
 		}
 	}
-	return copy.Interface().(ast.Node)
+	return rewritten.Interface().(ast.Node)
 }

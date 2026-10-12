@@ -17,19 +17,19 @@ func (r *rewrite) renameBindings(node ast.Node) ast.Node {
 			object = r.source.inventory.Checked.TypesInfo.Defs[id]
 		}
 		if name := r.bindings[object]; name != "" {
-			copy := *id
-			copy.Name = name
-			return &copy
+			renamed := *id
+			renamed.Name = name
+			return &renamed
 		}
 		return node
 	}
 	original := reflect.ValueOf(node).Elem()
-	copy := reflect.New(original.Type())
-	copy.Elem().Set(original)
+	rewritten := reflect.New(original.Type())
+	rewritten.Elem().Set(original)
 	changed := false
 	for i := 0; i < original.NumField(); i++ {
 		field := original.Field(i)
-		output := copy.Elem().Field(i)
+		output := rewritten.Elem().Field(i)
 		if child, ok := field.Interface().(ast.Node); ok && !reflect.ValueOf(child).IsNil() {
 			if rewritten := r.renameBindings(child); rewritten != child {
 				output.Set(reflect.ValueOf(rewritten))
@@ -55,5 +55,5 @@ func (r *rewrite) renameBindings(node ast.Node) ast.Node {
 	if !changed {
 		return node
 	}
-	return copy.Interface().(ast.Node)
+	return rewritten.Interface().(ast.Node)
 }

@@ -24,47 +24,47 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	if call, ok := expr.(*ast.CallExpr); ok && r.comprehensions[call] != nil {
-		before, values := r.expression(call)
-		return before, values[0]
+		statements, values := r.expression(call)
+		return statements, values[0]
 	}
 	switch e := expr.(type) {
 	case *ast.CompositeLit:
-		setup, values := r.expression(e)
-		return setup, values[0]
+		statements, values := r.expression(e)
+		return statements, values[0]
 	case *ast.ParenExpr:
-		copy := *e
-		before, copy.X = r.place(e.X)
-		result = &copy
+		parenthesized := *e
+		before, parenthesized.X = r.place(e.X)
+		result = &parenthesized
 	case *ast.StarExpr:
-		copy := *e
-		before, copy.X = r.capture(e.X)
-		result = &copy
+		dereference := *e
+		before, dereference.X = r.capture(e.X)
+		result = &dereference
 	case *ast.IndexExpr:
-		copy := *e
+		index := *e
 		kind := storageKinds(r.source.inventory.Checked.TypesInfo.TypeOf(e.X))
 		if kind == arrayStorage|otherStorage && r.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
-			before, copy.X = r.genericBase(e.X)
+			before, index.X = r.genericBase(e.X)
 		} else if kind == arrayStorage {
-			before, copy.X = r.place(e.X)
+			before, index.X = r.place(e.X)
 		} else {
-			before, copy.X = r.capture(e.X)
+			before, index.X = r.capture(e.X)
 		}
-		indexBefore, index := r.capture(e.Index)
-		before = append(before, indexBefore...)
-		copy.Index = index
-		result = &copy
+		indexStatements, indexValue := r.capture(e.Index)
+		before = append(before, indexStatements...)
+		index.Index = indexValue
+		result = &index
 	case *ast.SelectorExpr:
-		copy := *e
+		selector := *e
 		if r.source.inventory.Checked.TypesInfo.Selections[e] == nil {
-			result = &copy
+			result = &selector
 			break
 		}
 		if _, pointer := r.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
-			before, copy.X = r.capture(e.X)
+			before, selector.X = r.capture(e.X)
 		} else {
-			before, copy.X = r.place(e.X)
+			before, selector.X = r.place(e.X)
 		}
-		result = &copy
+		result = &selector
 	}
 	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true

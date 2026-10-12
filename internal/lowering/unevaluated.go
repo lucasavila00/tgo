@@ -52,11 +52,11 @@ func (r *rewrite) unevaluatedCall(call *ast.CallExpr) ([]ast.Stmt, ast.Expr) {
 	}
 	var replacement ast.Expr = &ast.StarExpr{X: &ast.CallExpr{Fun: zero}}
 	if builtinName == "Offsetof" && field {
-		copy := *selector
-		copy.X = replacement
-		replacement = &copy
+		selectedField := *selector
+		selectedField.X = replacement
+		replacement = &selectedField
 	}
-	copy := *call
-	copy.Args = []ast.Expr{replacement}
-	return []ast.Stmt{guard}, &copy
+	output := *call
+	output.Args = []ast.Expr{replacement}
+	return []ast.Stmt{guard}, &output
 }

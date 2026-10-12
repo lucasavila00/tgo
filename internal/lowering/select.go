@@ -8,98 +8,126 @@ import (
 
 func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	var roots []ast.Node
-	for _, stmt := range s.Body.List {
-		roots = append(roots, stmt.(*ast.CommClause).Comm)
+	for _, statement := range s.Body.List {
+		roots = append(roots, statement.(*ast.CommClause).Comm)
 	}
 	exit := r.prepareBreakExit(s, roots...)
-	selectStatement := *s
-	selectStatement.Body = &ast.BlockStmt{}
-	var before []ast.Stmt
-	commChanged := false
+
+	communicationChanged := false
 	for _, statement := range s.Body.List {
 		if r.contains(statement.(*ast.CommClause).Comm) {
-			commChanged = true
+			communicationChanged = true
 		}
 	}
+
+	output := *s
+	output.Body = &ast.BlockStmt{}
+	var statements []ast.Stmt
 	for _, statement := range s.Body.List {
 		original := statement.(*ast.CommClause)
-		clause := *original
-		var body []ast.Stmt
-		if commChanged && original.Comm != nil {
-			switch comm := original.Comm.(type) {
-			case *ast.SendStmt:
-				sendStatement := *comm
-				channelSetup, savedChannel := r.capture(comm.Chan)
-				before = append(before, channelSetup...)
-				valueSetup, sentValue := r.capture(comm.Value)
-				before = append(before, valueSetup...)
-				sendStatement.Chan = savedChannel
-				sendStatement.Value = sentValue
-				clause.Comm = &sendStatement
-			case *ast.ExprStmt:
-				receive := ast.Unparen(comm.X).(*ast.UnaryExpr)
-				receiveExpression := *receive
-				channelSetup, savedChannel := r.capture(receive.X)
-				before = append(before, channelSetup...)
-				receiveExpression.X = savedChannel
-				if receive == ast.Unparen(r.target) {
-					r.inserted = true
-					value := r.name()
-					before = append(before, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
-					clause.Comm = &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
-					body = append(body, r.after([]ast.Expr{value})...)
-					body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
-				} else {
-					clause.Comm = &ast.ExprStmt{X: &receiveExpression}
-				}
-			case *ast.AssignStmt:
-				receive := ast.Unparen(comm.Rhs[0]).(*ast.UnaryExpr)
-				receiveExpression := *receive
-				channelSetup, savedChannel := r.capture(receive.X)
-				before = append(before, channelSetup...)
-				receiveExpression.X = savedChannel
-				values := make([]ast.Expr, len(comm.Lhs))
-				for i := range values {
-					values[i] = r.name()
-					typ := r.typeOf(receive)
-					if tuple, ok := typ.(*types.Tuple); ok {
-						typ = tuple.At(i).Type()
-					} else if i == 1 {
-						typ = types.Typ[types.Bool]
-					}
-					before = append(before, variable(values[i].(*ast.Ident), r.temporaryType(typ, receive), nil))
-				}
-				clause.Comm = &ast.AssignStmt{Lhs: values, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
-				if receive == ast.Unparen(r.target) {
-					r.inserted = true
-					body = append(body, r.after(values)...)
-				}
-				store := *comm
-				store.Rhs = values
-				if comm.Tok == token.ASSIGN {
-					store.Lhs = make([]ast.Expr, len(comm.Lhs))
-					for i, lhs := range comm.Lhs {
-						placeSetup, destination := r.place(lhs)
-						body = append(body, placeSetup...)
-						store.Lhs[i] = destination
-					}
-				}
-				deferred := false
-				for _, place := range store.Lhs {
-					deferred = deferred || r.deferredPlace(place)
-				}
-				if deferred {
-					body = append(body, r.orderedStores(store.Lhs, store.Rhs, store.Tok)...)
-				} else {
-					body = append(body, &store)
-				}
-			}
-		}
-		for _, statement := range original.Body {
-			body = append(body, r.statement(statement)...)
-		}
-		clause.Body = body
-		selectStatement.Body.List = append(selectStatement.Body.List, &clause)
+		clauseStatements, clause := r.selectClause(original, communicationChanged)
+		statements = append(statements, clauseStatements...)
+		output.Body.List = append(output.Body.List, clause)
 	}
-	return r.withBreakExit(s, &selectStatement, append(before, &selectStatement), exit)
+	return r.withBreakExit(s, &output, append(statements, &output), exit)
+}
+
+func (r *rewrite) selectClause(original *ast.CommClause, communicationChanged bool) ([]ast.Stmt, *ast.CommClause) {
+	clause := *original
+	var statements []ast.Stmt
+	var body []ast.Stmt
+	if communicationChanged && original.Comm != nil {
+		switch communication := original.Comm.(type) {
+		case *ast.SendStmt:
+			statements, clause.Comm = r.selectSend(communication)
+		case *ast.ExprStmt:
+			statements, clause.Comm, body = r.selectReceiveExpression(communication)
+		case *ast.AssignStmt:
+			statements, clause.Comm, body = r.selectReceiveAssignment(communication)
+		}
+	}
+	for _, statement := range original.Body {
+		body = append(body, r.statement(statement)...)
+	}
+	clause.Body = body
+	return statements, &clause
+}
+
+func (r *rewrite) selectSend(original *ast.SendStmt) ([]ast.Stmt, ast.Stmt) {
+	channelStatements, channel := r.capture(original.Chan)
+	valueStatements, value := r.capture(original.Value)
+	statements := append(channelStatements, valueStatements...)
+	send := *original
+	send.Chan = channel
+	send.Value = value
+	return statements, &send
+}
+
+func (r *rewrite) selectReceiveExpression(original *ast.ExprStmt) ([]ast.Stmt, ast.Stmt, []ast.Stmt) {
+	receive := ast.Unparen(original.X).(*ast.UnaryExpr)
+	channelStatements, channel := r.capture(receive.X)
+	receiveExpression := *receive
+	receiveExpression.X = channel
+	if receive != ast.Unparen(r.target) {
+		return channelStatements, &ast.ExprStmt{X: &receiveExpression}, nil
+	}
+
+	r.inserted = true
+	value := r.name()
+	statements := append(channelStatements, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
+	communication := &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
+	body := r.after([]ast.Expr{value})
+	body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+	return statements, communication, body
+}
+
+func (r *rewrite) selectReceiveAssignment(original *ast.AssignStmt) ([]ast.Stmt, ast.Stmt, []ast.Stmt) {
+	receive := ast.Unparen(original.Rhs[0]).(*ast.UnaryExpr)
+	statements, channel := r.capture(receive.X)
+	receiveExpression := *receive
+	receiveExpression.X = channel
+
+	values := make([]ast.Expr, len(original.Lhs))
+	for i := range values {
+		value := r.name()
+		values[i] = value
+		valueType := r.selectReceiveType(receive, i)
+		statements = append(statements, variable(value, r.temporaryType(valueType, receive), nil))
+	}
+	communication := &ast.AssignStmt{Lhs: values, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
+
+	var body []ast.Stmt
+	if receive == ast.Unparen(r.target) {
+		r.inserted = true
+		body = append(body, r.after(values)...)
+	}
+	store := *original
+	store.Rhs = values
+	if original.Tok == token.ASSIGN {
+		store.Lhs = make([]ast.Expr, len(original.Lhs))
+		for i, left := range original.Lhs {
+			placeStatements, destination := r.place(left)
+			body = append(body, placeStatements...)
+			store.Lhs[i] = destination
+		}
+	}
+	for _, destination := range store.Lhs {
+		if r.deferredPlace(destination) {
+			body = append(body, r.orderedStores(store.Lhs, store.Rhs, store.Tok)...)
+			return statements, communication, body
+		}
+	}
+	body = append(body, &store)
+	return statements, communication, body
+}
+
+func (r *rewrite) selectReceiveType(receive *ast.UnaryExpr, index int) types.Type {
+	typ := r.typeOf(receive)
+	if tuple, ok := typ.(*types.Tuple); ok {
+		return tuple.At(index).Type()
+	}
+	if index == 1 {
+		return types.Typ[types.Bool]
+	}
+	return typ
 }
