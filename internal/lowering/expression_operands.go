@@ -38,7 +38,8 @@ func (r *rewrite) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast
 	if expression.Op == token.LOR {
 		condition = &ast.UnaryExpr{Op: token.NOT, X: result}
 	}
-	rightStatements = append(rightStatements, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: rightValues})
+	rightStatements = append(rightStatements, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN,
+		Rhs: rightValues})
 	statements = append(statements, &ast.IfStmt{Cond: condition, Body: &ast.BlockStmt{List: rightStatements}})
 	if r.untypedBoolean(expression) {
 		return statements, &ast.BinaryExpr{X: result, Op: token.EQL, Y: boolean(true)}
@@ -48,7 +49,8 @@ func (r *rewrite) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast
 
 func (r *rewrite) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
-	if selection := r.input.source.inventory.Checked.TypesInfo.Selections[e]; selection != nil && selection.Kind() == types.MethodVal {
+	if selection := r.input.source.inventory.Checked.TypesInfo.Selections[e]; selection != nil &&
+		selection.Kind() == types.MethodVal {
 		signature := selection.Obj().Type().(*types.Signature)
 		_, pointerReceiver := signature.Recv().Type().Underlying().(*types.Pointer)
 		_, pointerValue := r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
@@ -66,7 +68,8 @@ func (r *rewrite) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr)
 
 func (r *rewrite) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
-	if storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.input.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
+	if storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage &&
+		r.input.source.inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 		statements, base := r.genericBase(e.X)
 		indexStatements, index := r.capture(e.Index)
 		statements = append(statements, indexStatements...)
@@ -95,7 +98,8 @@ func (r *rewrite) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
 	input := []ast.Expr{e.X}
 	array := r.addressableArray(e.X)
-	mixed := storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage && r.input.source.inventory.Checked.TypesInfo.Types[e.X].Addressable()
+	mixed := storageKinds(r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|
+		otherStorage && r.input.source.inventory.Checked.TypesInfo.Types[e.X].Addressable()
 	if mixed {
 		statements, output.X = r.genericBase(e.X)
 		input = nil

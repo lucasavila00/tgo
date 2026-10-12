@@ -32,7 +32,9 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	if nameCheck.problem != "" {
 		if r.request.err == nil {
 			errorPosition := r.temporaryTypeErrorPosition(original)
-			r.request.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name", errorPosition, typ, nameCheck.problem)
+			r.request.err = fmt.Errorf("%s: cannot name type %s in a generated typed temporary: %s; expose the "+
+				"type with an accessible name",
+				errorPosition, typ, nameCheck.problem)
 		}
 		return ast.NewIdent("invalid")
 	}
@@ -47,14 +49,16 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		if alias == nil {
 			alias = r.nameFor(pkg.Name())
 			r.file.typeImports[pkg] = alias
-			r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: alias, Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
+			r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: alias,
+				Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(pkg.Path())}})
 		}
 		return alias.Name
 	})
 	var unsafeAlias *ast.Ident
 	if nameCheck.unsafePointer {
 		unsafeAlias = r.nameFor("unsafe")
-		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: unsafeAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: unsafeAlias,
+			Path: &ast.BasicLit{Kind: token.STRING, Value: `"unsafe"`}})
 	}
 	result, err := parser.ParseExpr(text)
 	if err != nil {
@@ -78,7 +82,8 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	return result
 }
 
-func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr, parameterNames map[*types.TypeParam]string, unsafeAlias *ast.Ident) {
+func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr,
+	parameterNames map[*types.TypeParam]string, unsafeAlias *ast.Ident) {
 	// Follow checked types so equal spellings do not merge different bindings.
 	var rename func(types.Type, ast.Expr)
 

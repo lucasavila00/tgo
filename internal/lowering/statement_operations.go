@@ -25,7 +25,8 @@ func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	if r.isTarget(s.X) {
 		// A completed expression statement has no further operation.
 		for _, value := range values {
-			statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+			statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")},
+				Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 		}
 		return statements
 	}
@@ -84,7 +85,8 @@ func (r *rewrite) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		valueSpec.Values = values
 		output = append(output, statements...)
-		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{&valueSpec}}})
+		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok,
+			Specs: []ast.Spec{&valueSpec}}})
 	}
 	return output
 }

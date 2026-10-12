@@ -56,19 +56,22 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 		value := r.name()
 		before = append(before, variable(value, r.temporaryType(element, call.Args[0]), values[0]))
 		if destination.index != nil {
-			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result,
+				Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 			return r.result(before, nil)
 		}
 		if destination.grow != nil {
 			return r.result(append(before, r.growComprehension(destination, value)...), nil)
 		}
 		appendCall := &ast.CallExpr{Fun: ast.NewIdent("append"), Args: []ast.Expr{destination.result, value}}
-		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN, Rhs: []ast.Expr{appendCall}})
+		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN,
+			Rhs: []ast.Expr{appendCall}})
 	} else {
 		key, value := r.name(), r.name()
 		before = append(before, variable(key, r.temporaryType(keyType, call.Args[0]), values[0]))
 		before = append(before, variable(value, r.temporaryType(element, call.Args[1]), values[1]))
-		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: key}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result,
+			Index: key}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 	}
 
 	return r.result(before, nil)
@@ -102,7 +105,8 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 		if loop, ok := node.(*ast.RangeStmt); ok {
 			for _, expression := range []ast.Expr{loop.Key, loop.Value} {
 				if id, ok := expression.(*ast.Ident); ok && id.Name != "_" {
-					if object := r.input.source.inventory.Checked.TypesInfo.Defs[id]; object != nil && r.file.bindings[object] == "" {
+					if object := r.input.source.inventory.Checked.TypesInfo.Defs[id]; object != nil &&
+						r.file.bindings[object] == "" {
 						r.file.bindings[object] = r.nameFor(id.Name).Name
 					}
 				}
@@ -116,7 +120,8 @@ func (r *rewrite) comprehensionBindings(body *ast.BlockStmt) {
 func (r *rewrite) growComprehension(destination *collectionDestination, value ast.Expr) []ast.Stmt {
 	r.prepareSliceImport()
 	result, count := destination.result, destination.grow
-	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Grow")}, Args: []ast.Expr{result, integer(1)}}
+	grown := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.file.sliceAlias, Sel: ast.NewIdent("Grow")},
+		Args: []ast.Expr{result, integer(1)}}
 	extended := &ast.SliceExpr{X: result, High: &ast.BinaryExpr{X: count, Op: token.ADD, Y: integer(1)}}
 	slot := &ast.IndexExpr{X: result, Index: count}
 	return []ast.Stmt{

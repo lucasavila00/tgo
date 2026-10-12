@@ -94,7 +94,8 @@ func ComprehensionTypes(typ Type) (Type, Type) {
 		default:
 			return false
 		}
-		if element != nil && (!Identical(element, e) || (key == nil) != (k == nil) || (key != nil && !Identical(key, k))) {
+		if element != nil && (!Identical(element, e) || (key == nil) != (k == nil) || (key != nil &&
+			!Identical(key, k))) {
 			return false
 		}
 		key, element = k, e

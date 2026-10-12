@@ -49,8 +49,11 @@ func insertedOffsets(count, offset int) []int {
 
 // ParseFile parses added expressions and maps syntax positions to the input.
 // Conditional bodies remain statements in the original enclosing function.
-func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed, error) {
-	result := &Parsed{Comprehensions: make(map[string]*Comprehension), Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker), ShortReturns: make(map[string]ShortReturn)}
+func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed,
+	error) {
+	result := &Parsed{Comprehensions: make(map[string]*Comprehension),
+		Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker),
+		ShortReturns: make(map[string]ShortReturn)}
 	original := fset.AddFile(filename, -1, len(input))
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
@@ -86,7 +89,8 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 			}
 		}
 		temporary := token.NewFileSet()
-		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
+		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|
+			parser.SkipObjectResolution)
 		if err == nil {
 			return result.finish(fset, file, temporary.File(file.Pos()), original, source.offsets), nil
 		}
@@ -107,7 +111,8 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	}
 }
 
-func prepareSource(sourceName string, input []byte, used map[string]bool, propagations map[string]Marker) mappedSource {
+func prepareSource(sourceName string, input []byte, used map[string]bool,
+	propagations map[string]Marker) mappedSource {
 	source := originalSource(input)
 	// Postfix comments let Go parse the surrounding expression. Build the same
 	// replacement as MarkPostfix while retaining every original byte offset.
@@ -142,7 +147,8 @@ func prepareSource(sourceName string, input []byte, used map[string]bool, propag
 	return source
 }
 
-func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File, offsets []int) *Parsed {
+func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File,
+	offsets []int) *Parsed {
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
 	result.File = file
 	ast.Inspect(file, func(node ast.Node) bool {

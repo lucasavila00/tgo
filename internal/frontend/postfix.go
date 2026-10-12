@@ -93,7 +93,8 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 				if !ok || expr.End() > comment.Pos() {
 					return true
 				}
-				if selected == nil || expr.End() > selected.End() || (expr.End() == selected.End() && expr.Pos() < selected.Pos()) {
+				if selected == nil || expr.End() > selected.End() || (expr.End() == selected.End() &&
+					expr.Pos() < selected.Pos()) {
 					selected = expr
 				}
 				return true

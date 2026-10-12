@@ -17,7 +17,8 @@ type returnFrame struct {
 	values   []ast.Expr
 }
 
-func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType, *ast.BlockStmt) {
+func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType,
+	*ast.BlockStmt) {
 	functionRewrite := &rewrite{
 		input:         r.input,
 		request:       r.request,
@@ -53,7 +54,9 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 				break
 			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
+			prefix = append(prefix, variable(value,
+				r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
+					original.End()), nil))
 			r.functionState.frame.values = append(r.functionState.frame.values, value)
 		}
 	}
@@ -71,7 +74,8 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ex
 
 	signature := r.frameSignature()
 	returnErrorType := signature.Results().At(signature.Results().Len() - 1).Type()
-	if _, ok := returnErrorType.Underlying().(*types.Interface); !ok || !types.AssignableTo(returnErrorType, types.Universe.Lookup("error").Type()) {
+	if _, ok := returnErrorType.Underlying().(*types.Interface); !ok || !types.AssignableTo(returnErrorType,
+		types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
 	if !r.functionState.frame.prepared {
@@ -102,7 +106,8 @@ func (r *rewrite) frameSignature() *types.Signature {
 	return signature
 }
 
-func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type, operation Propagation) ast.Expr {
+func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type,
+	operation Propagation) ast.Expr {
 	if !operation.Wrap {
 		return callError
 	}
@@ -111,7 +116,8 @@ func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type
 	}
 	if r.file.formatAlias == nil {
 		r.file.formatAlias = r.nameFor("fmt")
-		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.formatAlias,
+			Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 	}
 	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
 	return &ast.CallExpr{
@@ -152,7 +158,8 @@ func (r *rewrite) callFailure(result expressionValue, call ast.Expr) ([]ast.Stmt
 	switch typ.Underlying().(type) {
 	case *types.Pointer, *types.Chan, *types.Interface:
 		zero := r.name()
-		return []ast.Stmt{variable(zero, r.temporaryType(typ, call), nil)}, &ast.BinaryExpr{X: value, Op: token.NEQ, Y: zero}
+		return []ast.Stmt{variable(zero, r.temporaryType(typ, call), nil)}, &ast.BinaryExpr{X: value,
+			Op: token.NEQ, Y: zero}
 	default:
 		return nil, boolean(true)
 	}
@@ -163,14 +170,16 @@ func (r *rewrite) reflectedFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, a
 	reflected := r.name()
 	failed := r.name()
 	valueAddress := &ast.UnaryExpr{Op: token.AND, X: value}
-	valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("ValueOf")}, Args: []ast.Expr{valueAddress}}
+	valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("ValueOf")},
+		Args: []ast.Expr{valueAddress}}
 	reflectedValue := &ast.CallExpr{Fun: &ast.SelectorExpr{X: valueOf, Sel: ast.NewIdent("Elem")}}
 	var nilCapableKinds []ast.Expr
 	for _, kind := range []string{"Chan", "Func", "Interface", "Map", "Pointer", "Slice"} {
 		nilCapableKinds = append(nilCapableKinds, &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent(kind)})
 	}
 	isNil := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("IsNil")}}
-	setFailure := &ast.AssignStmt{Lhs: []ast.Expr{failed}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.UnaryExpr{Op: token.NOT, X: isNil}}}
+	setFailure := &ast.AssignStmt{Lhs: []ast.Expr{failed}, Tok: token.ASSIGN,
+		Rhs: []ast.Expr{&ast.UnaryExpr{Op: token.NOT, X: isNil}}}
 	kind := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("Kind")}}
 	checkNil := &ast.SwitchStmt{Tag: kind, Body: &ast.BlockStmt{List: []ast.Stmt{
 		&ast.CaseClause{List: nilCapableKinds, Body: []ast.Stmt{setFailure}},

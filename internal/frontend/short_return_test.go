@@ -54,7 +54,8 @@ func TestParseShortReturns(t *testing.T) {
 					return true
 				}
 				seen++
-				if input[record.Position.Offset:record.Position.Offset+2] != ".." || record.Position.Filename != "main.tgo" {
+				if input[record.Position.Offset:record.Position.Offset+2] != ".." ||
+					record.Position.Filename != "main.tgo" {
 					t.Fatalf("operator position: %v", record.Position)
 				}
 				for _, operand := range call.Args {
@@ -72,9 +73,11 @@ func TestParseShortReturns(t *testing.T) {
 }
 
 func TestRejectShortReturnSyntax(t *testing.T) {
-	for _, body := range []string{"return ..", "return .. err ..", "return x .. y", "return x .., y", "return .., err"} {
+	for _, body := range []string{"return ..", "return .. err ..", "return x .. y", "return x .., y",
+		"return .., err"} {
 		t.Run(body, func(t *testing.T) {
-			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte("package p\nfunc f() error { "+body+" }"), make(map[string]bool))
+			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo",
+				[]byte("package p\nfunc f() error { "+body+" }"), make(map[string]bool))
 			if err == nil || !strings.Contains(err.Error(), "main.tgo:") {
 				t.Fatalf("source diagnostic: %v", err)
 			}

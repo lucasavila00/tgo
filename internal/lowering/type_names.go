@@ -18,7 +18,8 @@ func (r *rewrite) temporaryTypeErrorPosition(original ast.Expr) token.Position {
 		}
 		closer := selected == 0 || distance < best
 		earlierAtSameDistance := distance == best && operation.Position.Offset < position.Offset
-		if operation.Position.IsValid() && r.functionState.frame != nil && contains(r.functionState.frame.function, expression) && (closer || earlierAtSameDistance) {
+		if operation.Position.IsValid() && r.functionState.frame != nil &&
+			contains(r.functionState.frame.function, expression) && (closer || earlierAtSameDistance) {
 			position = operation.Position
 			selected = expression.Pos()
 			best = distance
@@ -123,7 +124,8 @@ func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 func (c *typeNameCheck) visitInterface(typ *types.Interface) {
 	for i := 0; i < typ.NumExplicitMethods(); i++ {
 		method := typ.ExplicitMethod(i)
-		if method.Pkg() != nil && method.Pkg() != c.rewrite.input.source.inventory.Checked.Types && !method.Exported() {
+		if method.Pkg() != nil && method.Pkg() != c.rewrite.input.source.inventory.Checked.Types &&
+			!method.Exported() {
 			c.problem = "the type has a private method from " + method.Pkg().Path()
 		}
 		c.visit(method.Type())

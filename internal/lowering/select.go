@@ -32,7 +32,8 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	return r.withBreakExit(s, &output, append(statements, &output), exit)
 }
 
-func (r *rewrite) selectClause(original *ast.CommClause, communicationChanged bool) ([]ast.Stmt, *ast.CommClause) {
+func (r *rewrite) selectClause(original *ast.CommClause, communicationChanged bool) ([]ast.Stmt,
+	*ast.CommClause) {
 	clause := *original
 	var statements []ast.Stmt
 	var body []ast.Stmt
@@ -75,9 +76,11 @@ func (r *rewrite) selectReceiveExpression(original *ast.ExprStmt) ([]ast.Stmt, a
 	r.request.inserted = true
 	value := r.name()
 	statements := append(channelStatements, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
-	communication := &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: []ast.Expr{&receiveExpression}}
+	communication := &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN,
+		Rhs: []ast.Expr{&receiveExpression}}
 	body := r.input.after([]ast.Expr{value})
-	body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+	body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN,
+		Rhs: []ast.Expr{value}})
 	return statements, communication, body
 }
 

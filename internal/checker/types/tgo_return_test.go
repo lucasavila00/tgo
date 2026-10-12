@@ -16,7 +16,9 @@ func TestShortReturnTypes(t *testing.T) {
 		`type E struct{}; func(E) Error() string {return ""}; func f(e E) (int, E) {return .. e}`,
 		`type E struct{}; func(*E) Error() string {return ""}; func f() (int, *E) {return 1 ..}`,
 		`func f[E error](e E) (int, E) {return .. e}`,
-		`type E struct{}; func(*E) Error() string {return ""}; type C interface {error; ~*E}; func f[T C]() (int, T) {return 1 ..}`,
+		`type E struct{}; func(*E) Error() string {return ""}; type C interface ` +
+			`{error; ~*E}; func f[T C]() (int, T) {return 1 ..}`,
+
 		`func pair() (int,string) {return 1,"x"}; func f() (int,string,error) {return pair() ..}`,
 		`func f(n uint) (uint64, error) {return 1<<n ..}`,
 		`func f() (*int, error) {return nil ..}`,
@@ -50,7 +52,10 @@ func TestShortReturnTypeErrors(t *testing.T) {
 		{`func f() (int,error) {return "x" ..}`, "cannot use"},
 		{`func f() (int,error) {return .. 1}`, "cannot use"},
 		{`func f(e error) (int,error) {return .. e,e}`, "too many return values"},
-		{`type E struct{}; func(E) Error() string {return ""}; func f() (int,E) {return 1 ..}`, "requires nil to fit"},
+		{`type E struct{}; func(E) Error() string {return ""}; func f() (int,E) ` +
+			`{return 1 ..}`,
+			"requires nil to fit"},
+
 		{`func f[T error]() (int,T) {return 1 ..}`, "requires nil to fit"},
 		{`func f() (int8,error) {return 128 ..}`, "overflows"},
 		{`func f(xs []int) (int,error) {return xs... ..}`, "cannot end with ..."},
@@ -58,7 +63,8 @@ func TestShortReturnTypeErrors(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.source, func(t *testing.T) {
 			_, err := checkTGo(t, test.source)
-			if err == nil || !strings.Contains(err.Error(), test.diagnostic) || !strings.Contains(err.Error(), "main.tgo:") {
+			if err == nil || !strings.Contains(err.Error(), test.diagnostic) || !strings.Contains(err.Error(),
+				"main.tgo:") {
 				t.Fatalf("got %v, want %s", err, test.diagnostic)
 			}
 		})

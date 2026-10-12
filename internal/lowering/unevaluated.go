@@ -48,7 +48,9 @@ func (r *rewrite) unevaluatedCall(call *ast.CallExpr) ([]ast.Stmt, ast.Expr) {
 	guard := &ast.IfStmt{Cond: boolean(false), Body: &ast.BlockStmt{List: before}}
 	pointer := &ast.StarExpr{X: r.temporaryType(r.typeOf(base), base)}
 	zero := &ast.FuncLit{
-		Type: &ast.FuncType{Params: &ast.FieldList{}, Results: &ast.FieldList{List: []*ast.Field{{Names: []*ast.Ident{r.name()}, Type: pointer}}}},
+		Type: &ast.FuncType{Params: &ast.FieldList{},
+			Results: &ast.FieldList{List: []*ast.Field{{Names: []*ast.Ident{r.name()}, Type: pointer}}}},
+
 		Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{}}},
 	}
 	var replacement ast.Expr = &ast.StarExpr{X: &ast.CallExpr{Fun: zero}}

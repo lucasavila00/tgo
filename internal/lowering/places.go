@@ -63,7 +63,8 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 			result = &selector
 			break
 		}
-		if _, pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
+		if _,
+			pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
 			before, selector.X = r.capture(e.X)
 		} else {
 			before, selector.X = r.place(e.X)

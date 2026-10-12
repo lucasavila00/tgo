@@ -28,7 +28,8 @@ func TestPropagationUnsafeRejected(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			expected, err := os.ReadFile(filepath.Join("testdata/propagation-rejected", strings.TrimSuffix(entry.Name(), ".tgo")+".txt"))
+			expected, err := os.ReadFile(filepath.Join("testdata/propagation-rejected",
+				strings.TrimSuffix(entry.Name(), ".tgo")+".txt"))
 			if err != nil {
 				t.Fatal(err)
 			}

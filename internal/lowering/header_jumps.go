@@ -47,7 +47,8 @@ func (r *rewrite) withBreakExit(source, target ast.Stmt, output []ast.Stmt, exit
 			inner = block
 		}
 	}
-	return []ast.Stmt{&ast.BlockStmt{List: []ast.Stmt{inner, &ast.LabeledStmt{Label: exit, Stmt: &ast.EmptyStmt{Implicit: true}}}}}
+	return []ast.Stmt{&ast.BlockStmt{List: []ast.Stmt{inner, &ast.LabeledStmt{Label: exit,
+		Stmt: &ast.EmptyStmt{Implicit: true}}}}}
 }
 
 func labelUsed(statements []ast.Stmt, label string) bool {
