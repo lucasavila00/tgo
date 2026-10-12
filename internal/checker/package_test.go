@@ -27,7 +27,9 @@ func main() { fmt.Println(choose(true)) }
 			t.Fatal(err)
 		}
 	}
-	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
+	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles |
+		packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile |
+		packages.NeedModule}, "./...")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,12 +52,15 @@ func main() { fmt.Println(choose(true)) }
 func TestLoaderCachesPackageIdentity(t *testing.T) {
 	dir := t.TempDir()
 	filename := filepath.Join(dir, "main_tgo.go")
-	content := []byte("package p\nfunc call(v int) (int,error) {return v,nil}\nfunc f() error {_=call(call(1)!)!!;return nil}\n")
+	content := []byte("package p\nfunc call(v int) (int,error) {return v,nil}\nfunc f() error " +
+		"{_=call(call(1)!)!!;return nil}\n")
 	if err := os.WriteFile(filename, content, 0600); err != nil {
 		t.Fatal(err)
 	}
-	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p", GoFiles: []string{filename}, CompiledGoFiles: []string{filename}}
-	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p",
+		GoFiles: []string{filename}, CompiledGoFiles: []string{filename}}
+	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
+		make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,12 +98,15 @@ func TestLoaderCachesPackageIdentity(t *testing.T) {
 
 func TestCheckGoKeepsStockObjects(t *testing.T) {
 	dir := t.TempDir()
-	for name, source := range map[string]string{"go.mod": "module example.com/p\n\ngo 1.27.1\n", "main.go": "package p\nimport \"fmt\"\nvar Value = fmt.Sprint(1)\n"} {
+	for name, source := range map[string]string{"go.mod": "module example.com/p\n\ngo 1.27.1\n",
+		"main.go": "package p\nimport \"fmt\"\nvar Value = fmt.Sprint(1)\n"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, ".")
+	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles |
+		packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo |
+		packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +189,8 @@ func run() error {next()!;return nil}
 		t.Fatal(err)
 	}
 	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p", GoFiles: []string{filename}}
-	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
+		make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
 	}

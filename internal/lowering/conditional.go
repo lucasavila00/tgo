@@ -10,7 +10,8 @@ import (
 func (r *rewrite) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok && (r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil) {
+		if call, ok := node.(*ast.CallExpr); ok &&
+			(r.input.conditionals[call] != nil || r.input.comprehensions[call] != nil) {
 			found = true
 			return false
 		}
@@ -163,7 +164,10 @@ func (r *rewrite) conditionalExpressionTail(statement *ast.ExprStmt, result *ast
 				if tv.IsNil() {
 					value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
 				}
-				statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+				statements = append(
+					statements,
+					&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}},
+				)
 			}
 			return statements
 		}

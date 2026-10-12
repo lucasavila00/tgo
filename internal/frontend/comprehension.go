@@ -21,7 +21,11 @@ type Comprehension struct {
 
 // prepareComprehension replaces the innermost comprehension with a marker.
 // Every retained source byte keeps its original position.
-func (s *mappedSource) prepareComprehension(original *token.File, used map[string]bool, records map[string]*Comprehension) (bool, error) {
+func (s *mappedSource) prepareComprehension(
+	original *token.File,
+	used map[string]bool,
+	records map[string]*Comprehension,
+) (bool, error) {
 	tokens := sourceTokens(s.text)
 	blocks := statementBlockOffsets(s.text)
 	for first := len(tokens) - 1; first >= 0; first-- {
@@ -32,7 +36,8 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 		for open >= 0 && tokens[open].depth >= tokens[first].depth {
 			open--
 		}
-		if open < 0 || tokens[open].kind != token.LBRACE || s.input[s.offsets[tokens[open].offset]] != '{' || blocks[tokens[open].offset] {
+		if open < 0 || tokens[open].kind != token.LBRACE || s.input[s.offsets[tokens[open].offset]] != '{' ||
+			blocks[tokens[open].offset] {
 			continue
 		}
 		first = firstComprehensionClause(tokens, open, first)
@@ -45,7 +50,10 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 			end++
 		}
 		if end == len(tokens) {
-			return false, fmt.Errorf("%s: comprehension requires a closing brace", original.Position(original.Pos(s.offsets[start])))
+			return false, fmt.Errorf(
+				"%s: comprehension requires a closing brace",
+				original.Position(original.Pos(s.offsets[start])),
+			)
 		}
 		clauses, valid := s.comprehensionClauses(tokens, first, end)
 		if !valid {
@@ -80,7 +88,12 @@ func freshComprehensionName(used map[string]bool) string {
 	}
 }
 
-func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, first, end int, name, output string, clauses []int) {
+func (s *mappedSource) wrapComprehension(
+	tokens []sourceToken,
+	start, open, first, end int,
+	name, output string,
+	clauses []int,
+) {
 	var text strings.Builder
 	var offsets []int
 	insert := func(value string, at int) {
@@ -179,7 +192,8 @@ func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) in
 		if _, ok := expr.(*ast.CompositeLit); err == nil && ok {
 			start = tokens[i].offset
 		}
-		if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON || tokens[i].kind == token.ASSIGN || tokens[i].kind == token.DEFINE {
+		if tokens[i].depth < tokens[open].depth || tokens[i].kind == token.SEMICOLON || tokens[i].kind == token.ASSIGN ||
+			tokens[i].kind == token.DEFINE {
 			break
 		}
 	}

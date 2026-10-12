@@ -46,7 +46,9 @@ func checkPropagationSnapshots(t *testing.T, input string, source, files map[str
 			continue
 		}
 		if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
-			t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots\nSAVED:\n%s\nGENERATED:\n%s", name, saved, content)
+			t.Errorf("generated %s differs from snapshot; inspect output before using "+
+				"-update-snapshots\nSAVED:\n%s\nGENERATED:\n%s",
+				name, saved, content)
 		}
 	}
 }

@@ -44,9 +44,11 @@ expected,returned,wantPanic:=ReferenceReturn(%q,%d,%d,%q,%t,%d)
 if !reflect.DeepEqual(Trace,expected){t.Fatalf("trace: %%v, want %%v",Trace,expected)}
 if panicked!=wantPanic{t.Fatalf("panic: %%v, want %%v",panicked,wantPanic)}
 if fmt.Sprint(panicValue)!=ReferencePanic(%q,wantPanic){t.Fatalf("panic value: %%v",panicValue)}
-if returned {if result!=sentinel {t.Fatalf("result: %%v, want sentinel identity",result)}} else if result!=nil {t.Fatalf("result: %%v, want nil",result)}
+if returned {if result!=sentinel {t.Fatalf("result: %%v, want sentinel identity",result)}} `+
+				`else if result!=nil {t.Fatalf("result: %%v, want nil",result)}
 })
-`, fmt.Sprintf("%s/%t/%d", input.Name, input.Reached, visit), input.Reached, visit, input.Name, filepath.Base(site.File), site.Start, site.End, input.Name, input.Reached, visit, input.Name)
+`, fmt.Sprintf("%s/%t/%d", input.Name, input.Reached, visit), input.Reached, visit, input.Name,
+				filepath.Base(site.File), site.Start, site.End, input.Name, input.Reached, visit, input.Name)
 		}
 	}
 	checks.WriteString("}\n")

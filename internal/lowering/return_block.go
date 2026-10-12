@@ -19,7 +19,9 @@ func (r *rewrite) returnBlock(typ *ast.FuncType, body *ast.BlockStmt) *ast.Block
 		}
 		for i := 0; i < count; i++ {
 			name := r.name()
-			prefix = append(prefix, variable(name, r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type, typ.End()), nil))
+			prefix = append(prefix, variable(name,
+				r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
+					typ.End()), nil))
 			values = append(values, name)
 			value := ast.Expr(name)
 			if len(field.Names) > 0 && field.Names[i].Name != "_" {
@@ -61,7 +63,11 @@ func rewriteReturns(node ast.Node, replace func(*ast.ReturnStmt) ast.Stmt) ast.N
 	original := reflect.ValueOf(node).Elem()
 	rewrittenNode := reflect.New(original.Type())
 	rewrittenNode.Elem().Set(original)
-	changed := rewriteChildFields(original, rewrittenNode.Elem(), func(child ast.Node) ast.Node { return rewriteReturns(child, replace) })
+	changed := rewriteChildFields(
+		original,
+		rewrittenNode.Elem(),
+		func(child ast.Node) ast.Node { return rewriteReturns(child, replace) },
+	)
 	if !changed {
 		return node
 	}

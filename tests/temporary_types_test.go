@@ -95,7 +95,8 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, dir := range []string{generated, filepath.Join("testdata/propagation-reference", strings.ToLower(name))} {
+	for _, dir := range []string{generated, filepath.Join("testdata/propagation-reference",
+		strings.ToLower(name))} {
 		command := exec.Command("go", "run", ".")
 		command.Dir = dir
 		actual, err := command.CombinedOutput()

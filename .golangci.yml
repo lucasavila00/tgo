@@ -9,9 +9,14 @@ linters:
     - unused
     - revive
     - funlen
+    - lll
     - gocyclo
     - gocognit
+    - nolintlint
   settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
     staticcheck:
       checks: ["SA*"]
     revive:
@@ -21,6 +26,8 @@ linters:
         - name: var-naming
         - name: error-strings
         - name: error-return
+    lll:
+      line-length: 120
     funlen:
       lines: 100
       statements: -1

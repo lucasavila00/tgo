@@ -16,13 +16,16 @@ func TestParseConditionalExpressions(t *testing.T) {
 		`func f(ok bool, xs []int) { use(xs[0:if ok {1} else {2}:if ok {2} else {3}]) }`,
 		`func f(ok bool) { use((if ok { 1 } else { 2 }) + 1) }`,
 		`func f(ok bool) { use(if ok { log(); (if !ok {1} else {"two"}) } else {log(); "three"}, any(4)) }`,
-		`func f(ok bool) { switch { case ok: if ok { use(1) }; default: if ok { use(2) } }; use(if ok {1} else {2}) }`,
+		`func f(ok bool) { switch { case ok: if ok { use(1) }; default: if ok { ` +
+			`use(2) } }; use(if ok {1} else {2}) }`,
+
 		`func f(ok bool) { var x = if ok { if !ok { 1 } else { 2 } } else { 3 }; use(x) }`,
 		`func f(ok bool) { var x = if ok { 1 } else if !ok { 2 } else { 3 }; use(x) }`,
 		`func f(ok bool) { var x = if func() bool { return ok }() { 1 } else { 2 }; use(x) }`,
 		`func f(ok bool) error { use(if ok { next()! } else { next()!! }); return nil }`,
 		`func f(ok bool) { L: if ok { goto L }; use(if ok { 1 } else { 2 }) }`,
-		`func f() { turns:=0; again: for i:=if turns<2 {turns++;0} else {0}; i<1;i++ { _=int(if turns<2 {goto again} else {break again}) } }`,
+		`func f() { turns:=0; again: for i:=if turns<2 {turns++;0} else {0}; i<1;` +
+			`i++ { _=int(if turns<2 {goto again} else {break again}) } }`,
 	} {
 		t.Run(source, func(t *testing.T) {
 			checkConditionalPositions(t, source)
@@ -74,7 +77,8 @@ func TestPropagationRequiresCall(t *testing.T) {
 				}
 			}()
 			input := "package p\nfunc f(err error) error { value := (err)" + operator + "; return value }"
-			if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool)); err != nil {
+			if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input),
+				make(map[string]bool)); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -82,7 +86,8 @@ func TestPropagationRequiresCall(t *testing.T) {
 }
 
 func TestConditionalNamesKeepSourceBindings(t *testing.T) {
-	input := "package p\nfunc tgoConditional1() int {return 4}; func f() int { return if true { tgoConditional1() } else { 0 } }"
+	input := "package p\nfunc tgoConditional1() int {return 4}; func f() int { return if " +
+		"true { tgoConditional1() } else { 0 } }"
 	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +162,8 @@ func TestConditionalBatchIndependentOperands(t *testing.T) {
 		source.WriteString("if ok { use(0) }; use(if ok { 1 } else { 2 });\n")
 	}
 	source.WriteString("}\n")
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source.String()), make(map[string]bool))
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source.String()),
+		make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
 	}

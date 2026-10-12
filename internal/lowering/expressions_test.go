@@ -20,7 +20,8 @@ func right() int { fmt.Print("R"); return 2 }
 func use(a, b int) { fmt.Print("U") }
 func main() { use(left(), right()) }
 `
-	for name, content := range map[string]string{"go.mod": "module example.com/order\n\ngo 1.27.1\n", "main.go": input} {
+	for name, content := range map[string]string{"go.mod": "module example.com/order\n\ngo 1.27.1\n",
+		"main.go": input} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -41,7 +42,8 @@ func main() { use(left(), right()) }
 	r := newRewrite(source)
 	r.input.target = target
 	r.input.after = func([]ast.Expr) []ast.Stmt {
-		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
+		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"),
+			Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
 	}
 	file := *source.Package.Syntax[0]
 	file.Decls = append([]ast.Decl(nil), file.Decls...)

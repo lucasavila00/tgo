@@ -43,23 +43,28 @@ func main() {
  fmt.Print(choose(true), ";", choose(false), ";")
  consume(effect("L",1), if true {effect("B",2)} else {effect("X",0)}, effect("R",3))
  _=false && if true {fmt.Print("X"); true} else {false}
- fmt.Print(early(true), ";", early(false), ";", small(true), ";", small(false), ";", nested(true), ";", nested(false), ";", deferred())
+ fmt.Print(early(true), ";", early(false), ";", small(true), ";", ` +
+		`small(false), ";", nested(true), ";", nested(false), ";", deferred())
 }
 `
 	dir := t.TempDir()
-	for name, content := range map[string]string{"go.mod": "module example.com/conditional\n\ngo 1.27.1\n", "main_tgo.go": input} {
+	for name, content := range map[string]string{"go.mod": "module example.com/conditional\n\ngo 1.27.1\n",
+		"main_tgo.go": input} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, ".")
+	roots, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles |
+		packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile |
+		packages.NeedModule}, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(roots) != 1 {
 		t.Fatalf("packages: %d", len(roots))
 	}
-	loader, err := checker.NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	loader, err := checker.NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"},
+		make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
 	}

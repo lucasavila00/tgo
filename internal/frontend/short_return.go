@@ -14,7 +14,11 @@ type ShortReturn struct {
 }
 
 // prepareShortReturn wraps one operand list without adding a source function.
-func (s *mappedSource) prepareShortReturn(original *token.File, used map[string]bool, records map[string]ShortReturn) (bool, error) {
+func (s *mappedSource) prepareShortReturn(
+	original *token.File,
+	used map[string]bool,
+	records map[string]ShortReturn,
+) (bool, error) {
 	tokens := sourceTokens(s.text)
 	for returnIndex := len(tokens) - 1; returnIndex >= 0; returnIndex-- {
 		if tokens[returnIndex].kind != token.RETURN {

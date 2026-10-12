@@ -13,7 +13,8 @@ func TestSourcePublicAPI(t *testing.T) {
 		t.Fatalf("Source exposes unsupported methods: %v", sourceType)
 	}
 	var source transpiler.Source
-	if _, err := source.InsertAfter(transpiler.Site{}, nil); err == nil || err.Error() != "expression site does not belong to this source" {
+	if _, err := source.InsertAfter(transpiler.Site{}, nil); err == nil ||
+		err.Error() != "expression site does not belong to this source" {
 		t.Fatalf("invalid site: %v", err)
 	}
 }

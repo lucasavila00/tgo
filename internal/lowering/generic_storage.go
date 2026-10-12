@@ -70,7 +70,8 @@ func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 func (r *rewrite) reflectPackage() *ast.Ident {
 	if r.file.reflectAlias == nil {
 		r.file.reflectAlias = r.nameFor("reflect")
-		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.reflectAlias,
+			Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
 	}
 	return r.file.reflectAlias
 }
@@ -83,14 +84,17 @@ func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	before, place := r.place(expr)
 	isArray := r.name()
 	savedHeader := r.name()
-	typeFor := &ast.CallExpr{Fun: &ast.IndexExpr{X: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("TypeFor")}, Index: typeAlias}}
+	typeFor := &ast.CallExpr{Fun: &ast.IndexExpr{X: &ast.SelectorExpr{X: reflectPackage,
+		Sel: ast.NewIdent("TypeFor")}, Index: typeAlias}}
 	kind := &ast.CallExpr{Fun: &ast.SelectorExpr{X: typeFor, Sel: ast.NewIdent("Kind")}}
-	isArrayValue := &ast.BinaryExpr{X: kind, Op: token.EQL, Y: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("Array")}}
+	isArrayValue := &ast.BinaryExpr{X: kind, Op: token.EQL, Y: &ast.SelectorExpr{X: reflectPackage,
+		Sel: ast.NewIdent("Array")}}
 	before = append(before, variable(isArray, r.temporaryType(types.Typ[types.Bool], expr), isArrayValue))
 	savedHeaderSpec := &ast.ValueSpec{Names: []*ast.Ident{savedHeader}, Type: typeAlias}
 	before = append(before, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{savedHeaderSpec}}})
 	saveHeader := &ast.AssignStmt{Lhs: []ast.Expr{savedHeader}, Tok: token.ASSIGN, Rhs: []ast.Expr{place}}
-	before = append(before, &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: isArray}, Body: &ast.BlockStmt{List: []ast.Stmt{saveHeader}}})
+	before = append(before, &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: isArray},
+		Body: &ast.BlockStmt{List: []ast.Stmt{saveHeader}}})
 	getter := genericBaseGetter(typeAlias, isArray, place, savedHeader)
 	base := &ast.ParenExpr{X: &ast.StarExpr{X: &ast.CallExpr{Fun: getter}}}
 	if r.functionState.deferredBases == nil {
@@ -107,7 +111,8 @@ func genericBaseGetter(typeAlias, isArray *ast.Ident, place ast.Expr, savedHeade
 	headerAddress := &ast.UnaryExpr{Op: token.AND, X: savedHeader}
 	returnHeader := &ast.ReturnStmt{Results: []ast.Expr{headerAddress}}
 	returnType := &ast.StarExpr{X: typeAlias}
-	functionType := &ast.FuncType{Params: &ast.FieldList{}, Results: &ast.FieldList{List: []*ast.Field{{Type: returnType}}}}
+	functionType := &ast.FuncType{Params: &ast.FieldList{},
+		Results: &ast.FieldList{List: []*ast.Field{{Type: returnType}}}}
 	return &ast.FuncLit{Type: functionType, Body: &ast.BlockStmt{List: []ast.Stmt{arrayCase, returnHeader}}}
 }
 
