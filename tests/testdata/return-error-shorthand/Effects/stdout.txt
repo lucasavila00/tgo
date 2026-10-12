@@ -1,0 +1,4 @@
+1 2 <nil> [A B D]
+1 3 <nil> [A C D]
+0 0 true [A D]
+7 pair <nil> [P]

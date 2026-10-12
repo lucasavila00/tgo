@@ -1,0 +1,5 @@
+package rejected
+
+func run() (int, error) {
+	return 1, 2 ..
+}

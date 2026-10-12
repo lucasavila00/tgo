@@ -96,6 +96,10 @@
 // with Go's %w error wrapping, so errors.Is and errors.As can find the original
 // error. Other function results receive zero values of their declared types.
 //
+// Short returns become ordinary explicit returns. Leading .. uses fresh typed
+// zero values for success results. Trailing .. adds a nil error; multiple-result
+// calls are evaluated once into locals before the final return.
+//
 // The ordinary-Go InsertAfter API uses the same statement generation rules.
 // See the [public API] for an example. Rewrites leave the loaded syntax unchanged,
 // so callers can produce independent changes from one load. The [runtime tests]

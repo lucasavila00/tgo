@@ -1,0 +1,5 @@
+package rejected
+
+func run[T error]() (int, T) {
+	return 1 ..
+}
