@@ -1,0 +1,15 @@
+package main
+
+import (
+	"fmt"
+	"example.com/shortforeign/foreign"
+)
+
+func values() (any, any, error) {
+	return foreign.Pair() ..
+}
+
+func main() {
+	left, right, err := values()
+	fmt.Println(left, right, err, foreign.Calls)
+}

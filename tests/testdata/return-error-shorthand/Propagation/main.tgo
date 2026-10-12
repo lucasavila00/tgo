@@ -1,0 +1,55 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var failure = errors.New("failure")
+var events []string
+
+func read(label string, fail bool) (int, error) {
+	events = append(events, label)
+	if fail {
+		return 99, failure
+	}
+	return 7, nil
+}
+
+func pair(fail bool) (int, string, error) {
+	events = append(events, "P")
+	if fail {
+		return 99, "discard", failure
+	}
+	return 8, "pair", nil
+}
+
+func done() { events = append(events, "D") }
+
+func original(fail bool) (int, int, error) {
+	defer done()
+	return read("L", false)!, read("R", fail)! ..
+}
+
+func wrapped(fail bool) (int, error) {
+	defer done()
+	return read("W", fail)!! ..
+}
+
+func tuple(fail bool) (int, string, error) {
+	return pair(fail)! ..
+}
+
+func main() {
+	for _, fail := range []bool{false, true} {
+		events = nil
+		left, right, err := original(fail)
+		fmt.Println(left, right, err == failure, errors.Is(err, failure), events)
+		events = nil
+		left, err = wrapped(fail)
+		fmt.Println(left, err == failure, errors.Is(err, failure), events)
+		events = nil
+		value, text, err := tuple(fail)
+		fmt.Println(value, text == "pair", err == failure, events)
+	}
+}

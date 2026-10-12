@@ -26,6 +26,11 @@
 // uses that type to check each output value. Names from a range clause are
 // available to later clauses and the output, but not outside the comprehension.
 //
+// Short returns use the source function's declared result types. Both forms
+// require unnamed results and a final type that implements error. A trailing
+// form also requires that final type to accept nil. Supplied operands follow
+// the same assignment rules as ordinary returns.
+//
 // # Use one compatible set of type information
 //
 // The standard Go checker does not know TGo's expression rules. This package

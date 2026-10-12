@@ -28,6 +28,8 @@ type rewrite struct {
 	collectionOutputs   map[string]*collectionDestination
 	conditionals        map[*ast.CallExpr]ast.Stmt
 	lowered             map[ast.Expr]bool
+	shortReturns        map[*ast.ReturnStmt]frontend.ShortReturn
+	loweredReturns      map[*ast.ReturnStmt]bool
 	frame               *returnFrame
 	formatAlias         *ast.Ident
 	suppressed          bool

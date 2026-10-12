@@ -1,0 +1,4 @@
+package rejected
+
+var value = 1 ..
+

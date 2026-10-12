@@ -31,11 +31,22 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	return output, nil
 }
 
-// LowerPropagations replaces checked propagation, if values, and comprehensions with ordinary Go.
+// LowerPropagations replaces checked TGo operations with ordinary Go.
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, propagations: make(map[ast.Expr]Propagation), comprehensions: s.inventory.Checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.inventory.Checked.Conditionals, lowered: make(map[ast.Expr]bool)}
+	checked := s.inventory.Checked
+	r := &rewrite{
+		source:              s,
+		propagations:        make(map[ast.Expr]Propagation),
+		comprehensions:      checked.Comprehensions,
+		comprehensionRanges: make(map[*ast.RangeStmt]bool),
+		collectionOutputs:   make(map[string]*collectionDestination),
+		conditionals:        checked.Conditionals,
+		shortReturns:        checked.ShortReturns,
+		loweredReturns:      make(map[*ast.ReturnStmt]bool),
+		lowered:             make(map[ast.Expr]bool),
+	}
 	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -83,6 +94,11 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return nil, fmt.Errorf("%s: comprehension was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
+	for statement := range r.shortReturns {
+		if !r.loweredReturns[statement] {
+			return nil, fmt.Errorf("%s: short return was not lowered", s.inventory.Checked.Fset.Position(statement.Pos()))
+		}
+	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
 			return nil, fmt.Errorf("%s: conditional expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
@@ -97,6 +113,11 @@ func (r *rewrite) contains(node ast.Node) bool {
 	}
 	if contains(node, r.target) {
 		return true
+	}
+	for statement := range r.shortReturns {
+		if contains(node, statement) {
+			return true
+		}
 	}
 	for expression := range r.propagations {
 		if contains(node, expression) {

@@ -11,6 +11,9 @@
 // replacement forms as ordinary Go calls. The frontend does not decide types
 // or generate the final Go code.
 //
+// Short return records identify omitted results in return statements. The
+// checker uses the source function's signature to supply their types.
+//
 // # Preserve the meaning of source positions and statements
 //
 // Temporary text can be longer than the original expression. The frontend maps

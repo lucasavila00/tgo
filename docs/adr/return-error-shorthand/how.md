@@ -2,15 +2,14 @@
 
 ## Approach
 
-Recognize adjacent `..` only before or after return operands. Keep Go token
-boundaries: write `1 ..`, not `1..`. Trailing `..` ends statements at
-newlines. Leading `..` needs an operand, which can start on the next line.
+Recognize adjacent `..` before or after return operands. Preserve Go token
+boundaries. Trailing `..` ends statements at newlines; leading `..` needs an
+operand.
 
-The frontend records the operator and original positions. A marker, an
-internal syntax node, lets Go's parser read operands. Before lowering,
-reject the statement if its source function has any named result, including
-`_`. Check operands against result types and count the statement as a return
-for termination checks.
+The frontend records the operator and original positions. A marker, an internal
+syntax node, lets Go's parser read operands. The checker uses the enclosing
+signature: reject named results, including `_`, and check supplied values against
+result types. Count the statement as a return for termination checks.
 
 ## Example
 
@@ -21,21 +20,24 @@ var zero T
 return zero, err
 ```
 
-For `return pair() ..`, save results before appending nil:
+For `return pair() ..` in `(int, string, error)`, use declared result types:
 
 ```go
-first, second := pair()
+var first int
+var second string
+first, second = pair()
 return first, second, nil
 ```
 
-Use checked type identities and fresh names. If source code shadows `nil`,
-use zero storage of the final type. Existing expression lowering preserves
-operand order, enclosing returns, defers, and jumps.
+Thus private callee types need no generated name. Use checked type identities
+and fresh names. If source code shadows `nil`, use zero storage of the final
+type. Existing expression lowering preserves operand order, returns, defers,
+and jumps.
 
 ## Tradeoffs
 
-Library helpers need type arguments for omitted results and separate forms
-for result counts. Return syntax uses the enclosing signature. Automatic
-fixes must prove omitted values and effects stay unchanged.
+Library helpers need explicit type arguments for omitted results and separate
+forms for result counts. Return syntax uses the enclosing signature. Automatic fixes require
+unchanged values and effects.
 
 [WHAT](what.md) states behavior. [PROOF](proof.md) defines checks.

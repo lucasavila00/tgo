@@ -42,7 +42,7 @@ func rejectUnsafePropagation(pkg *checker.Package) {
 						return true
 					}
 					operation, ok := pkg.Operations[name.Name]
-					if !ok || operation.Conditional || operation.Comprehension || operation.Element {
+					if !ok || operation.Conditional || operation.Comprehension || operation.Element || operation.ShortReturn {
 						return true
 					}
 					operator := "!"

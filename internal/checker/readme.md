@@ -24,6 +24,8 @@ Switch cases keep Go scopes, including the types of type\-switch bindings. A bra
 
 A comprehension declares the slice or map type that it builds. The checker uses that type to check each output value. Names from a range clause are available to later clauses and the output, but not outside the comprehension.
 
+Short returns use the source function's declared result types. Both forms require unnamed results and a final type that implements error. A trailing form also requires that final type to accept nil. Supplied operands follow the same assignment rules as ordinary returns.
+
 ### Use one compatible set of type information
 
 The standard Go checker does not know TGo's expression rules. This package uses a patched copy of it and a matching reader for compiled dependency types. Both come from the same pinned Go version. Run make prepare to generate them; see [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) before changing that version or its patch.
@@ -76,6 +78,7 @@ type Package struct {
     Operations     map[string]types.TGoOperation
     Comprehensions map[*ast.CallExpr]*frontend.Comprehension
     Conditionals   map[*ast.CallExpr]ast.Stmt
+    ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 ```
 

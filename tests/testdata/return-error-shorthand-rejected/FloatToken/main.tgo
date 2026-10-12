@@ -1,0 +1,5 @@
+package rejected
+
+func run() (float64, error) {
+	return 1..
+}

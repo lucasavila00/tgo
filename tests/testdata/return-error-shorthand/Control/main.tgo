@@ -1,0 +1,66 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var events []string
+var token = &struct{ N int }{8}
+
+func done() { events = append(events, "D") }
+
+func skipping(err error) (int, error) {
+	for i := 0; i < 2; i++ {
+		return if i == 0 { continue; 0 } else { defer done(); 7 } ..
+	}
+	return .. err
+}
+
+func breaking(err error) (int, error) {
+	for {
+		return if true { break; 0 } else { 1 } ..
+	}
+	return .. err
+}
+
+func jumping(err error) (int, error) {
+	var value int
+	value = if true { goto exit; 0 } else { 1 }
+	return value ..
+exit:
+	return .. err
+}
+
+func onlyError(err error) error {
+	return .. err
+}
+
+func ordinaryNamed() (value int, err error) {
+	call := func() (int, error) { return 9 .. }
+	return call()
+}
+
+func panicking() (int, error) {
+	defer done()
+	return if true { panic(token); 0 } else { 1 } ..
+}
+
+func main() {
+	failure := errors.New("failure")
+	events = nil
+	value, err := skipping(failure)
+	fmt.Println(value, err, events)
+	value, err = breaking(failure)
+	fmt.Println(value, err == failure)
+	value, err = jumping(failure)
+	fmt.Println(value, err == failure)
+	fmt.Println(onlyError(failure) == failure)
+	value, err = ordinaryNamed()
+	fmt.Println(value, err)
+	events = nil
+	func() {
+		defer func() { fmt.Println(recover() == token, events) }()
+		_, _ = panicking()
+	}()
+}

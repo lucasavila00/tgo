@@ -28,6 +28,7 @@ type Package struct {
 	Operations     map[string]types.TGoOperation
 	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
 	Conditionals   map[*ast.CallExpr]ast.Stmt
+	ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 
 // Loader checks source packages and reads compiled dependency types.
@@ -89,6 +90,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 		Operations:     make(map[string]types.TGoOperation),
 		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
 		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
+		ShortReturns:   make(map[*ast.ReturnStmt]frontend.ShortReturn),
 	}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
@@ -122,6 +124,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 					return true
 				})
 			}
+			pkg.recordShortReturns(file, parsed.ShortReturns)
 			for name, pos := range parsed.Conditionals {
 				pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
 			}
@@ -214,7 +217,33 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 		Operations:     make(map[string]types.TGoOperation),
 		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
 		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
+		ShortReturns:   make(map[*ast.ReturnStmt]frontend.ShortReturn),
 	}
 	loader.fset = metadata.Fset
 	return loader.check(metadata, pkg)
+}
+
+func (pkg *Package) recordShortReturns(file *ast.File, records map[string]frontend.ShortReturn) {
+	for name, record := range records {
+		pkg.Operations[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess, Position: record.Position}
+	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		statement, isReturn := node.(*ast.ReturnStmt)
+		if !isReturn || len(statement.Results) != 1 {
+			return true
+		}
+		markerCall, isCall := statement.Results[0].(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		markerIdentifier, isIdentifier := markerCall.Fun.(*ast.Ident)
+		if !isIdentifier {
+			return true
+		}
+		record, found := records[markerIdentifier.Name]
+		if found {
+			pkg.ShortReturns[statement] = record
+		}
+		return true
+	})
 }

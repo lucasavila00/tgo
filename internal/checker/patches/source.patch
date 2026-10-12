@@ -756,7 +756,7 @@
  			check.assignment(&val, elem, "send")
  		}
  
-@@ -538,9 +547,17 @@
+@@ -538,9 +547,20 @@
  		check.suspendedCall("go", s.Call)
  
  	case *ast.DeferStmt:
@@ -767,6 +767,9 @@
  		check.suspendedCall("defer", s.Call)
  
  	case *ast.ReturnStmt:
++		if check.shortReturn(s) {
++			return
++		}
 +		if check.sig == nil {
 +			check.error(s, InvalidSyntaxTree, "return requires an enclosing function")
 +			return
@@ -774,7 +777,7 @@
  		res := check.sig.results
  		// Return with implicit results allowed for function with named results.
  		// (If one is named, all are named.)
-@@ -606,7 +623,9 @@
+@@ -606,7 +626,9 @@
  		check.openScope(s, "if")
  		defer check.closeScope()
  
@@ -785,7 +788,7 @@
  		var x operand
  		check.expr(nil, &x, s.Cond)
  		if x.isValid() && !allBoolean(x.typ()) {
-@@ -629,7 +648,13 @@
+@@ -629,7 +651,13 @@
  		check.openScope(s, "switch")
  		defer check.closeScope()
 +		if check.sig == nil && len(check.conditionalCases) > 0 {
@@ -800,7 +803,7 @@
  		var x operand
  		if s.Tag != nil {
  			check.expr(nil, &x, s.Tag)
-@@ -658,6 +680,11 @@
+@@ -658,6 +686,11 @@
  				check.error(c, InvalidSyntaxTree, "incorrect expression switch case")
  				continue
  			}
@@ -812,7 +815,7 @@
  			check.caseValues(&x, clause.List, seen)
  			check.openScope(clause, "case")
  			inner := inner
-@@ -666,7 +693,11 @@
+@@ -666,7 +699,11 @@
  			} else {
  				inner |= finalSwitchCase
  			}
@@ -825,7 +828,7 @@
  			check.closeScope()
  		}
  
-@@ -675,7 +706,13 @@
+@@ -675,7 +712,13 @@
  		check.openScope(s, "type switch")
  		defer check.closeScope()
 +		if check.sig == nil && len(check.conditionalCases) > 0 {
@@ -840,7 +843,7 @@
  
  		// A type switch guard must be of the form:
  		//
-@@ -762,7 +796,11 @@
+@@ -762,7 +805,11 @@
  				// Collect them for later analysis.
  				lhsVars = append(lhsVars, obj)
  			}
@@ -853,7 +856,7 @@
  			check.closeScope()
  		}
  
-@@ -833,7 +871,10 @@
+@@ -833,7 +880,10 @@
  		check.openScope(s, "for")
  		defer check.closeScope()
  
@@ -865,7 +868,7 @@
  		if s.Cond != nil {
  			var x operand
  			check.expr(nil, &x, s.Cond)
-@@ -841,7 +882,9 @@
+@@ -841,7 +891,9 @@
  				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
  			}
  		}
@@ -876,7 +879,7 @@
  		// spec: "The init statement may be a short variable
  		// declaration, but the post statement must not."
  		if s, _ := s.Post.(*ast.AssignStmt); s != nil && s.Tok == token.DEFINE {
-@@ -855,6 +898,7 @@
+@@ -855,6 +907,7 @@
  
  	case *ast.RangeStmt:
  		inner |= breakOk | continueOk

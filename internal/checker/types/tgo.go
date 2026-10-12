@@ -17,6 +17,8 @@ type TGoOperation struct {
 	Output        string
 	Element       bool
 	Conditional   bool
+	ShortReturn   bool
+	ZeroSuccess   bool
 	Wrap          bool
 	CallName      string
 	Position      token.Position
