@@ -85,72 +85,77 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 }
 
 func (r *rewrite) renameTypeBindings(typ types.Type, result ast.Expr, parameterNames map[*types.TypeParam]string, unsafeAlias *ast.Ident) {
-	// Follow checked types so equal spellings do not merge different bindings.
-	var rename func(types.Type, ast.Expr)
+	names := typeBindingNames{parameterNames: parameterNames, unsafeAlias: unsafeAlias}
+	names.rename(types.Default(typ), result)
+}
 
-	rename = func(typ types.Type, expr ast.Expr) {
-		for {
-			parenthesized, ok := expr.(*ast.ParenExpr)
-			if !ok {
-				break
-			}
-			expr = parenthesized.X
+type typeBindingNames struct {
+	parameterNames map[*types.TypeParam]string
+	unsafeAlias    *ast.Ident
+}
+
+// rename follows checked types so equal spellings keep separate bindings.
+func (names typeBindingNames) rename(typ types.Type, expr ast.Expr) {
+	for {
+		parenthesized, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			break
 		}
-		switch t := typ.(type) {
-		case *types.TypeParam:
-			if name := parameterNames[t]; name != "" {
-				expr.(*ast.Ident).Name = name
+		expr = parenthesized.X
+	}
+	switch t := typ.(type) {
+	case *types.TypeParam:
+		if name := names.parameterNames[t]; name != "" {
+			expr.(*ast.Ident).Name = name
+		}
+	case *types.Basic:
+		if t.Kind() == types.UnsafePointer {
+			expr.(*ast.SelectorExpr).X = names.unsafeAlias
+		}
+	case *types.Named, *types.Alias:
+		var args *types.TypeList
+		if named, ok := t.(*types.Named); ok {
+			args = named.TypeArgs()
+		} else {
+			args = t.(*types.Alias).TypeArgs()
+		}
+		switch e := expr.(type) {
+		case *ast.IndexExpr:
+			names.rename(args.At(0), e.Index)
+		case *ast.IndexListExpr:
+			for i, index := range e.Indices {
+				names.rename(args.At(i), index)
 			}
-		case *types.Basic:
-			if t.Kind() == types.UnsafePointer {
-				expr.(*ast.SelectorExpr).X = unsafeAlias
-			}
-		case *types.Named, *types.Alias:
-			var args *types.TypeList
-			if named, ok := t.(*types.Named); ok {
-				args = named.TypeArgs()
-			} else {
-				args = t.(*types.Alias).TypeArgs()
-			}
-			switch e := expr.(type) {
-			case *ast.IndexExpr:
-				rename(args.At(0), e.Index)
-			case *ast.IndexListExpr:
-				for i, index := range e.Indices {
-					rename(args.At(i), index)
-				}
-			}
-		case *types.Pointer:
-			rename(t.Elem(), expr.(*ast.StarExpr).X)
-		case *types.Array:
-			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
-		case *types.Slice:
-			rename(t.Elem(), expr.(*ast.ArrayType).Elt)
-		case *types.Map:
-			e := expr.(*ast.MapType)
-			rename(t.Key(), e.Key)
-			rename(t.Elem(), e.Value)
-		case *types.Chan:
-			rename(t.Elem(), expr.(*ast.ChanType).Value)
-		case *types.Struct:
-			for i, field := range expr.(*ast.StructType).Fields.List {
-				rename(t.Field(i).Type(), field.Type)
-			}
-		case *types.Signature:
-			e := expr.(*ast.FuncType)
-			renameTupleFields(t.Params(), e.Params, rename)
-			renameTupleFields(t.Results(), e.Results, rename)
-		case *types.Interface:
-			list := expr.(*ast.InterfaceType).Methods.List
-			for i := 0; i < t.NumExplicitMethods(); i++ {
-				rename(t.ExplicitMethod(i).Type(), list[i].Type)
-			}
-			for i := 0; i < t.NumEmbeddeds(); i++ {
-				rename(t.EmbeddedType(i), list[t.NumExplicitMethods()+i].Type)
-			}
+		}
+	case *types.Pointer:
+		names.rename(t.Elem(), expr.(*ast.StarExpr).X)
+	case *types.Array:
+		names.rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+	case *types.Slice:
+		names.rename(t.Elem(), expr.(*ast.ArrayType).Elt)
+	case *types.Map:
+		e := expr.(*ast.MapType)
+		names.rename(t.Key(), e.Key)
+		names.rename(t.Elem(), e.Value)
+	case *types.Chan:
+		names.rename(t.Elem(), expr.(*ast.ChanType).Value)
+	case *types.Struct:
+		for i, field := range expr.(*ast.StructType).Fields.List {
+			names.rename(t.Field(i).Type(), field.Type)
+		}
+	case *types.Signature:
+		e := expr.(*ast.FuncType)
+		renameTupleFields(t.Params(), e.Params, names.rename)
+		renameTupleFields(t.Results(), e.Results, names.rename)
+	case *types.Interface:
+		list := expr.(*ast.InterfaceType).Methods.List
+		for i := 0; i < t.NumExplicitMethods(); i++ {
+			names.rename(t.ExplicitMethod(i).Type(), list[i].Type)
+		}
+		for i := 0; i < t.NumEmbeddeds(); i++ {
+			names.rename(t.EmbeddedType(i), list[t.NumExplicitMethods()+i].Type)
 		}
 	}
-	rename(types.Default(typ), result)
 }
 
 func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(types.Type, ast.Expr)) {

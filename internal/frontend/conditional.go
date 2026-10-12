@@ -20,6 +20,11 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 	if start >= 0 {
 		return start
 	}
+	return recoveredConditionalStart(file, temporary, source, candidates)
+}
+
+func recoveredConditionalStart(file *ast.File, temporary *token.FileSet, source string, candidates map[int]bool) int {
+	start := -1
 	var parents []ast.Node
 	ast.Inspect(file, func(node ast.Node) bool {
 		if node == nil {

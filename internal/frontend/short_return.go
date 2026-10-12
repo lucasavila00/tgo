@@ -89,10 +89,7 @@ func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (i
 		if leadingOperator {
 			continue
 		}
-		nextToken := tokens[i+1]
-		atNextStatement := nextToken.kind == token.EOF || nextToken.kind == token.SEMICOLON || nextToken.kind == token.RBRACE
-		hasNewline := strings.Contains(s.text[secondDot.end:nextToken.offset], "\n")
-		if atNextStatement || hasNewline {
+		if s.shortReturnEndsAfter(tokens, i) {
 			return operatorOffset, tokens[i].end, nil
 		}
 		return operatorOffset, 0, fmt.Errorf("short return permits .. only before or after its operands")
@@ -122,4 +119,12 @@ func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, returnEnd i
 			return returnEnd
 		}
 	}
+}
+
+func (s *mappedSource) shortReturnEndsAfter(tokens []sourceToken, secondDotIndex int) bool {
+	secondDot := tokens[secondDotIndex]
+	nextToken := tokens[secondDotIndex+1]
+	atNextStatement := nextToken.kind == token.EOF || nextToken.kind == token.SEMICOLON || nextToken.kind == token.RBRACE
+	hasNewline := strings.Contains(s.text[secondDot.end:nextToken.offset], "\n")
+	return atNextStatement || hasNewline
 }

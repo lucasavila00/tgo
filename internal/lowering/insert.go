@@ -82,19 +82,8 @@ func (r *rewrite) checkLoweredOperations() error {
 			return fmt.Errorf("%s: propagation was not lowered", s.inventory.Checked.Fset.Position(expression.Pos()))
 		}
 	}
-	for _, file := range s.inventory.Checked.Syntax {
-		var missing error
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.request.lowered[call] {
-					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
-				}
-			}
-			return missing == nil
-		})
-		if missing != nil {
-			return missing
-		}
+	if err := r.checkLoweredElements(); err != nil {
+		return err
 	}
 	for call := range r.input.comprehensions {
 		if !r.request.lowered[call] {
@@ -136,16 +125,7 @@ func (r *rewrite) contains(node ast.Node) bool {
 			return true
 		}
 	}
-	found := false
-	ast.Inspect(node, func(child ast.Node) bool {
-		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.input.source.inventory.Checked.Operations[id.Name].Element {
-				found = true
-			}
-		}
-		return !found
-	})
-	if found {
+	if r.containsElement(node) {
 		return true
 	}
 	for expression := range r.input.conditionals {
@@ -222,31 +202,38 @@ func (r *rewrite) functionBodies(node ast.Node) ast.Node {
 	original := reflect.ValueOf(node).Elem()
 	rewritten := reflect.New(original.Type())
 	rewritten.Elem().Set(original)
-	for i := 0; i < original.NumField(); i++ {
-		field := original.Field(i)
-		output := rewritten.Elem().Field(i)
-		if child, ok := field.Interface().(ast.Node); ok {
-			if (field.Kind() == reflect.Pointer || field.Kind() == reflect.Interface) && field.IsNil() {
-				continue
-			}
-			output.Set(reflect.ValueOf(r.functionBodies(child)))
-		} else if field.Kind() == reflect.Slice {
-			// Copy child slices before replacing an element; leave non-AST data alone.
-			for j := 0; j < field.Len(); j++ {
-				child, ok := field.Index(j).Interface().(ast.Node)
-				if !ok || reflect.ValueOf(child).IsNil() {
-					continue
-				}
-				rewritten := r.functionBodies(child)
-				if rewritten != child {
-					if output.Pointer() == field.Pointer() {
-						output.Set(reflect.MakeSlice(field.Type(), field.Len(), field.Len()))
-						reflect.Copy(output, field)
-					}
-					output.Index(j).Set(reflect.ValueOf(rewritten))
+	rewriteChildFields(original, rewritten.Elem(), r.functionBodies)
+	return rewritten.Interface().(ast.Node)
+}
+
+func (r *rewrite) checkLoweredElements() error {
+	s := r.input.source
+	for _, file := range s.inventory.Checked.Syntax {
+		var missing error
+		ast.Inspect(file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.request.lowered[call] {
+					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
 				}
 			}
+			return missing == nil
+		})
+		if missing != nil {
+			return missing
 		}
 	}
-	return rewritten.Interface().(ast.Node)
+	return nil
+}
+
+func (r *rewrite) containsElement(node ast.Node) bool {
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		if call, ok := child.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok && r.input.source.inventory.Checked.Operations[id.Name].Element {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }

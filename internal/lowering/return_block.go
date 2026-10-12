@@ -61,37 +61,7 @@ func rewriteReturns(node ast.Node, replace func(*ast.ReturnStmt) ast.Stmt) ast.N
 	original := reflect.ValueOf(node).Elem()
 	rewrittenNode := reflect.New(original.Type())
 	rewrittenNode.Elem().Set(original)
-	changed := false
-	for i := 0; i < original.NumField(); i++ {
-		field := original.Field(i)
-		output := rewrittenNode.Elem().Field(i)
-		if child, ok := field.Interface().(ast.Node); ok {
-			if reflect.ValueOf(child).IsNil() {
-				continue
-			}
-			rewritten := rewriteReturns(child, replace)
-			if rewritten != child {
-				changed = true
-				output.Set(reflect.ValueOf(rewritten))
-			}
-		} else if field.Kind() == reflect.Slice {
-			for j := 0; j < field.Len(); j++ {
-				child, ok := field.Index(j).Interface().(ast.Node)
-				if !ok || reflect.ValueOf(child).IsNil() {
-					continue
-				}
-				rewritten := rewriteReturns(child, replace)
-				if rewritten != child {
-					changed = true
-					if output.Pointer() == field.Pointer() {
-						output.Set(reflect.MakeSlice(field.Type(), field.Len(), field.Len()))
-						reflect.Copy(output, field)
-					}
-					output.Index(j).Set(reflect.ValueOf(rewritten))
-				}
-			}
-		}
-	}
+	changed := rewriteChildFields(original, rewrittenNode.Elem(), func(child ast.Node) ast.Node { return rewriteReturns(child, replace) })
 	if !changed {
 		return node
 	}

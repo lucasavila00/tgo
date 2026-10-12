@@ -97,45 +97,9 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 		filenames = metadata.GoFiles
 	}
 	for _, filename := range filenames {
-		input, err := os.ReadFile(filename)
+		file, err := loader.parseFile(filename, pkg)
 		if err != nil {
 			return nil, err
-		}
-		name, err := filepath.Rel(loader.Root, filename)
-		if err != nil {
-			return nil, err
-		}
-		var file *ast.File
-		if sourceName := loader.TGoFiles[name]; sourceName != "" {
-			parsed, err := frontend.ParseFile(loader.fset, filename, sourceName, input, loader.Used)
-			if err != nil {
-				return nil, err
-			}
-			file = parsed.File
-			for name, record := range parsed.Comprehensions {
-				pkg.Operations[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges, Output: record.Output, Position: record.Position}
-				pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
-				ast.Inspect(file, func(node ast.Node) bool {
-					if call, ok := node.(*ast.CallExpr); ok {
-						if id, ok := call.Fun.(*ast.Ident); ok && id.Name == name {
-							pkg.Comprehensions[call] = record
-						}
-					}
-					return true
-				})
-			}
-			pkg.recordShortReturns(file, parsed.ShortReturns)
-			for name, pos := range parsed.Conditionals {
-				pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
-			}
-			for name, op := range parsed.Propagations {
-				pkg.Operations[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
-			}
-		} else {
-			file, err = parser.ParseFile(loader.fset, filename, input, parser.ParseComments|parser.SkipObjectResolution)
-			if err != nil {
-				return nil, err
-			}
 		}
 		pkg.Syntax = append(pkg.Syntax, file)
 	}
@@ -246,4 +210,52 @@ func (pkg *Package) recordShortReturns(file *ast.File, records map[string]fronte
 		}
 		return true
 	})
+}
+
+func (loader *Loader) parseFile(filename string, pkg *Package) (*ast.File, error) {
+	input, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	name, err := filepath.Rel(loader.Root, filename)
+	if err != nil {
+		return nil, err
+	}
+	var file *ast.File
+	if sourceName := loader.TGoFiles[name]; sourceName != "" {
+		parsed, err := frontend.ParseFile(loader.fset, filename, sourceName, input, loader.Used)
+		if err != nil {
+			return nil, err
+		}
+		file = parsed.File
+		pkg.recordParsedFile(file, parsed)
+	} else {
+		file, err = parser.ParseFile(loader.fset, filename, input, parser.ParseComments|parser.SkipObjectResolution)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return file, nil
+}
+
+func (pkg *Package) recordParsedFile(file *ast.File, parsed *frontend.Parsed) {
+	for name, record := range parsed.Comprehensions {
+		pkg.Operations[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges, Output: record.Output, Position: record.Position}
+		pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
+		ast.Inspect(file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok && id.Name == name {
+					pkg.Comprehensions[call] = record
+				}
+			}
+			return true
+		})
+	}
+	pkg.recordShortReturns(file, parsed.ShortReturns)
+	for name, pos := range parsed.Conditionals {
+		pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
+	}
+	for name, op := range parsed.Propagations {
+		pkg.Operations[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
+	}
 }

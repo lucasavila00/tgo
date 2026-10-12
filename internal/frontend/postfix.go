@@ -44,14 +44,7 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 			if offset+1 < len(input) && input[offset+1] == '!' {
 				count = 2
 			}
-			name := ""
-			for n := 1; ; n++ {
-				name = fmt.Sprintf("tgoPropagation%d", n)
-				if !used[name] {
-					used[name] = true
-					break
-				}
-			}
+			name := freshPropagationName(used)
 			operations[name] = Marker{Name: name, Wrap: count == 2, Position: file.Position(pos)}
 			output.Write(input[copied:offset])
 			fmt.Fprintf(&output, "/*%s*/", name)
@@ -82,22 +75,7 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 			if !ok {
 				continue
 			}
-			var selected ast.Expr
-			ast.Inspect(file, func(node ast.Node) bool {
-				expr, ok := node.(ast.Expr)
-				switch expr.(type) {
-				case *ast.CallExpr, *ast.ParenExpr:
-				default:
-					return true
-				}
-				if !ok || expr.End() > comment.Pos() {
-					return true
-				}
-				if selected == nil || expr.End() > selected.End() || (expr.End() == selected.End() && expr.Pos() < selected.Pos()) {
-					selected = expr
-				}
-				return true
-			})
+			selected := precedingCall(file, comment.Pos())
 			raw := ast.Unparen(selected)
 			call, ok := raw.(*ast.CallExpr)
 			if !ok {
@@ -148,4 +126,34 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 		}
 	}
 	file.Comments = comments
+}
+
+func freshPropagationName(used map[string]bool) string {
+	for n := 1; ; n++ {
+		name := fmt.Sprintf("tgoPropagation%d", n)
+		if !used[name] {
+			used[name] = true
+			return name
+		}
+	}
+}
+
+func precedingCall(file *ast.File, position token.Pos) ast.Expr {
+	var selected ast.Expr
+	ast.Inspect(file, func(node ast.Node) bool {
+		expr, ok := node.(ast.Expr)
+		switch expr.(type) {
+		case *ast.CallExpr, *ast.ParenExpr:
+		default:
+			return true
+		}
+		if !ok || expr.End() > position {
+			return true
+		}
+		if selected == nil || expr.End() > selected.End() || (expr.End() == selected.End() && expr.Pos() < selected.Pos()) {
+			selected = expr
+		}
+		return true
+	})
+	return selected
 }

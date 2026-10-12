@@ -103,27 +103,7 @@ func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.
 func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.Stmt {
 	switch statement := statement.(type) {
 	case *ast.LabeledStmt:
-		tail := statement.Stmt
-		for {
-			label, ok := tail.(*ast.LabeledStmt)
-			if !ok {
-				break
-			}
-			tail = label.Stmt
-		}
-		switch tail.(type) {
-		case *ast.ExprStmt, *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
-		default:
-			return r.statement(statement)
-		}
-		labeled := *statement
-		statements := r.conditionalTail(statement.Stmt, result)
-		if len(statements) == 1 {
-			labeled.Stmt = statements[0]
-		} else {
-			labeled.Stmt = &ast.BlockStmt{List: statements}
-		}
-		return []ast.Stmt{&labeled}
+		return r.conditionalLabeledTail(statement, result)
 	case *ast.IfStmt:
 		return r.conditionalStatement(statement, result)
 	case *ast.SwitchStmt:
@@ -131,22 +111,7 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 	case *ast.TypeSwitchStmt:
 		return r.valueTypeSwitchStatement(statement, result)
 	case *ast.ExprStmt:
-		if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
-			statements, values := r.expression(statement.X)
-			if result == nil {
-				for _, value := range values {
-					if tv.Value != nil {
-						value = &ast.BinaryExpr{X: value, Op: token.EQL, Y: value}
-					}
-					if tv.IsNil() {
-						value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
-					}
-					statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
-				}
-				return statements
-			}
-			return append(statements, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
-		}
+		return r.conditionalExpressionTail(statement, result)
 	}
 	return r.statement(statement)
 }
@@ -161,4 +126,48 @@ func (r *rewrite) valueStatement(statement ast.Stmt, result *ast.Ident) []ast.St
 		return r.valueTypeSwitchStatement(statement, result)
 	}
 	return nil
+}
+
+func (r *rewrite) conditionalLabeledTail(statement *ast.LabeledStmt, result *ast.Ident) []ast.Stmt {
+	tail := statement.Stmt
+	for {
+		label, ok := tail.(*ast.LabeledStmt)
+		if !ok {
+			break
+		}
+		tail = label.Stmt
+	}
+	switch tail.(type) {
+	case *ast.ExprStmt, *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+	default:
+		return r.statement(statement)
+	}
+	labeled := *statement
+	statements := r.conditionalTail(statement.Stmt, result)
+	if len(statements) == 1 {
+		labeled.Stmt = statements[0]
+	} else {
+		labeled.Stmt = &ast.BlockStmt{List: statements}
+	}
+	return []ast.Stmt{&labeled}
+}
+
+func (r *rewrite) conditionalExpressionTail(statement *ast.ExprStmt, result *ast.Ident) []ast.Stmt {
+	if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
+		statements, values := r.expression(statement.X)
+		if result == nil {
+			for _, value := range values {
+				if tv.Value != nil {
+					value = &ast.BinaryExpr{X: value, Op: token.EQL, Y: value}
+				}
+				if tv.IsNil() {
+					value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
+				}
+				statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+			}
+			return statements
+		}
+		return append(statements, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
+	}
+	return r.statement(statement)
 }
