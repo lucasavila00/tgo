@@ -2,31 +2,42 @@
 
 ## Behavior checks
 
-Use existing propagation, comprehension, value-expression, and insertion tests.
-For `use(first(), fetch()!, last())`, require the same trace and original error
-as the handwritten Go reference. For skipped Boolean operands and branches,
-require no extra execution.
+Use [propagation_test.go](../../../tests/propagation_test.go),
+[value_expressions_test.go](../../../tests/value_expressions_test.go),
+[comprehensions_test.go](../../../tests/comprehensions_test.go),
+[short_returns_test.go](../../../tests/short_returns_test.go), and
+[insert_test.go](../../../tests/insert_test.go).
+The [propagation reference](../../../tests/testdata/propagation-reference) and
+[proof corpus](../../../tests/testdata/proof) supply independent behavior checks.
+Require unchanged traces, values, errors, panics, and deferred calls.
 
 ## Rejected inputs
 
-No new rejected inputs or diagnostics. Preserve existing invalid-input results.
+No new restrictions. Preserve existing diagnostics in
+[propagation-rejected](../../../tests/testdata/propagation-rejected) and
+[comprehensions-rejected](../../../tests/testdata/comprehensions-rejected).
 
 ## Regression checks
 
-Check tuple and contextual types, comma-ok results, assignment destinations,
-store panics, loop post work, labeled jumps, closures, package initializers,
-imported types, and error wrapping. Nested functions must retain independent
-return targets and jump maps when callbacks receive their current context.
-
-Keep all generated snapshots unchanged. Check imports for dispatcher to rules
-to shared, with no shared import of a rule. Check each new package comment for
-its implemented responsibility.
+Preserve snapshots, contextual and tuple types, assignment order, skipped paths,
+loop posts, labeled jumps, closures, initializer state, and error identity.
+Callbacks must receive the current context and preserve nested return targets.
 
 ## Evidence
 
-Planned: run focused lowering and feature runtime tests, then use hosted CI for
-the full compiler suite. Compare snapshots and the public API. Passing checks
-must show unchanged behavior and the required import direction.
+Planned focused commands, from the repository root:
 
-Completed before the code move: baseline `go test ./internal/lowering` passed.
-Package extraction and its behavior checks remain incomplete.
+```sh
+go test ./internal/lowering
+go test ./tests -run '^(TestPropagationFixtures|TestValueExpressions|TestCollectionComprehensions|TestReturnErrorShorthand|TestInsertReturn)$'
+go list -deps ./internal/lowering/...
+make lint
+make docs-check
+```
+
+Inspect the dependency list: shared must not import rules. Compare snapshots
+and public APIs. Use hosted CI for the full compiler suite.
+
+Completed: baseline `go test ./internal/lowering` passed before extraction.
+ADR word limits, local links, and diff checks passed. The code move and its
+behavior checks remain future work under #347; this PR contains only the ADR.
