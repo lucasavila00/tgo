@@ -14,7 +14,7 @@ Lowering means turning an expression that Go cannot execute directly into ordina
 
 The [source inventory](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/source/readme.md>) records expressions and their parents in the checked syntax. It also records where evaluation cannot accept inserted statements. These facts belong to the input and stay available after a rewrite.
 
-Each output request creates a rewrite with its own generated locals, changed bindings, and return target. The [name allocator](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/names/readme.md>) reserves identifiers from every source file before the first generated name. It keeps one sequence for the complete request, including import aliases.
+Input facts and selected operations stay unchanged during emission. Request state records completed operations and allocates names across all files. Each file owns its added imports, declarations, and renamed source bindings. Each function owns its return target, labels, jumps, and temporary values. A nested function gets new function state and shares its file state. Thus a closure can still refer to renamed outer variables and outer type aliases. Package initializer wrappers also get their own function state. The [name allocator](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/names/readme.md>) reserves source names before generation starts.
 
 Expression lowering returns statements that must run first and references to the resulting values. The caller puts the statements at the expression's evaluation point. For use\(first\(\), fetch\(\)\!, last\(\)\), operands saves first before it adds the statements for fetch. Statement lowering then places the final use call after these statements.
 

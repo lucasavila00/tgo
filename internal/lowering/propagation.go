@@ -18,19 +18,22 @@ type returnFrame struct {
 }
 
 func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType, *ast.BlockStmt) {
-	parent := r.frame
-	r.frame = &returnFrame{function: node, typ: typ}
-	output := r.block(body)
-	if r.frame.prepared {
-		output.List = append(r.frame.prefix, output.List...)
+	functionRewrite := &rewrite{
+		input:         r.input,
+		request:       r.request,
+		file:          r.file,
+		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}},
 	}
-	if r.source.inventory.Checked.TypesInfo.TGoReturnBlocks[body] {
-		output = r.returnBlock(typ, output)
+	output := functionRewrite.block(body)
+	if functionRewrite.functionState.frame.prepared {
+		output.List = append(functionRewrite.functionState.frame.prefix, output.List...)
 	}
-	if aliases := r.aliasStatements[node]; len(aliases) != 0 {
+	if functionRewrite.input.source.inventory.Checked.TypesInfo.TGoReturnBlocks[body] {
+		output = functionRewrite.returnBlock(typ, output)
+	}
+	if aliases := functionRewrite.file.aliasStatements[node]; len(aliases) != 0 {
 		output.List = append(aliases, output.List...)
 	}
-	r.frame = parent
 	return typ, output
 }
 
@@ -50,8 +53,8 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 				break
 			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
-			r.frame.values = append(r.frame.values, value)
+			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
+			r.functionState.frame.values = append(r.functionState.frame.values, value)
 		}
 	}
 	return prefix
@@ -71,30 +74,30 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 	if _, ok := returnErrorType.Underlying().(*types.Interface); !ok || !types.AssignableTo(returnErrorType, types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
-	if !r.frame.prepared {
-		r.frame.prefix = r.prepareReturns(r.frame.typ)
-		r.frame.prepared = true
+	if !r.functionState.frame.prepared {
+		r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)
+		r.functionState.frame.prepared = true
 	}
 
 	callError := savedValues[len(savedValues)-1]
 	failureStatements, failed := r.callFailure(callError, call)
 	statements = append(statements, failureStatements...)
 	errorValue := r.propagatedError(callError, returnErrorType, operation)
-	results := append(append([]ast.Expr(nil), r.frame.values...), errorValue)
+	results := append(append([]ast.Expr(nil), r.functionState.frame.values...), errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
-	r.inserted = true
-	r.lowered[marker] = true
+	r.request.inserted = true
+	r.request.lowered[marker] = true
 	return statements, savedValues[:len(savedValues)-1]
 }
 
 func (r *rewrite) frameSignature() *types.Signature {
 	var signature *types.Signature
-	switch function := r.frame.function.(type) {
+	switch function := r.functionState.frame.function.(type) {
 	case *ast.FuncDecl:
-		signature = r.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
+		signature = r.input.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
 	case *ast.FuncLit:
-		signature = r.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
+		signature = r.input.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
 	}
 	return signature
 }
@@ -106,13 +109,13 @@ func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type
 	if !types.AssignableTo(types.Universe.Lookup("error").Type(), returnErrorType) {
 		panic("wrapped errors do not fit the function return type")
 	}
-	if r.formatAlias == nil {
-		r.formatAlias = r.nameFor("fmt")
-		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
+	if r.file.formatAlias == nil {
+		r.file.formatAlias = r.nameFor("fmt")
+		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
 	}
 	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
 	return &ast.CallExpr{
-		Fun:  &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")},
+		Fun:  &ast.SelectorExpr{X: r.file.formatAlias, Sel: ast.NewIdent("Errorf")},
 		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},
 	}
 }
@@ -136,7 +139,7 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 		nilCapable = true
 	}
 	if nilCapable {
-		scope := r.source.inventory.Checked.Types.Scope().Innermost(call.Pos())
+		scope := r.input.source.inventory.Checked.Types.Scope().Innermost(call.Pos())
 		_, resolved := scope.LookupParent("nil", call.Pos())
 		if resolved == types.Universe.Lookup("nil") {
 			return nil, &ast.BinaryExpr{X: value, Op: token.NEQ, Y: ast.NewIdent("nil")}
