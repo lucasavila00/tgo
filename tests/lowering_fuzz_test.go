@@ -92,7 +92,8 @@ func FuzzPropagationBehavior(f *testing.F) {
 		fuzzCompile(t, inputDir, input)
 		got := fuzzRun(t, inputDir, input)
 		if !bytes.Equal(got, want) {
-			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input, reference, want, got, readFiles(t, inputDir)["main_tgo.go"])
+			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input,
+				reference, want, got, readFiles(t, inputDir)["main_tgo.go"])
 		}
 	})
 }

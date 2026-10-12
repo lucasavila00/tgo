@@ -44,16 +44,20 @@ func (r *rewrite) forStatement(s *ast.ForStmt) []ast.Stmt {
 	var bodyStatements []ast.Stmt
 	if jumpingInit || len(postStatements) != 0 {
 		first := r.name()
-		outerStatements = append(outerStatements, variable(first, r.temporaryType(types.Typ[types.Bool], firstExpression(s)), boolean(true)))
-		firstBody := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN, Rhs: []ast.Expr{boolean(false)}}}
+		outerStatements = append(outerStatements, variable(first, r.temporaryType(types.Typ[types.Bool],
+			firstExpression(s)), boolean(true)))
+		firstBody := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN,
+			Rhs: []ast.Expr{boolean(false)}}}
 		if jumpingInit {
 			firstBody = append(firstBody, initStatements...)
 		}
-		bodyStatements = append(bodyStatements, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: firstBody}, Else: &ast.BlockStmt{List: postStatements}})
+		bodyStatements = append(bodyStatements, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: firstBody},
+			Else: &ast.BlockStmt{List: postStatements}})
 	}
 	bodyStatements = append(bodyStatements, conditionStatements...)
 	if len(conditionValues) != 0 {
-		stop := &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: conditionValues[0]}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{Tok: token.BREAK}}}}
+		stop := &ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: conditionValues[0]},
+			Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{Tok: token.BREAK}}}}
 		bodyStatements = append(bodyStatements, stop)
 	}
 	bodyStatements = append(bodyStatements, output.Body)
@@ -125,7 +129,9 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 			return nil
 		}
 		if branch.Label != nil {
-			if label, ok := node.(*ast.LabeledStmt); ok && r.input.source.inventory.Checked.TypesInfo.Defs[label.Label] == r.input.source.inventory.Checked.TypesInfo.Uses[branch.Label] {
+			info := r.input.source.inventory.Checked.TypesInfo
+			if label, ok := node.(*ast.LabeledStmt); ok &&
+				info.Defs[label.Label] == info.Uses[branch.Label] {
 				return label.Stmt
 			}
 			continue

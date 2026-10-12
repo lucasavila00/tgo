@@ -64,6 +64,7 @@ func (r *rewrite) shortReturnTuple(tupleCall, originalCall ast.Expr) ([]ast.Stmt
 		statements = append(statements, variable(resultName, resultType, nil))
 		resultReferences = append(resultReferences, resultName)
 	}
-	statements = append(statements, &ast.AssignStmt{Lhs: resultReferences, Tok: token.ASSIGN, Rhs: []ast.Expr{tupleCall}})
+	statements = append(statements, &ast.AssignStmt{Lhs: resultReferences, Tok: token.ASSIGN,
+		Rhs: []ast.Expr{tupleCall}})
 	return statements, resultReferences
 }

@@ -55,7 +55,8 @@ func knownTargetOS(word string) bool {
 func knownTargetArch(word string) bool {
 	switch word {
 	case "386", "amd64", "amd64p32", "arm", "armbe", "arm64", "arm64be", "loong64", "mips", "mips64",
-		"mips64le", "mips64p32", "mips64p32le", "mipsle", "ppc", "ppc64", "ppc64le", "riscv", "riscv64", "s390", "s390x", "sparc", "sparc64", "wasm":
+		"mips64le", "mips64p32", "mips64p32le", "mipsle", "ppc", "ppc64", "ppc64le", "riscv", "riscv64", "s390",
+		"s390x", "sparc", "sparc64", "wasm":
 		return true
 	default:
 		return false

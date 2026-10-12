@@ -86,8 +86,10 @@ func (r *rewrite) checkLoweredOperations() error {
 		var missing error
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element && !r.request.lowered[call] {
-					missing = fmt.Errorf("%s: comprehension output was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
+				if id, ok := call.Fun.(*ast.Ident); ok && s.inventory.Checked.Operations[id.Name].Element &&
+					!r.request.lowered[call] {
+					missing = fmt.Errorf("%s: comprehension output was not lowered",
+						s.inventory.Checked.Fset.Position(call.Pos()))
 				}
 			}
 			return missing == nil
@@ -108,7 +110,8 @@ func (r *rewrite) checkLoweredOperations() error {
 	}
 	for call := range r.input.conditionals {
 		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: conditional expression was not lowered", s.inventory.Checked.Fset.Position(call.Pos()))
+			return fmt.Errorf("%s: conditional expression was not lowered",
+				s.inventory.Checked.Fset.Position(call.Pos()))
 		}
 	}
 	return nil
@@ -172,7 +175,8 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 	r.request.names.ReserveSyntax(r.input.source.inventory.Checked.Syntax)
 	output := make(map[string][]byte)
 	for _, file := range r.input.source.inventory.Checked.Syntax {
-		fileRewrite := &rewrite{input: r.input, request: r.request, file: &fileState{}, functionState: &functionState{}}
+		fileRewrite := &rewrite{input: r.input, request: r.request, file: &fileState{},
+			functionState: &functionState{}}
 		outputFile := fileRewrite.functionBodies(file).(*ast.File)
 		if r.request.err != nil {
 			return nil, r.request.err
@@ -184,7 +188,8 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.input.source.inventory.Checked.Fset, fileRewrite.renameBindings(outputFile)); err != nil {
+		if err := format.Node(&buf, r.input.source.inventory.Checked.Fset,
+			fileRewrite.renameBindings(outputFile)); err != nil {
 			return nil, err
 		}
 		output[r.input.source.inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()

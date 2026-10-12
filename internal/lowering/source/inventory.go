@@ -32,7 +32,8 @@ type Inventory struct {
 
 // New records source facts from one checked package.
 func New(checked *checker.Package, dir string) *Inventory {
-	inventory := &Inventory{Checked: checked, Expressions: make(map[Site]ast.Expr), Parents: make(map[ast.Node]ast.Node)}
+	inventory := &Inventory{Checked: checked, Expressions: make(map[Site]ast.Expr),
+		Parents: make(map[ast.Node]ast.Node)}
 	for _, file := range checked.Syntax {
 		inventory.inventory(file, dir)
 	}
@@ -77,7 +78,8 @@ func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
 			return false
 		}
-		if call, ok := n.(*ast.CallExpr); ok && checked.TypesInfo.Types[call].Value == nil && !checked.TypesInfo.Types[call.Fun].IsType() {
+		if call, ok := n.(*ast.CallExpr); ok && checked.TypesInfo.Types[call].Value == nil &&
+			!checked.TypesInfo.Types[call.Fun].IsType() {
 			constantLength = false
 		}
 		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.ARROW {

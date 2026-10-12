@@ -51,7 +51,8 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 	return start
 }
 
-func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool, conditionals map[string]token.Position) error {
+func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool,
+	conditionals map[string]token.Position) error {
 	end := conditionalEnd(filename, s.text, start, sourceTokens(s.text))
 	if end < 0 {
 		return fmt.Errorf("%s: invalid conditional expression", original.Position(original.Pos(s.offsets[start])))
@@ -94,7 +95,9 @@ func expressionConditionalTokens(source string) map[int]bool {
 				token.IF, token.FOR, token.SWITCH, token.CASE, token.GO, token.DEFER:
 				result[file.Offset(position)] = true
 			default:
-				result[file.Offset(position)] = previous.Precedence() > 0 || previous == token.NOT || previous == token.ARROW || (previous >= token.ADD_ASSIGN && previous <= token.AND_NOT_ASSIGN)
+				result[file.Offset(position)] = previous.Precedence() > 0 || previous == token.NOT ||
+					previous == token.ARROW || (previous >= token.ADD_ASSIGN &&
+					previous <= token.AND_NOT_ASSIGN)
 			}
 		}
 		previous = current
