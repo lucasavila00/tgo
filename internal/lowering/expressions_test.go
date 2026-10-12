@@ -51,7 +51,7 @@ func main() { use(left(), right()) }
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "main" {
 			copy := *fn
 			beforeEvaluation := r.expression(fn.Body.List[0].(*ast.ExprStmt).X)
-			before, refs := beforeEvaluation.statements, beforeEvaluation.expressions()
+			before, refs := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 			copy.Body = &ast.BlockStmt{List: append(before, &ast.ExprStmt{X: refs[0]})}
 			file.Decls[i] = &copy
 		}

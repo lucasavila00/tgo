@@ -11,7 +11,7 @@ func (r *rewrite) forStatement(s *ast.ForStmt) []ast.Stmt {
 	output := *s
 	output.Body = r.block(s.Body)
 	conditionEvaluation := r.expression(s.Cond)
-	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
+	conditionStatements, conditionValues := conditionEvaluation.Statements, conditionEvaluation.Expressions()
 	var postStatements []ast.Stmt
 	if s.Post != nil {
 		postStatements = r.header(s.Post)

@@ -15,7 +15,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	output := *s
 	output.Body = r.block(s.Body)
 	statementsEvaluation := r.expression(s.X)
-	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
+	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
 		if value := r.input.source.inventory.Checked.TypesInfo.Types[s.X].Value; value != nil &&
@@ -79,7 +79,7 @@ func (r *rewrite) switchStatementResult(
 		initializerStatements = r.header(statement.Init)
 	}
 	tagEvaluation := r.expression(statement.Tag)
-	tagStatements, tagExpressions := tagEvaluation.statements, tagEvaluation.expressions()
+	tagStatements, tagExpressions := tagEvaluation.Statements, tagEvaluation.Expressions()
 	caseClauses, casesNeedStatements := r.switchCases(statement, resultVariable, isValueExpression)
 	rewrittenSwitch.Body = &ast.BlockStmt{}
 	if !casesNeedStatements {
@@ -108,7 +108,7 @@ func (r *rewrite) switchStatementResult(
 		tagInfo := r.input.source.inventory.Checked.TypesInfo.Types[statement.Tag]
 		if tagInfo.Value == nil {
 			savedTagEvaluation := r.save(r.value(tagValue))
-			savedTagStatements, savedTagValues := savedTagEvaluation.statements, savedTagEvaluation.expressions()
+			savedTagStatements, savedTagValues := savedTagEvaluation.Statements, savedTagEvaluation.Expressions()
 			selectionStatements = append(selectionStatements, savedTagStatements...)
 			tagValue = savedTagValues[0]
 		}
@@ -176,7 +176,7 @@ func (r *rewrite) switchCaseSelection(
 	var selectionStatements []ast.Stmt
 	for _, caseExpression := range expressions {
 		operandEvaluation := r.expression(caseExpression)
-		operandStatements, operandValues := operandEvaluation.statements, operandEvaluation.expressions()
+		operandStatements, operandValues := operandEvaluation.Statements, operandEvaluation.Expressions()
 		condition := operandValues[0]
 		if tagValue != nil {
 			condition = &ast.BinaryExpr{X: tagValue, Op: token.EQL, Y: condition}
@@ -218,7 +218,7 @@ func (r *rewrite) typeSwitchStatementResult(
 		assertion = guardStatement.Rhs[0].(*ast.TypeAssertExpr)
 	}
 	guardEvaluation := r.expression(assertion.X)
-	guardStatements, guardValues := guardEvaluation.statements, guardEvaluation.expressions()
+	guardStatements, guardValues := guardEvaluation.Statements, guardEvaluation.Expressions()
 	headerStatements = append(headerStatements, guardStatements...)
 	typeAssertion := *assertion
 	typeAssertion.X = guardValues[0]

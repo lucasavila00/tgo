@@ -43,7 +43,7 @@ func (r *rewrite) unevaluatedCall(call *ast.CallExpr) ([]ast.Stmt, ast.Expr) {
 		base = selector.X
 	}
 	beforeEvaluation := r.expression(operand)
-	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
+	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 	before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: values})
 	guard := &ast.IfStmt{Cond: boolean(false), Body: &ast.BlockStmt{List: before}}
 	pointer := &ast.StarExpr{X: r.temporaryType(r.typeOf(base), base)}

@@ -12,7 +12,7 @@ import (
 func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record frontend.ShortReturn) []ast.Stmt {
 	returnMarker := statement.Results[0].(*ast.CallExpr)
 	statementsEvaluation := r.operands(returnMarker.Args)
-	statements, returnValues := statementsEvaluation.statements, statementsEvaluation.expressions()
+	statements, returnValues := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	if record.ZeroSuccess {
 		if !r.functionState.frame.prepared {
 			r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)

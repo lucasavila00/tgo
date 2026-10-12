@@ -135,7 +135,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) expressionRe
 			continue
 		}
 		saveEvaluation := r.save(r.value(element))
-		saveStatements, refs := saveEvaluation.statements, saveEvaluation.expressions()
+		saveStatements, refs := saveEvaluation.Statements, saveEvaluation.Expressions()
 		statements = append(statements, saveStatements...)
 		values = append(values, refs[0])
 	}

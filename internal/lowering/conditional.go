@@ -33,7 +33,7 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 		results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(typ, expression)})
 	}
 	beforeEvaluation := initializer.expression(expression)
-	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
+	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 	body := &ast.BlockStmt{List: append(before, &ast.ReturnStmt{Results: values})}
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }
@@ -67,7 +67,7 @@ func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident)
 		initStatements = r.header(statement.Init)
 	}
 	conditionEvaluation := r.expression(statement.Cond)
-	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
+	conditionStatements, conditionValues := conditionEvaluation.Statements, conditionEvaluation.Expressions()
 	output.Cond = conditionValues[0]
 	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
 		if len(initStatements) != 0 {
@@ -158,7 +158,7 @@ func (r *rewrite) conditionalLabeledTail(statement *ast.LabeledStmt, result *ast
 func (r *rewrite) conditionalExpressionTail(statement *ast.ExprStmt, result *ast.Ident) []ast.Stmt {
 	if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 		evaluation := r.expression(statement.X)
-		statements, values := evaluation.statements, evaluation.expressions()
+		statements, values := evaluation.Statements, evaluation.Expressions()
 		if result == nil {
 			for _, value := range values {
 				if tv.Value != nil {

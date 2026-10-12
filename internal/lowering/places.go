@@ -8,7 +8,7 @@ import (
 
 func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	beforeEvaluation := r.expression(expr)
-	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
+	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 	value := values[0]
 	if tv := r.input.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 		return before, value
@@ -16,8 +16,8 @@ func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	if len(before) != 0 && r.isTarget(expr) {
 		return before, value
 	}
-	savedEvaluation := r.save(beforeEvaluation.values[0])
-	saved, refs := savedEvaluation.statements, savedEvaluation.expressions()
+	savedEvaluation := r.save(beforeEvaluation.Values[0])
+	saved, refs := savedEvaluation.Statements, savedEvaluation.Expressions()
 	return append(before, saved...), refs[0]
 }
 
@@ -27,13 +27,13 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var result ast.Expr = expr
 	if call, ok := expr.(*ast.CallExpr); ok && r.input.comprehensions[call] != nil {
 		statementsEvaluation := r.expression(call)
-		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
+		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 		return statements, values[0]
 	}
 	switch e := expr.(type) {
 	case *ast.CompositeLit:
 		statementsEvaluation := r.expression(e)
-		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
+		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 		return statements, values[0]
 	case *ast.ParenExpr:
 		parenthesized := *e
@@ -75,7 +75,7 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		r.request.inserted = true
 		if r.functionState.suppressedRoot != nil {
 			savedEvaluation := r.save(r.value(r.typedAddress(result, expr)))
-			saved, values := savedEvaluation.statements, savedEvaluation.expressions()
+			saved, values := savedEvaluation.Statements, savedEvaluation.Expressions()
 			before = append(before, saved...)
 			result = &ast.StarExpr{X: values[0]}
 			before = append(before, r.input.after([]ast.Expr{result})...)
@@ -93,7 +93,7 @@ func (r *rewrite) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	before, place := r.place(expr)
 	r.functionState.suppressedRoot = previous
 	savedEvaluation := r.save(r.value(r.typedAddress(place, expr)))
-	saved, values := savedEvaluation.statements, savedEvaluation.expressions()
+	saved, values := savedEvaluation.Statements, savedEvaluation.Expressions()
 	before = append(before, saved...)
 	if expr == r.input.target {
 		r.request.inserted = true

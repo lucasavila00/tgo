@@ -19,7 +19,7 @@ func variable(name *ast.Ident, typ ast.Expr, value ast.Expr) ast.Stmt {
 }
 
 func (r *rewrite) typeOf(expr ast.Expr) types.Type {
-	return r.value(expr).typ
+	return r.value(expr).Type
 }
 
 // temporaryType names the checked type without using a hidden source binding.

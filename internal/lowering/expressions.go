@@ -19,12 +19,12 @@ func (r *rewrite) expression(expr ast.Expr) expressionResult {
 	}
 	if parenthesized, ok := expr.(*ast.ParenExpr); ok {
 		inner := r.expression(parenthesized.X)
-		if len(inner.values) != 1 {
+		if len(inner.Values) != 1 {
 			return inner
 		}
 		output := *parenthesized
-		output.X = inner.values[0].expression
-		return r.finishExpression(expr, inner.statements, &output)
+		output.X = inner.Values[0].Expression
+		return r.finishExpression(expr, inner.Statements, &output)
 	}
 	statements, result := r.expressionSyntax(expr)
 	return r.finishExpression(expr, statements, result)
@@ -69,7 +69,7 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr
 		beforeEvaluation := r.operands(operands)
-		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
+		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
 		call.Fun = values[0]
 		call.Args = values[1:]
 		result = &call
@@ -81,7 +81,7 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		}
 		var values []ast.Expr
 		beforeEvaluation := r.expression(e.X)
-		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
+		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
 		unary.X = values[0]
 		result = &unary
 	case *ast.BinaryExpr:
@@ -94,21 +94,21 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		dereference := *e
 		var values []ast.Expr
 		beforeEvaluation := r.expression(e.X)
-		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
+		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
 		dereference.X = values[0]
 		result = &dereference
 	case *ast.TypeAssertExpr:
 		assertion := *e
 		var values []ast.Expr
 		beforeEvaluation := r.expression(e.X)
-		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
+		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
 		assertion.X = values[0]
 		result = &assertion
 	case *ast.IndexListExpr:
 		indexList := *e
 		var values []ast.Expr
 		beforeEvaluation := r.expression(e.X)
-		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
+		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
 		indexList.X = values[0]
 		result = &indexList
 	case *ast.SliceExpr:
@@ -132,9 +132,9 @@ func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 			return r.result(append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result})
 		}
 		saved := r.save(r.value(result))
-		before = append(before, saved.statements...)
-		before = append(before, r.input.after(saved.expressions())...)
-		saved.statements = before
+		before = append(before, saved.Statements...)
+		before = append(before, r.input.after(saved.Expressions())...)
+		saved.Statements = before
 		return saved
 	}
 	return r.result(before, []ast.Expr{result})

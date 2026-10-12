@@ -11,7 +11,7 @@ func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 		return statements
 	}
 	statementsEvaluation := r.expression(s.X)
-	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
+	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
@@ -47,7 +47,7 @@ func (r *rewrite) discardedPropagation(expression ast.Expr) ([]ast.Stmt, bool) {
 	}
 	if operation, ok := r.input.propagations[expression]; ok && !r.functionState.suppressed {
 		evaluation := r.propagatedCall(expression.(*ast.CallExpr), operation, true)
-		return evaluation.statements, true
+		return evaluation.Statements, true
 	}
 	return nil, false
 }
@@ -81,7 +81,7 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 		}
 	}
 	valueEvaluation := r.operands(s.Rhs)
-	valueStatements, values := valueEvaluation.statements, valueEvaluation.expressions()
+	valueStatements, values := valueEvaluation.Statements, valueEvaluation.Expressions()
 	statements = append(statements, valueStatements...)
 	output.Rhs = values
 	deferred := false
@@ -96,7 +96,7 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 				continue
 			}
 			saveEvaluation := r.save(r.value(value))
-			saveStatements, saved := saveEvaluation.statements, saveEvaluation.expressions()
+			saveStatements, saved := saveEvaluation.Statements, saveEvaluation.Expressions()
 			statements = append(statements, saveStatements...)
 			savedValues = append(savedValues, saved...)
 		}
@@ -116,7 +116,7 @@ func (r *rewrite) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 		}
 		valueSpec := *value
 		statementsEvaluation := r.operands(value.Values)
-		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
+		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 		valueSpec.Values = values
 		output = append(output, statements...)
 		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok,
@@ -141,7 +141,7 @@ func (r *rewrite) ifStatement(s *ast.IfStmt) []ast.Stmt {
 		initStatements = r.header(s.Init)
 	}
 	conditionEvaluation := r.expression(s.Cond)
-	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
+	conditionStatements, conditionValues := conditionEvaluation.Statements, conditionEvaluation.Expressions()
 	output.Cond = conditionValues[0]
 	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
 		if len(initStatements) != 0 {

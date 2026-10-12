@@ -50,7 +50,7 @@ func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Compreh
 func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) expressionResult {
 	r.request.lowered[call] = true
 	beforeEvaluation := r.operands(call.Args)
-	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
+	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 	keyType, element := types.ComprehensionTypes(destination.typ)
 	if keyType == nil {
 		value := r.name()

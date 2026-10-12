@@ -9,22 +9,22 @@ import (
 
 func (r *rewrite) recordOrigin(expression, original ast.Expr) {
 	value := r.value(expression)
-	value.original = original
-	if !value.temporary {
-		value.typ = r.input.source.inventory.Checked.TypesInfo.TypeOf(original)
+	value.Original = original
+	if !value.Temporary {
+		value.Type = r.input.source.inventory.Checked.TypesInfo.TypeOf(original)
 	}
 	r.recordValue(value)
 }
 
 func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
-	r.recordValue(expressionValue{expression: expression, typ: typ, original: original, temporary: true})
+	r.recordValue(expressionValue{Expression: expression, Type: typ, Original: original, Temporary: true})
 }
 
 func (r *rewrite) recordValue(value expressionValue) {
 	if r.functionState.values == nil {
 		r.functionState.values = make(map[ast.Expr]expressionValue)
 	}
-	r.functionState.values[value.expression] = value
+	r.functionState.values[value.Expression] = value
 }
 
 func (r *rewrite) save(value expressionValue) expressionResult {
@@ -32,17 +32,17 @@ func (r *rewrite) save(value expressionValue) expressionResult {
 }
 
 func (r *rewrite) saveResults(value expressionValue, discardSuccess, errorResult bool) expressionResult {
-	expr := value.expression
-	original := value.original
+	expr := value.Expression
+	original := value.Original
 	count := r.resultCount(original)
-	if value.temporary {
+	if value.Temporary {
 		count = 1
 	}
 	if literal := r.implicitMapKey(value); literal != nil {
 		return r.materializeKey(expr.(*ast.CompositeLit), literal)
 	}
-	typ := value.typ
-	if !value.temporary {
+	typ := value.Type
+	if !value.Temporary {
 		expr = r.contextLiteral(expr, original)
 	}
 	if count == 0 {
@@ -72,7 +72,7 @@ func (r *rewrite) saveResults(value expressionValue, discardSuccess, errorResult
 	}
 	if count == 1 && r.untypedBoolean(original) {
 		comparison := &ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}
-		r.recordValue(expressionValue{expression: comparison, typ: types.Typ[types.UntypedBool], original: original})
+		r.recordValue(expressionValue{Expression: comparison, Type: types.Typ[types.UntypedBool], Original: original})
 		return r.result(statements, []ast.Expr{comparison})
 	}
 	return r.result(statements, refs)
@@ -110,26 +110,26 @@ func (r *rewrite) operands(input []ast.Expr) expressionResult {
 	var result expressionResult
 	for _, expression := range input {
 		operand := r.expression(expression)
-		if len(operand.statements) != 0 {
-			saved := r.savePreviousOperands(result.values)
-			result.values = saved.values
-			result.statements = append(result.statements, saved.statements...)
-			result.statements = append(result.statements, operand.statements...)
+		if len(operand.Statements) != 0 {
+			saved := r.savePreviousOperands(result.Values)
+			result.Values = saved.Values
+			result.Statements = append(result.Statements, saved.Statements...)
+			result.Statements = append(result.Statements, operand.Statements...)
 		}
-		result.values = append(result.values, operand.values...)
+		result.Values = append(result.Values, operand.Values...)
 	}
 	return result
 }
 
 func (r *rewrite) savePreviousOperands(values []expressionValue) expressionResult {
-	result := expressionResult{values: values}
+	result := expressionResult{Values: values}
 	for i, value := range values {
-		if !r.operandNeedsSaving(value.expression) {
+		if !r.operandNeedsSaving(value.Expression) {
 			continue
 		}
 		saved := r.save(value)
-		result.statements = append(result.statements, saved.statements...)
-		result.values[i] = saved.values[0]
+		result.Statements = append(result.Statements, saved.Statements...)
+		result.Values[i] = saved.Values[0]
 	}
 	return result
 }
@@ -165,9 +165,9 @@ func (r *rewrite) savedReferences(count int, discardSuccess, errorResult bool) [
 }
 
 func (r *rewrite) implicitMapKey(value expressionValue) *ast.CompositeLit {
-	original := value.original
+	original := value.Original
 	literal, ok := original.(*ast.CompositeLit)
-	if !ok || literal.Type != nil || value.temporary {
+	if !ok || literal.Type != nil || value.Temporary {
 		return nil
 	}
 	pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr)
