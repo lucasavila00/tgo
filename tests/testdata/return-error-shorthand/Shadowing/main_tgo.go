@@ -7,18 +7,16 @@ type Error interface{ Error() string }
 
 func nilShadow(nil int) (Result, error) {
 	_ = nil
-	{
-		var tgo2 error
-		return Result{7}, tgo2
-	}
+	var tgo2 error
+	return Result{7}, tgo2
 }
 
 func typeShadow(err error) (Result, error) {
-	var tgo3 Result
+	var zero_tgo3 Result
 	type Result string
 	var value Result = "local"
 	_ = value
-	return tgo3, err
+	return zero_tgo3, err
 }
 
 func collision(tgo1 int) (int, error) {
@@ -26,10 +24,10 @@ func collision(tgo1 int) (int, error) {
 }
 
 func builtinShadow(err Error) (int, Error) {
-	var tgo4 int
+	var zero_tgo4 int
 	type error int
 	_ = error(3)
-	return tgo4, err
+	return zero_tgo4, err
 }
 
 func main() {

@@ -1,0 +1,12 @@
+package main
+
+type Value int
+
+func get() (Value, error) { return 1, nil }
+
+func run(Value string) error {
+	get()!
+	return nil
+}
+
+func main() { if run("") != nil { panic("failed") } }

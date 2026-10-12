@@ -3,7 +3,8 @@ package main
 func get() (int, error) { return 1, nil }
 
 func run(int string) error {
-	get()!
+	value := get()!
+	_ = value
 	return nil
 }
 

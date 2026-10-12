@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo5 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -18,25 +16,25 @@ func next(fail bool) (int, error) {
 }
 
 func checked(wrap, fail bool) (int, error) {
-	var tgo4 int
+	var zero_tgo4 int
 	defer fmt.Print("D")
 	var tgo1 int
 	if wrap {
-		var tgo2 int
-		var tgo3 error
-		tgo2, tgo3 = next(fail)
-		if tgo3 != nil {
-			return tgo4, fmt_tgo5.Errorf("next: %w", tgo3)
+		var value_tgo2 int
+		var error_tgo3 error
+		value_tgo2, error_tgo3 = next(fail)
+		if error_tgo3 != nil {
+			return zero_tgo4, fmt.Errorf("next: %w", error_tgo3)
 		}
-		tgo1 = tgo2
+		tgo1 = value_tgo2
 	} else {
-		var tgo6 int
-		var tgo7 error
-		tgo6, tgo7 = next(fail)
-		if tgo7 != nil {
-			return tgo4, tgo7
+		var value_tgo5 int
+		var error_tgo6 error
+		value_tgo5, error_tgo6 = next(fail)
+		if error_tgo6 != nil {
+			return zero_tgo4, error_tgo6
 		}
-		tgo1 = tgo6
+		tgo1 = value_tgo5
 	}
 	value := tgo1
 
@@ -46,7 +44,7 @@ func checked(wrap, fail bool) (int, error) {
 func loop() int {
 	total := 0
 	for i := 0; i < 5; i++ {
-		var tgo8 int
+		var tgo7 int
 		if i == 1 {
 			fmt.Print("C")
 			continue
@@ -54,9 +52,9 @@ func loop() int {
 			fmt.Print("B")
 			break
 		} else {
-			tgo8 = i
+			tgo7 = i
 		}
-		value := tgo8
+		value := tgo7
 
 		total += value
 	}
@@ -66,13 +64,13 @@ func loop() int {
 func jump(skip bool) int {
 	value := 0
 	{
-		var tgo9 int
+		var tgo8 int
 		if skip {
 			goto done
 		} else {
-			tgo9 = 9
+			tgo8 = 9
 		}
-		value = tgo9
+		value = tgo8
 	}
 
 done:
@@ -83,52 +81,50 @@ func labelledValue() int { return 6 }
 
 func tail() int {
 	{
-		var tgo10 int
+		var tgo9 int
 		if true {
 			goto value
 		value:
-			tgo10 = labelledValue()
+			tgo9 = labelledValue()
 		} else {
-			tgo10 = 0
+			tgo9 = 0
 		}
-		return tgo10
+		return tgo9
 	}
 
 }
 
 func deferred() int {
-	{
-		var tgo11 int
-		if true {
-			defer fmt.Print("F")
-			tgo11 = 5
-		} else {
-			tgo11 = 0
-		}
-		return tgo11
+	var tgo10 int
+	if true {
+		defer fmt.Print("F")
+		tgo10 = 5
+	} else {
+		tgo10 = 0
 	}
+	return tgo10
 
 }
 
 func headers() int {
 	total := 0
 	{
-		var tgo13 bool = 0 == 0
+		var tgo12 bool = 0 == 0
 	condition:
 		for i := 0; ; {
-			if tgo13 {
-				tgo13 = 0 != 0
+			if tgo12 {
+				tgo12 = 0 != 0
 			} else {
 
 				i++
 			}
-			var tgo12 bool
+			var tgo11 bool
 			if i == 1 {
 				break condition
 			} else {
-				tgo12 = i < 3
+				tgo11 = i < 3
 			}
-			if !tgo12 {
+			if !tgo11 {
 				break
 			}
 			{
@@ -138,22 +134,22 @@ func headers() int {
 	}
 	checks := 0
 	{
-		var tgo15 bool = 0 == 0
+		var tgo14 bool = 0 == 0
 	retry:
 		for i := 0; ; {
-			if tgo15 {
-				tgo15 = 0 != 0
+			if tgo14 {
+				tgo14 = 0 != 0
 			} else {
 
 				i++
 			}
-			var tgo14 bool
+			var tgo13 bool
 			if checks++; checks == 1 {
 				continue retry
 			} else {
-				tgo14 = checks < 3
+				tgo13 = checks < 3
 			}
-			if !tgo14 {
+			if !tgo13 {
 				break
 			}
 			{
@@ -162,19 +158,19 @@ func headers() int {
 		}
 	}
 	{
-		var tgo17 bool = 0 == 0
+		var tgo16 bool = 0 == 0
 	post:
 		for i := 0; ; {
-			if tgo17 {
-				tgo17 = 0 != 0
+			if tgo16 {
+				tgo16 = 0 != 0
 			} else {
-				var tgo16 int
+				var tgo15 int
 				if i == 1 {
 					break post
 				} else {
-					tgo16 = 1
+					tgo15 = 1
 				}
-				i += tgo16
+				i += tgo15
 			}
 			if !(i < 3) {
 				break
@@ -187,41 +183,39 @@ func headers() int {
 	}
 	for i := 0; i < 5; i++ {
 		{
-			var tgo18 int
+			var tgo17 int
 			if i == 1 {
 				continue
 			} else if i == 3 {
 				break
 			} else {
-				tgo18 = i
+				tgo17 = i
 			}
-			value := tgo18
+			value := tgo17
 			if value >= 0 {
 				total += value
 			}
 		}
 	}
 	for i := 0; i < 5; i++ {
+		var tgo18 int
 		{
 			var tgo19 int
-			{
-				var tgo20 int
-				if i == 1 {
-					continue
-				} else if i == 3 {
-					break
-				} else {
-					tgo20 = i
-				}
-				value := tgo20
-				if value >= 0 {
-					tgo19 = value
-				} else {
-					tgo19 = 0
-				}
+			if i == 1 {
+				continue
+			} else if i == 3 {
+				break
+			} else {
+				tgo19 = i
 			}
-			total += tgo19
+			value := tgo19
+			if value >= 0 {
+				tgo18 = value
+			} else {
+				tgo18 = 0
+			}
 		}
+		total += tgo18
 
 	}
 	return total
@@ -231,36 +225,34 @@ func labelledLoop() int {
 	turns := 0
 again:
 	{
-		{
-			var tgo23 int
-			if turns < 2 {
-				turns++
-				tgo23 = 0
+		var tgo22 int
+		if turns < 2 {
+			turns++
+			tgo22 = 0
+		} else {
+			tgo22 = 0
+		}
+		var tgo23 bool = 0 == 0
+	tgo20:
+		for i := tgo22; ; {
+			if tgo23 {
+				tgo23 = 0 != 0
 			} else {
-				tgo23 = 0
-			}
-			var tgo24 bool = 0 == 0
-		tgo21:
-			for i := tgo23; ; {
-				if tgo24 {
-					tgo24 = 0 != 0
-				} else {
 
-					i++
-				}
-				if !(i < 1) {
-					break
-				}
+				i++
+			}
+			if !(i < 1) {
+				break
+			}
+			{
 				{
-					{
-						var tgo22 int
-						if turns < 2 {
-							goto again
-						} else {
-							break tgo21
-						}
-						_ = int(tgo22)
+					var tgo21 int
+					if turns < 2 {
+						goto again
+					} else {
+						break tgo20
 					}
+					_ = int(tgo21)
 				}
 			}
 		}

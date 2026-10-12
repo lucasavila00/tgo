@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo3 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -41,27 +39,27 @@ func identity[T any](v T) (T, error) {
 
 func run() error {
 	{
-		var tgo5 int
-		var tgo6 error
-		tgo5, tgo6 = step("I")
-		if tgo6 != nil {
-			return fmt_tgo3.Errorf("step: %w", tgo6)
+		var value_tgo4 int
+		var error_tgo5 error
+		value_tgo4, error_tgo5 = step("I")
+		if error_tgo5 != nil {
+			return fmt.Errorf("step: %w", error_tgo5)
 		}
-		var tgo7 bool = 0 == 0
-		for i := tgo5; ; {
-			if tgo7 {
-				tgo7 = 0 != 0
+		var tgo6 bool = 0 == 0
+		for i := value_tgo4; ; {
+			if tgo6 {
+				tgo6 = 0 != 0
 			} else {
 				i++
 			}
-			var tgo4 int = i
-			var tgo1 int
-			var tgo2 error
-			tgo1, tgo2 = step("C")
-			if tgo2 != nil {
-				return fmt_tgo3.Errorf("step: %w", tgo2)
+			var value_tgo3 int = i
+			var value_tgo1 int
+			var error_tgo2 error
+			value_tgo1, error_tgo2 = step("C")
+			if error_tgo2 != nil {
+				return fmt.Errorf("step: %w", error_tgo2)
 			}
-			if !(tgo4 < tgo1+1) {
+			if !(value_tgo3 < value_tgo1+1) {
 				break
 			}
 			{

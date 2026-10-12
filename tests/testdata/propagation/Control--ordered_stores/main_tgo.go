@@ -24,27 +24,25 @@ func run() error {
 		}
 	}()
 	a := [1]int{}
-	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("I")
-		if tgo2 != nil {
-			return tgo2
-		}
-		var tgo3 int
-		var tgo4 error
-		tgo3, tgo4 = step("V")
-		if tgo4 != nil {
-			return tgo4
-		}
-		var tgo5 int
-		var tgo6 error
-		tgo5, tgo6 = step("W")
-		if tgo6 != nil {
-			return tgo6
-		}
-		a[tgo1], a[0] = tgo3, tgo5
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = step("I")
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
+	var value_tgo3 int
+	var error_tgo4 error
+	value_tgo3, error_tgo4 = step("V")
+	if error_tgo4 != nil {
+		return error_tgo4
+	}
+	var value_tgo5 int
+	var error_tgo6 error
+	value_tgo5, error_tgo6 = step("W")
+	if error_tgo6 != nil {
+		return error_tgo6
+	}
+	a[value_tgo1], a[0] = value_tgo3, value_tgo5
 	return nil
 }
 

@@ -6,19 +6,15 @@ var sliceResult []int
 var mapResult map[int]int
 
 func denseComprehension(values []int) []int {
+	var value_tgo3 []int = (values)
+	var tgo1 []int = make([]int, len(value_tgo3))
 	{
-		var tgo3 []int = (values)
-		var tgo1 []int = make([]int, len(tgo3))
-		{
-			for tgo4, x_tgo2 := range tgo3 {
-				{
-					var tgo5 int = x_tgo2 * 2
-					tgo1[tgo4] = tgo5
-				}
-			}
+		for tgo4, x_tgo2 := range value_tgo3 {
+			var tgo5 int = x_tgo2 * 2
+			tgo1[tgo4] = tgo5
 		}
-		return tgo1
 	}
+	return tgo1
 }
 
 func denseGo(values []int) []int {
@@ -30,20 +26,16 @@ func denseGo(values []int) []int {
 }
 
 func sparseComprehension(values []int) []int {
+	var tgo6 []int = []int{}
 	{
-		var tgo6 []int = []int{}
-		{
-			for _, x_tgo7 := range values {
-				if x_tgo7%100 == 0 {
-					{
-						var tgo8 int = x_tgo7 * 2
-						tgo6 = append(tgo6, tgo8)
-					}
-				}
+		for _, x_tgo7 := range values {
+			if x_tgo7%100 == 0 {
+				var tgo8 int = x_tgo7 * 2
+				tgo6 = append(tgo6, tgo8)
 			}
 		}
-		return tgo6
 	}
+	return tgo6
 }
 
 func sparseGo(values []int) []int {
@@ -71,20 +63,16 @@ func materialized(values []int) []int {
 }
 
 func nestedComprehension(values []int) []int {
+	var tgo9 []int = []int{}
 	{
-		var tgo9 []int = []int{}
-		{
-			for _, x_tgo10 := range values {
-				for y_tgo11 := range 4 {
-					{
-						var tgo12 int = x_tgo10 + y_tgo11
-						tgo9 = append(tgo9, tgo12)
-					}
-				}
+		for _, x_tgo10 := range values {
+			for y_tgo11 := range 4 {
+				var tgo12 int = x_tgo10 + y_tgo11
+				tgo9 = append(tgo9, tgo12)
 			}
 		}
-		return tgo9
 	}
+	return tgo9
 }
 
 func nestedGo(values []int) []int {
@@ -98,19 +86,15 @@ func nestedGo(values []int) []int {
 }
 
 func repeatedComprehension(values []int) map[int]int {
+	var tgo13 map[int]int = map[int]int{}
 	{
-		var tgo13 map[int]int = map[int]int{}
-		{
-			for _, x_tgo14 := range values {
-				{
-					var tgo15 int = x_tgo14 % 10
-					var tgo16 int = x_tgo14
-					tgo13[tgo15] = tgo16
-				}
-			}
+		for _, x_tgo14 := range values {
+			var tgo15 int = x_tgo14 % 10
+			var tgo16 int = x_tgo14
+			tgo13[tgo15] = tgo16
 		}
-		return tgo13
 	}
+	return tgo13
 }
 
 func repeatedGo(values []int) map[int]int {
@@ -132,18 +116,14 @@ func iterator(values []int) func(func(int) bool) {
 }
 
 func iteratorComprehension(values []int) []int {
+	var tgo17 []int = []int{}
 	{
-		var tgo17 []int = []int{}
-		{
-			for x_tgo18 := range iterator(values) {
-				{
-					var tgo19 int = x_tgo18 * 2
-					tgo17 = append(tgo17, tgo19)
-				}
-			}
+		for x_tgo18 := range iterator(values) {
+			var tgo19 int = x_tgo18 * 2
+			tgo17 = append(tgo17, tgo19)
 		}
-		return tgo17
 	}
+	return tgo17
 }
 
 func iteratorGo(values []int) []int {

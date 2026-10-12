@@ -34,7 +34,7 @@ func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
 		return []ast.Stmt{statement}
 	}
 	output := r.statementInner(statement)
-	if len(output) <= 1 {
+	if len(output) <= 1 || !r.functionState.hasGoto {
 		return output
 	}
 	switch s := statement.(type) {
@@ -190,4 +190,19 @@ func boolean(value bool) ast.Expr {
 	}
 	return &ast.BinaryExpr{X: &ast.BasicLit{Kind: token.INT, Value: "0"}, Op: op,
 		Y: &ast.BasicLit{Kind: token.INT, Value: "0"}}
+}
+
+// functionHasGoto excludes nested functions, which have their own jump scope.
+func (r *rewrite) functionHasGoto(body *ast.BlockStmt) bool {
+	found := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		if function, ok := node.(*ast.FuncLit); ok && r.realFunction(function) {
+			return false
+		}
+		if branch, ok := node.(*ast.BranchStmt); ok && branch.Tok == token.GOTO {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

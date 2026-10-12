@@ -9,10 +9,11 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-func (r *rewrite) propagationExpression(marker *ast.CallExpr, operation Propagation) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) propagationExpression(marker *ast.CallExpr, operation Propagation,
+	discardSuccess bool) ([]ast.Stmt, []ast.Expr) {
 	call := marker.Args[0]
 	statements, callValues := r.expression(call)
-	saveStatements, savedValues := r.save(callValues[0])
+	saveStatements, savedValues := r.saveResults(callValues[0], discardSuccess, true)
 	statements = append(statements, saveStatements...)
 	if len(savedValues) == 0 {
 		panic("propagation requires an error result")
@@ -23,28 +24,31 @@ func (r *rewrite) propagationExpression(marker *ast.CallExpr, operation Propagat
 		types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
-
 	zeroResults := r.failureResults()
+
 	callError := savedValues[len(savedValues)-1]
 	failureStatements, failed := r.callFailure(callError, call)
 	statements = append(statements, failureStatements...)
-	errorValue := r.propagatedError(callError, returnErrorType, operation)
+	errorValue := r.propagatedError(callError, returnErrorType, operation, call)
 	results := append(zeroResults, errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
 	r.completePropagation(marker)
+	if discardSuccess {
+		return statements, nil
+	}
 	return statements, savedValues[:len(savedValues)-1]
 }
 
 func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type,
-	operation Propagation) ast.Expr {
+	operation Propagation, call ast.Expr) ast.Expr {
 	if !operation.Wrap {
 		return callError
 	}
 	if !types.AssignableTo(types.Universe.Lookup("error").Type(), returnErrorType) {
 		panic("wrapped errors do not fit the function return type")
 	}
-	formatPackage := r.formatPackage()
+	formatPackage := r.formatPackage(call)
 	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
 	return &ast.CallExpr{
 		Fun:  &ast.SelectorExpr{X: formatPackage, Sel: ast.NewIdent("Errorf")},
@@ -82,7 +86,7 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 	}
 	switch typ.Underlying().(type) {
 	case *types.Pointer, *types.Chan, *types.Interface:
-		zero := r.name()
+		zero := r.nameFor("zero")
 		return []ast.Stmt{variable(zero, r.temporaryType(typ, call), nil)}, &ast.BinaryExpr{X: value,
 			Op: token.NEQ, Y: zero}
 	default:
@@ -92,8 +96,8 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 
 func (r *rewrite) reflectedFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
 	reflectPackage := r.reflectPackage()
-	reflected := r.name()
-	failed := r.name()
+	reflected := r.nameFor("reflected")
+	failed := r.nameFor("failed")
 	valueAddress := &ast.UnaryExpr{Op: token.AND, X: value}
 	valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("ValueOf")},
 		Args: []ast.Expr{valueAddress}}

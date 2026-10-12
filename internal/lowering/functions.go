@@ -20,7 +20,7 @@ func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 		input:         r.input,
 		request:       r.request,
 		file:          r.file,
-		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}},
+		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}, hasGoto: r.functionHasGoto(body)},
 	}
 	output := functionRewrite.block(body)
 	if functionRewrite.functionState.frame.prepared {
@@ -50,7 +50,7 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 			if i == len(original.Results.List)-1 && j == count-1 {
 				break
 			}
-			value := r.name()
+			value := r.nameFor("zero")
 			prefix = append(prefix, variable(value,
 				r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
 					original.End()), nil))

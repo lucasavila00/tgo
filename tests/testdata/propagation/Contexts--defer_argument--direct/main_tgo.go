@@ -38,23 +38,17 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("D")
-		if tgo2 != nil {
-			return tgo2
-		}
-		defer fmt.Print(tgo1)
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = step("D")
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
-	{
-		var tgo3 int
-		var tgo4 error
-		tgo3, tgo4 = step("B")
-		if tgo4 != nil {
-			return tgo4
-		}
-		_ = tgo3
+	defer fmt.Print(value_tgo1)
+	var error_tgo3 error
+	_, error_tgo3 = step("B")
+	if error_tgo3 != nil {
+		return error_tgo3
 	}
 	return nil
 }

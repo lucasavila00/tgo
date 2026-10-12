@@ -35,7 +35,8 @@
 // specialExpression selects one feature entry: propagationExpression evaluates
 // the call and returns on error; comprehensionExpression builds the collection;
 // valueExpression assigns the result of an if or switch expression.
-// comprehensionOutput belongs to the active collection, not a separate feature.
+// Statement lowering uses the same propagation entry when success values are
+// discarded. comprehensionOutput belongs to the active collection.
 //
 // Feature code calls expression and operands for ordered evaluation, save for
 // evaluated values, and resultStorage for typed result declarations. place and

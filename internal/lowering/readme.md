@@ -22,7 +22,7 @@ A store destination uses place instead of ordinary expression lowering. place sa
 
 ### Feature boundaries
 
-specialExpression selects one feature entry: propagationExpression evaluates the call and returns on error; comprehensionExpression builds the collection; valueExpression assigns the result of an if or switch expression. comprehensionOutput belongs to the active collection, not a separate feature.
+specialExpression selects one feature entry: propagationExpression evaluates the call and returns on error; comprehensionExpression builds the collection; valueExpression assigns the result of an if or switch expression. Statement lowering uses the same propagation entry when success values are discarded. comprehensionOutput belongs to the active collection.
 
 Feature code calls expression and operands for ordered evaluation, save for evaluated values, and resultStorage for typed result declarations. place and orderedStores preserve source assignment storage. Fresh names come from name and nameFor. Features use statement, rangeStatement, and the switch operations to retain source jump targets; they do not create a new source function.
 

@@ -39,13 +39,13 @@ func identity[T any](v T) (T, error) {
 
 func run() error {
 	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("T")
-		if tgo2 != nil {
-			return tgo2
+		var value_tgo1 int
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = step("T")
+		if error_tgo2 != nil {
+			return error_tgo2
 		}
-		switch any(tgo1).(type) {
+		switch any(value_tgo1).(type) {
 		case int:
 			fmt.Print("m")
 		}

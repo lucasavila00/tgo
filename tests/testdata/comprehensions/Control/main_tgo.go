@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo6 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -17,65 +15,55 @@ func read(value int) (int, error) {
 }
 
 func propagate(wrapped bool) ([]int, error) {
-	var tgo5 []int
+	var zero_tgo5 []int
 	defer fmt.Println("deferred")
 	if wrapped {
+		var tgo1 []int = []int{}
 		{
-			var tgo1 []int = []int{}
-			{
-				for x_tgo2 := range 3 {
-					{
-						var tgo3 int
-						var tgo4 error
-						tgo3, tgo4 = read(x_tgo2)
-						if tgo4 != nil {
-							return tgo5, fmt_tgo6.Errorf("read: %w", tgo4)
-						}
-						var tgo7 int = tgo3
-						tgo1 = append(tgo1, tgo7)
-					}
+			for x_tgo2 := range 3 {
+				var value_tgo3 int
+				var error_tgo4 error
+				value_tgo3, error_tgo4 = read(x_tgo2)
+				if error_tgo4 != nil {
+					return zero_tgo5, fmt.Errorf("read: %w", error_tgo4)
 				}
+				var tgo6 int = value_tgo3
+				tgo1 = append(tgo1, tgo6)
 			}
-			return tgo1, nil
 		}
+		return tgo1, nil
 	}
+	var tgo7 []int = []int{}
 	{
-		var tgo8 []int = []int{}
-		{
-			for x_tgo9 := range 3 {
-				{
-					var tgo10 int
-					var tgo11 error
-					tgo10, tgo11 = read(x_tgo9)
-					if tgo11 != nil {
-						return tgo5, tgo11
-					}
-					var tgo12 int = tgo10
-					tgo8 = append(tgo8, tgo12)
-				}
+		for x_tgo8 := range 3 {
+			var value_tgo9 int
+			var error_tgo10 error
+			value_tgo9, error_tgo10 = read(x_tgo8)
+			if error_tgo10 != nil {
+				return zero_tgo5, error_tgo10
 			}
+			var tgo11 int = value_tgo9
+			tgo7 = append(tgo7, tgo11)
 		}
-		return tgo8, nil
 	}
+	return tgo7, nil
 }
 
 func returnValue() int {
-	var tgo13 []int = []int{}
+	var tgo12 []int = []int{}
 	{
-		for x_tgo14 := range 3 {
-			{
-				var tgo15 int
-				if x_tgo14 == 1 {
-					return 9
-				} else {
-					tgo15 = x_tgo14
-				}
-				var tgo16 int = tgo15
-				tgo13 = append(tgo13, tgo16)
+		for x_tgo13 := range 3 {
+			var tgo14 int
+			if x_tgo13 == 1 {
+				return 9
+			} else {
+				tgo14 = x_tgo13
 			}
+			var tgo15 int = tgo14
+			tgo12 = append(tgo12, tgo15)
 		}
 	}
-	values := tgo13
+	values := tgo12
 	return len(values)
 }
 
@@ -86,127 +74,127 @@ func main() {
 	}
 	fmt.Println(returnValue())
 	{
-		var tgo17 []int = []int{}
+		var tgo16 []int = []int{}
 		{
-			for x_tgo18 := range 3 {
+			for x_tgo17 := range 3 {
 				{
-					var tgo19 int
-					if x_tgo18 == 1 {
+					var tgo18 int
+					if x_tgo17 == 1 {
 						continue
 					} else {
-						tgo19 = x_tgo18
+						tgo18 = x_tgo17
 					}
-					var tgo20 int = tgo19
-					tgo17 = append(tgo17, tgo20)
+					var tgo19 int = tgo18
+					tgo16 = append(tgo16, tgo19)
 				}
 			}
 		}
-		fmt.Println(tgo17)
+		fmt.Println(tgo16)
 	}
 	{
-		var tgo21 []int = []int{}
+		var tgo20 []int = []int{}
 		{
-			for x_tgo22 := range 3 {
+			for x_tgo21 := range 3 {
 				{
-					var tgo24 bool
-					if x_tgo22 == 1 {
+					var tgo23 bool
+					if x_tgo21 == 1 {
 						continue
 					} else {
-						tgo24 = true
+						tgo23 = true
 					}
-					if tgo24 {
+					if tgo23 {
 						{
-							var tgo23 int = x_tgo22
-							tgo21 = append(tgo21, tgo23)
+							var tgo22 int = x_tgo21
+							tgo20 = append(tgo20, tgo22)
 						}
 					}
 				}
 			}
 		}
-		fmt.Println(tgo21)
+		fmt.Println(tgo20)
 	}
 	{
-		var tgo25 [][2]int = [][2]int{}
+		var tgo24 [][2]int = [][2]int{}
 		{
-			for x_tgo26 := range 2 {
-				for y_tgo27 := range 3 {
+			for x_tgo25 := range 2 {
+				for y_tgo26 := range 3 {
 					{
-						var tgo29 int = x_tgo26
-						var tgo28 int
-						if y_tgo27 == 1 {
+						var value_tgo28 int = x_tgo25
+						var tgo27 int
+						if y_tgo26 == 1 {
 							break
 						} else {
-							tgo28 = y_tgo27
+							tgo27 = y_tgo26
 						}
-						var tgo30 [2]int = [2]int{tgo29, tgo28}
-						tgo25 = append(tgo25, tgo30)
+						var tgo29 [2]int = [2]int{value_tgo28, tgo27}
+						tgo24 = append(tgo24, tgo29)
 					}
 				}
 			}
 		}
-		fmt.Println(tgo25)
+		fmt.Println(tgo24)
 	}
 	for i := range 2 {
-		var tgo31 []int = []int{}
+		var tgo30 []int = []int{}
 		{
 			{
-				var tgo34 int
+				var tgo33 int
 				if i == 0 {
 					continue
 				} else {
-					tgo34 = 2
+					tgo33 = 2
 				}
-				for x_tgo32 := range tgo34 {
+				for x_tgo31 := range tgo33 {
 					{
-						var tgo33 int = x_tgo32
-						tgo31 = append(tgo31, tgo33)
+						var tgo32 int = x_tgo31
+						tgo30 = append(tgo30, tgo32)
 					}
 				}
 			}
 		}
-		values := tgo31
+		values := tgo30
 		fmt.Println("outer", i, values)
 	}
 outer:
 	for i := range 2 {
 		{
-			var tgo35 []int = []int{}
+			var tgo34 []int = []int{}
 			{
-				for x_tgo36 := range 3 {
+				for x_tgo35 := range 3 {
 					{
-						var tgo37 int
-						if x_tgo36 == 1 {
+						var tgo36 int
+						if x_tgo35 == 1 {
 							break outer
 						} else {
-							tgo37 = x_tgo36
+							tgo36 = x_tgo35
 						}
-						var tgo38 int = tgo37
-						tgo35 = append(tgo35, tgo38)
+						var tgo37 int = tgo36
+						tgo34 = append(tgo34, tgo37)
 					}
 				}
 			}
-			_ = tgo35
+			_ = tgo34
 		}
 		fmt.Println("unreached", i)
 	}
 	var result []int
 	{
-		var tgo39 []int = []int{}
+		var tgo38 []int = []int{}
 		{
-			for x_tgo40 := range 3 {
+			for x_tgo39 := range 3 {
 				{
-					var tgo41 int
-					if x_tgo40 == 1 {
+					var tgo40 int
+					if x_tgo39 == 1 {
 						goto done
 					} else {
-						tgo41 = x_tgo40
+						tgo40 = x_tgo39
 					}
-					var tgo42 int = tgo41
-					tgo39 = append(tgo39, tgo42)
+					var tgo41 int = tgo40
+					tgo38 = append(tgo38, tgo41)
 				}
 			}
 		}
-		result = tgo39
+		result = tgo38
 	}
 	fmt.Println("unreached")
 done:

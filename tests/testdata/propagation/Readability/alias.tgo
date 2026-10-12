@@ -1,0 +1,9 @@
+package main
+
+import format "fmt"
+
+func aliased() error {
+	format.Print("A")
+	target(true)!!
+	return nil
+}

@@ -38,11 +38,9 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	{
-		var tgo1 error = only()
-		if tgo1 != nil {
-			return tgo1
-		}
+	var error_tgo1 error = only()
+	if error_tgo1 != nil {
+		return error_tgo1
 	}
 	fmt.Print("b")
 	return nil

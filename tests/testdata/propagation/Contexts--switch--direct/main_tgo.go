@@ -39,27 +39,27 @@ func identity[T any](v T) (T, error) {
 
 func run() error {
 	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("T")
-		if tgo2 != nil {
-			return tgo2
+		var value_tgo1 int
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = step("T")
+		if error_tgo2 != nil {
+			return error_tgo2
 		}
-		var tgo3 int = tgo1
+		var value_tgo3 int = value_tgo1
 		var tgo4 int = -1
 		if tgo4 == -1 {
-			var tgo5 int
-			var tgo6 error
-			tgo5, tgo6 = step("C")
-			if tgo6 != nil {
-				return tgo6
+			var value_tgo5 int
+			var error_tgo6 error
+			value_tgo5, error_tgo6 = step("C")
+			if error_tgo6 != nil {
+				return error_tgo6
 			}
-			if tgo3 == tgo5 {
+			if value_tgo3 == value_tgo5 {
 				tgo4 = 0
 			}
 		}
 		if tgo4 == -1 {
-			if tgo3 ==
+			if value_tgo3 ==
 
 				2 {
 				tgo4 = 1
