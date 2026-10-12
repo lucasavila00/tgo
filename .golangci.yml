@@ -11,6 +11,7 @@ linters:
     - funlen
     - lll
     - gocyclo
+    - gocognit
     - depguard
     - nolintlint
   settings:
@@ -64,6 +65,8 @@ linters:
       lines: 100
       statements: -1
       ignore-comments: false
+    gocognit:
+      min-complexity: 20
     gocyclo:
       min-complexity: 20
   exclusions:
