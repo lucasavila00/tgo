@@ -10,7 +10,8 @@ import (
 func (r *rewrite) returnBlock(typ *ast.FuncType, body *ast.BlockStmt) *ast.BlockStmt {
 	exit := r.name()
 	var prefix []ast.Stmt
-	var values, named []ast.Expr
+	var values []ast.Expr
+	var named []ast.Expr
 	for _, field := range typ.Results.List {
 		count := len(field.Names)
 		if count == 0 {
@@ -58,12 +59,12 @@ func rewriteReturns(node ast.Node, replace func(*ast.ReturnStmt) ast.Stmt) ast.N
 		return node
 	}
 	original := reflect.ValueOf(node).Elem()
-	copy := reflect.New(original.Type())
-	copy.Elem().Set(original)
+	rewrittenNode := reflect.New(original.Type())
+	rewrittenNode.Elem().Set(original)
 	changed := false
 	for i := 0; i < original.NumField(); i++ {
 		field := original.Field(i)
-		output := copy.Elem().Field(i)
+		output := rewrittenNode.Elem().Field(i)
 		if child, ok := field.Interface().(ast.Node); ok {
 			if reflect.ValueOf(child).IsNil() {
 				continue
@@ -94,5 +95,5 @@ func rewriteReturns(node ast.Node, replace func(*ast.ReturnStmt) ast.Stmt) ast.N
 	if !changed {
 		return node
 	}
-	return copy.Interface().(ast.Node)
+	return rewrittenNode.Interface().(ast.Node)
 }

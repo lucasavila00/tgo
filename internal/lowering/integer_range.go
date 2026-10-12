@@ -9,11 +9,11 @@ import (
 func (r *rewrite) integerRange(original, loop *ast.RangeStmt, before []ast.Stmt) []ast.Stmt {
 	value := r.name()
 	before = append(before, variable(value, r.temporaryType(r.typeOf(original.Key), original.Key), nil))
-	setup, place := r.place(original.Key)
+	placeStatements, place := r.place(original.Key)
 	store := &ast.AssignStmt{Lhs: []ast.Expr{place}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}}
 	loop.Key = value
 	loop.Value = nil
 	loop.Tok = token.ASSIGN
-	loop.Body = &ast.BlockStmt{List: append(append(setup, store), loop.Body)}
+	loop.Body = &ast.BlockStmt{List: append(append(placeStatements, store), loop.Body)}
 	return append(before, loop)
 }

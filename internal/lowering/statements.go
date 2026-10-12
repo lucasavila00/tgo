@@ -9,12 +9,12 @@ func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
 	if body == nil || (!r.contains(body) && !r.hasMappedBranch(body)) {
 		return body
 	}
-	copy := *body
-	copy.List = nil
+	output := *body
+	output.List = nil
 	for _, statement := range body.List {
-		copy.List = append(copy.List, r.statement(statement)...)
+		output.List = append(output.List, r.statement(statement)...)
 	}
-	return &copy
+	return &output
 }
 
 func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
@@ -25,9 +25,9 @@ func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
 	}
 	if branch, ok := statement.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO {
 		if name := r.labels[branch.Label.Name]; name != "" {
-			copy := *branch
-			copy.Label = ast.NewIdent(name)
-			return []ast.Stmt{&copy}
+			output := *branch
+			output.Label = ast.NewIdent(name)
+			return []ast.Stmt{&output}
 		}
 	}
 	if !r.contains(statement) && !r.hasMappedBranch(statement) {
@@ -61,27 +61,28 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 	case *ast.SelectStmt:
 		return r.selectStatement(s)
 	case *ast.SendStmt:
-		copy := *s
-		before, values := r.operands([]ast.Expr{s.Chan, s.Value})
-		copy.Chan, copy.Value = values[0], values[1]
-		return append(before, &copy)
+		output := *s
+		statements, values := r.operands([]ast.Expr{s.Chan, s.Value})
+		output.Chan = values[0]
+		output.Value = values[1]
+		return append(statements, &output)
 	case *ast.ExprStmt:
 		return r.expressionStatement(s)
 	case *ast.ReturnStmt:
 		if record, found := r.shortReturns[s]; found {
 			return r.shortReturnStatement(s, record)
 		}
-		copy := *s
-		before, values := r.operands(s.Results)
-		copy.Results = values
-		return append(before, &copy)
+		output := *s
+		statements, values := r.operands(s.Results)
+		output.Results = values
+		return append(statements, &output)
 	case *ast.AssignStmt:
 		return r.assignmentStatement(s)
 	case *ast.IncDecStmt:
-		copy := *s
-		before, place := r.place(s.X)
-		copy.X = place
-		return append(before, &copy)
+		output := *s
+		statements, place := r.place(s.X)
+		output.X = place
+		return append(statements, &output)
 	case *ast.DeclStmt:
 		return r.declarationStatement(s)
 	case *ast.IfStmt:
@@ -89,15 +90,15 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 	case *ast.ForStmt:
 		return r.forStatement(s)
 	case *ast.GoStmt:
-		copy := *s
-		before, refs := r.expression(s.Call)
-		copy.Call = refs[0].(*ast.CallExpr)
-		return append(before, &copy)
+		output := *s
+		statements, values := r.expression(s.Call)
+		output.Call = values[0].(*ast.CallExpr)
+		return append(statements, &output)
 	case *ast.DeferStmt:
-		copy := *s
-		before, refs := r.expression(s.Call)
-		copy.Call = refs[0].(*ast.CallExpr)
-		return append(before, &copy)
+		output := *s
+		statements, values := r.expression(s.Call)
+		output.Call = values[0].(*ast.CallExpr)
+		return append(statements, &output)
 	case *ast.LabeledStmt:
 		return r.labeledStatement(s)
 	}

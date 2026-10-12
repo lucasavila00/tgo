@@ -23,13 +23,7 @@ func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Compreh
 	typ := r.typeOf(call)
 	r.collectionOutputs[record.Output] = &collectionDestination{result: result, typ: typ}
 	r.comprehensionBindings(record.Body)
-	if r.temporaryTypes == nil {
-		r.temporaryTypes = make(map[ast.Expr]types.Type)
-	}
-	if r.origins == nil {
-		r.origins = make(map[ast.Expr]ast.Expr)
-	}
-	r.temporaryTypes[result], r.origins[result] = typ, call
+	r.recordTemporary(result, typ, call)
 	empty := &ast.CompositeLit{Type: r.temporaryType(typ, call)}
 	output := []ast.Stmt{variable(result, r.temporaryType(typ, call), empty)}
 	key, _ := types.ComprehensionTypes(typ)

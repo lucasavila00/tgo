@@ -1,11 +1,12 @@
 package lowering
 
 import (
-	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
 	"strconv"
 	"strings"
+
+	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
 type returnFrame struct {
@@ -57,59 +58,75 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 }
 
 func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([]ast.Stmt, []ast.Expr) {
-	raw := marker.Args[0]
-	before, rewritten := r.expression(raw)
-	saved, values := r.save(rewritten[0])
-	before = append(before, saved...)
-	if len(values) == 0 {
+	call := marker.Args[0]
+	statements, callValues := r.expression(call)
+	saveStatements, savedValues := r.save(callValues[0])
+	statements = append(statements, saveStatements...)
+	if len(savedValues) == 0 {
 		panic("propagation requires an error result")
 	}
-	function := r.frame.function
-	var signature *types.Signature
-	switch fn := function.(type) {
-	case *ast.FuncDecl:
-		signature = r.source.inventory.Checked.TypesInfo.Defs[fn.Name].Type().(*types.Signature)
-	case *ast.FuncLit:
-		signature = r.source.inventory.Checked.TypesInfo.TypeOf(fn).(*types.Signature)
-	}
-	last := signature.Results().At(signature.Results().Len() - 1).Type()
-	if _, ok := last.Underlying().(*types.Interface); !ok || !types.AssignableTo(last, types.Universe.Lookup("error").Type()) {
+
+	signature := r.frameSignature()
+	returnErrorType := signature.Results().At(signature.Results().Len() - 1).Type()
+	if _, ok := returnErrorType.Underlying().(*types.Interface); !ok || !types.AssignableTo(returnErrorType, types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
 	if !r.frame.prepared {
 		r.frame.prefix = r.prepareReturns(r.frame.typ)
 		r.frame.prepared = true
 	}
-	callError := values[len(values)-1]
-	check, failed := r.callFailure(callError, raw)
-	before = append(before, check...)
-	var errorValue ast.Expr = callError
-	if operation.Wrap {
-		if !types.AssignableTo(types.Universe.Lookup("error").Type(), last) {
-			panic("wrapped errors do not fit the function return type")
-		}
-		if r.formatAlias == nil {
-			r.formatAlias = r.nameFor("fmt")
-			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
-		}
-		errorValue = &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w")}, errorValue}}
-	}
+
+	callError := savedValues[len(savedValues)-1]
+	failureStatements, failed := r.callFailure(callError, call)
+	statements = append(statements, failureStatements...)
+	errorValue := r.propagatedError(callError, returnErrorType, operation)
 	results := append(append([]ast.Expr(nil), r.frame.values...), errorValue)
-	failure := []ast.Stmt{&ast.ReturnStmt{Results: results}}
-	before = append(before, &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: failure}})
+	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
+	statements = append(statements, failure)
 	r.inserted = true
 	r.lowered[marker] = true
-	return before, values[:len(values)-1]
+	return statements, savedValues[:len(savedValues)-1]
+}
+
+func (r *rewrite) frameSignature() *types.Signature {
+	var signature *types.Signature
+	switch function := r.frame.function.(type) {
+	case *ast.FuncDecl:
+		signature = r.source.inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
+	case *ast.FuncLit:
+		signature = r.source.inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
+	}
+	return signature
+}
+
+func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type, operation Propagation) ast.Expr {
+	if !operation.Wrap {
+		return callError
+	}
+	if !types.AssignableTo(types.Universe.Lookup("error").Type(), returnErrorType) {
+		panic("wrapped errors do not fit the function return type")
+	}
+	if r.formatAlias == nil {
+		r.formatAlias = r.nameFor("fmt")
+		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
+	}
+	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
+	return &ast.CallExpr{
+		Fun:  &ast.SelectorExpr{X: r.formatAlias, Sel: ast.NewIdent("Errorf")},
+		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},
+	}
 }
 
 // callFailure checks the call result before conversion to the caller's return type.
 func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
 	typ := r.typeOf(value)
 	_, generic := types.Unalias(typ).(*types.TypeParam)
-	nilOnly, nilCapable := false, false
+	nilOnly := false
+	nilCapable := false
 	switch typ.Underlying().(type) {
 	case *types.Slice, *types.Map, *types.Signature:
-		nilOnly, nilCapable = true, true
+		nilOnly = true
+		nilCapable = true
 	case *types.Pointer, *types.Chan:
 		nilCapable = true
 	case *types.Interface:
@@ -126,25 +143,7 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 		}
 	}
 	if generic || nilOnly {
-		if r.reflectAlias == nil {
-			r.reflectAlias = r.nameFor("reflect")
-			r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.reflectAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"reflect"`}})
-		}
-		reflected, failed := r.name(), r.name()
-		valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent("ValueOf")}, Args: []ast.Expr{&ast.UnaryExpr{Op: token.AND, X: value}}}
-		ref := &ast.CallExpr{Fun: &ast.SelectorExpr{X: valueOf, Sel: ast.NewIdent("Elem")}}
-		var kinds []ast.Expr
-		for _, kind := range []string{"Chan", "Func", "Interface", "Map", "Pointer", "Slice"} {
-			kinds = append(kinds, &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent(kind)})
-		}
-		isNil := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("IsNil")}}
-		return []ast.Stmt{
-			variable(reflected, &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent("Value")}, ref),
-			variable(failed, r.temporaryType(types.Typ[types.Bool], call), boolean(true)),
-			&ast.SwitchStmt{Tag: &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("Kind")}}, Body: &ast.BlockStmt{List: []ast.Stmt{
-				&ast.CaseClause{List: kinds, Body: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{failed}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.UnaryExpr{Op: token.NOT, X: isNil}}}}},
-			}}},
-		}, failed
+		return r.reflectedFailure(value, call)
 	}
 	switch typ.Underlying().(type) {
 	case *types.Pointer, *types.Chan, *types.Interface:
@@ -153,4 +152,29 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 	default:
 		return nil, boolean(true)
 	}
+}
+
+func (r *rewrite) reflectedFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
+	reflectPackage := r.reflectPackage()
+	reflected := r.name()
+	failed := r.name()
+	valueAddress := &ast.UnaryExpr{Op: token.AND, X: value}
+	valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("ValueOf")}, Args: []ast.Expr{valueAddress}}
+	reflectedValue := &ast.CallExpr{Fun: &ast.SelectorExpr{X: valueOf, Sel: ast.NewIdent("Elem")}}
+	var nilCapableKinds []ast.Expr
+	for _, kind := range []string{"Chan", "Func", "Interface", "Map", "Pointer", "Slice"} {
+		nilCapableKinds = append(nilCapableKinds, &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent(kind)})
+	}
+	isNil := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("IsNil")}}
+	setFailure := &ast.AssignStmt{Lhs: []ast.Expr{failed}, Tok: token.ASSIGN, Rhs: []ast.Expr{&ast.UnaryExpr{Op: token.NOT, X: isNil}}}
+	kind := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflected, Sel: ast.NewIdent("Kind")}}
+	checkNil := &ast.SwitchStmt{Tag: kind, Body: &ast.BlockStmt{List: []ast.Stmt{
+		&ast.CaseClause{List: nilCapableKinds, Body: []ast.Stmt{setFailure}},
+	}}}
+	statements := []ast.Stmt{
+		variable(reflected, &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("Value")}, reflectedValue),
+		variable(failed, r.temporaryType(types.Typ[types.Bool], call), boolean(true)),
+		checkNil,
+	}
+	return statements, failed
 }

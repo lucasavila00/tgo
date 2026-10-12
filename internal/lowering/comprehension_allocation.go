@@ -62,14 +62,14 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 			return nil
 		}
 	}
-	copy := *loop
+	output := *loop
 	var before []ast.Stmt
 	var count ast.Expr
 	if r.source.rangeElided(loop) {
 		count = &ast.BasicLit{Kind: token.INT, Value: strconv.FormatInt(sourceType.(*types.Array).Len(), 10)}
 	} else {
-		before, copy.X = r.capture(loop.X)
-		count = &ast.CallExpr{Fun: ast.NewIdent("len"), Args: []ast.Expr{copy.X}}
+		before, output.X = r.capture(loop.X)
+		count = &ast.CallExpr{Fun: ast.NewIdent("len"), Args: []ast.Expr{output.X}}
 	}
 	allocation := &ast.CallExpr{Fun: ast.NewIdent("make"), Args: []ast.Expr{r.temporaryType(typ, call), count}}
 	before = append(before, variable(result, r.temporaryType(typ, call), allocation))
@@ -78,12 +78,12 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
 			object := r.source.inventory.Checked.TypesInfo.Defs[sourceKey]
 			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.bindings[object]))
-			copy.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
+			output.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
 		} else {
-			copy.Key = index
-			copy.Tok = token.DEFINE
+			output.Key = index
+			output.Tok = token.DEFINE
 		}
 		r.collectionOutputs[record.Output].index = index
 	}
-	return append(before, &ast.BlockStmt{List: r.rangeStatement(&copy)})
+	return append(before, &ast.BlockStmt{List: r.rangeStatement(&output)})
 }
