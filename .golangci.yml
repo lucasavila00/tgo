@@ -10,7 +10,11 @@ linters:
     - revive
     - funlen
     - gocyclo
+    - nolintlint
   settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
     staticcheck:
       checks: ["SA*"]
     revive:
