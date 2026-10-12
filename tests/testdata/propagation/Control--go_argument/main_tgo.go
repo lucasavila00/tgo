@@ -19,19 +19,17 @@ func step(name string) (int, error) {
 
 func run() error {
 	done := make(chan struct{})
-	{
-		var tgo3 func(v int) = func(v int) {
-			fmt.Print("g")
-			close(done)
-		}
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("G")
-		if tgo2 != nil {
-			return tgo2
-		}
-		go tgo3(tgo1)
+	var value_tgo3 func(v int) = func(v int) {
+		fmt.Print("g")
+		close(done)
 	}
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = step("G")
+	if error_tgo2 != nil {
+		return error_tgo2
+	}
+	go value_tgo3(value_tgo1)
 	<-done
 	return nil
 }

@@ -97,14 +97,14 @@ func main() {
 			panic("constant conversion")
 		}
 		{
-			var tgo9 *int = &point
+			var value_tgo9 *int = &point
 			var tgo8 *int
 			if ok {
 				tgo8 = nil
 			} else {
 				tgo8 = nil
 			}
-			if last(tgo9, tgo8) != nil {
+			if last(value_tgo9, tgo8) != nil {
 				panic("variadic inference")
 			}
 		}
@@ -114,14 +114,14 @@ func main() {
 		} else {
 			tgo10 = 2
 		}
-		var tgo12 any = any(nil)
+		var value_tgo12 any = any(nil)
 		var tgo11 uint8
 		if ok {
 			tgo11 = 4
 		} else {
 			tgo11 = 5
 		}
-		value := partial[any](tgo10, uint8(3), tgo12, tgo11)
+		value := partial[any](tgo10, uint8(3), value_tgo12, tgo11)
 		if ok && value != 4 || !ok && value != 5 {
 			panic("partial type arguments")
 		}

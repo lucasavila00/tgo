@@ -19,22 +19,22 @@ type PointerError interface {
 }
 
 func zeros(err error) (int, string, [2]int, Data, *int, []int, map[string]int, func() int, chan int, any, error) {
-	var tgo1 int
-	var tgo2 string
-	var tgo3 [2]int
-	var tgo4 Data
-	var tgo5 *int
-	var tgo6 []int
-	var tgo7 map[string]int
-	var tgo8 func() int
-	var tgo9 chan int
-	var tgo10 any
-	return tgo1, tgo2, tgo3, tgo4, tgo5, tgo6, tgo7, tgo8, tgo9, tgo10, err
+	var zero_tgo1 int
+	var zero_tgo2 string
+	var zero_tgo3 [2]int
+	var zero_tgo4 Data
+	var zero_tgo5 *int
+	var zero_tgo6 []int
+	var zero_tgo7 map[string]int
+	var zero_tgo8 func() int
+	var zero_tgo9 chan int
+	var zero_tgo10 any
+	return zero_tgo1, zero_tgo2, zero_tgo3, zero_tgo4, zero_tgo5, zero_tgo6, zero_tgo7, zero_tgo8, zero_tgo9, zero_tgo10, err
 }
 
 func generic[T any](err error) (T, error) {
-	var tgo11 T
-	return tgo11, err
+	var zero_tgo11 T
+	return zero_tgo11, err
 }
 
 func genericError[E PointerError]() (int, E) {
@@ -42,13 +42,13 @@ func genericError[E PointerError]() (int, E) {
 }
 
 func concrete(err StructError) (int, StructError) {
-	var tgo12 int
-	return tgo12, err
+	var zero_tgo12 int
+	return zero_tgo12, err
 }
 
 func typedNil(err *Failure) (int, error) {
-	var tgo13 int
-	return tgo13, err
+	var zero_tgo13 int
+	return zero_tgo13, err
 }
 
 func pointerSuccess() (int, *Failure) {
@@ -60,28 +60,24 @@ func shift(n uint) (Num, error) {
 }
 
 func conditional(ready bool) (uint8, error) {
-	{
-		var tgo14 uint8
-		if ready {
-			tgo14 = 127
-		} else {
-			tgo14 = 0
-		}
-		return tgo14, nil
+	var tgo14 uint8
+	if ready {
+		tgo14 = 127
+	} else {
+		tgo14 = 0
 	}
+	return tgo14, nil
 }
 
 func shiftBeforeBranch(n uint, ready bool) (Num, int, error) {
-	{
-		var tgo16 Num = 1 << n
-		var tgo15 int
-		if ready {
-			tgo15 = 1
-		} else {
-			tgo15 = 0
-		}
-		return tgo16, tgo15, nil
+	var value_tgo16 Num = 1 << n
+	var tgo15 int
+	if ready {
+		tgo15 = 1
+	} else {
+		tgo15 = 0
 	}
+	return value_tgo16, tgo15, nil
 }
 
 func nilValue() (any, error) {

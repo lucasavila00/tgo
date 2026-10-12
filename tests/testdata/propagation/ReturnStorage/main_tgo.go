@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo4 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -17,7 +15,7 @@ func next(fail bool) (int, error) {
 }
 
 func named(fail, wrap bool) (value int, err error) {
-	var tgo3 int
+	var zero_tgo3 int
 	defer func() {
 		value += 100
 		if err != nil && !errors.Is(err, sentinel) {
@@ -26,54 +24,42 @@ func named(fail, wrap bool) (value int, err error) {
 	}()
 	value = 9
 	if wrap {
-		{
-			var tgo1 int
-			var tgo2 error
-			tgo1, tgo2 = next(fail)
-			if tgo2 != nil {
-				return tgo3, fmt_tgo4.Errorf("next: %w", tgo2)
-			}
-			value = tgo1
+		var value_tgo1 int
+		var error_tgo2 error
+		value_tgo1, error_tgo2 = next(fail)
+		if error_tgo2 != nil {
+			return zero_tgo3, fmt.Errorf("next: %w", error_tgo2)
 		}
+		value = value_tgo1
 	} else {
-		{
-			var tgo5 int
-			var tgo6 error
-			tgo5, tgo6 = next(fail)
-			if tgo6 != nil {
-				return tgo3, tgo6
-			}
-			value = tgo5
+		var value_tgo4 int
+		var error_tgo5 error
+		value_tgo4, error_tgo5 = next(fail)
+		if error_tgo5 != nil {
+			return zero_tgo3, error_tgo5
 		}
+		value = value_tgo4
 	}
 	return
 }
 
 func grouped(fail bool) (first, last error) {
-	var tgo9 error
+	var zero_tgo7 error
 	first = sentinel
-	{
-		var tgo7 int
-		var tgo8 error
-		tgo7, tgo8 = next(fail)
-		if tgo8 != nil {
-			return tgo9, tgo8
-		}
-		_ = tgo7
+	var error_tgo6 error
+	_, error_tgo6 = next(fail)
+	if error_tgo6 != nil {
+		return zero_tgo7, error_tgo6
 	}
 	return
 }
 
 func blank(fail bool) (_, _ error) {
-	var tgo12 error
-	{
-		var tgo10 int
-		var tgo11 error
-		tgo10, tgo11 = next(fail)
-		if tgo11 != nil {
-			return tgo12, tgo11
-		}
-		_ = tgo10
+	var zero_tgo9 error
+	var error_tgo8 error
+	_, error_tgo8 = next(fail)
+	if error_tgo8 != nil {
+		return zero_tgo9, error_tgo8
 	}
 	return sentinel, nil
 }

@@ -16,33 +16,29 @@ func done() { events = append(events, "D") }
 
 func ordered(flag bool) (int, int, error) {
 	defer done()
-	{
-		var tgo2 int = effect("A", 1)
-		var tgo1 int
-		if flag {
-			tgo1 = effect("B", 2)
-		} else {
-			tgo1 = effect("C", 3)
-		}
-		return tgo2, tgo1, nil
+	var value_tgo2 int = effect("A", 1)
+	var tgo1 int
+	if flag {
+		tgo1 = effect("B", 2)
+	} else {
+		tgo1 = effect("C", 3)
 	}
+	return value_tgo2, tgo1, nil
 }
 
 func early(err error) (int, int, error) {
-	var tgo4 int
-	var tgo5 int
+	var zero_tgo4 int
+	var zero_tgo5 int
 	defer done()
-	{
-		var tgo6 int = effect("A", 1)
-		var tgo3 int
-		if true {
-			return tgo4, tgo5, err
-			_ = 2 == 2
-		} else {
-			tgo3 = 3
-		}
-		return tgo6, tgo3, nil
+	var value_tgo6 int = effect("A", 1)
+	var tgo3 int
+	if true {
+		return zero_tgo4, zero_tgo5, err
+		_ = 2 == 2
+	} else {
+		tgo3 = 3
 	}
+	return value_tgo6, tgo3, nil
 }
 
 func pair() (int, string) {
@@ -50,12 +46,10 @@ func pair() (int, string) {
 }
 
 func multiple() (any, any, error) {
-	{
-		var tgo7 any
-		var tgo8 any
-		tgo7, tgo8 = pair()
-		return tgo7, tgo8, nil
-	}
+	var tgo7 any
+	var tgo8 any
+	tgo7, tgo8 = pair()
+	return tgo7, tgo8, nil
 }
 
 func main() {

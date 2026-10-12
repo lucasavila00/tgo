@@ -5,14 +5,10 @@ type Failure interface{ Error() string }
 func next() (int, Failure) { return 7, nil }
 
 func run(error int) error {
-	{
-		var tgo1 int
-		var tgo2 Failure
-		tgo1, tgo2 = next()
-		if tgo2 != nil {
-			return tgo2
-		}
-		_ = tgo1
+	var error_tgo1 Failure
+	_, error_tgo1 = next()
+	if error_tgo1 != nil {
+		return error_tgo1
 	}
 	return nil
 }

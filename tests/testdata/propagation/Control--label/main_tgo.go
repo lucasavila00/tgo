@@ -22,14 +22,10 @@ func run() error {
 again:
 	for i < 2 {
 		i++
-		{
-			var tgo1 int
-			var tgo2 error
-			tgo1, tgo2 = step("B")
-			if tgo2 != nil {
-				return tgo2
-			}
-			_ = tgo1
+		var error_tgo1 error
+		_, error_tgo1 = step("B")
+		if error_tgo1 != nil {
+			return error_tgo1
 		}
 		if i == 1 {
 			continue again

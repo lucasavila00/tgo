@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo4 "fmt"
-
 import "fmt"
 
 func target() (int, error) {
@@ -9,14 +7,10 @@ func target() (int, error) {
 }
 
 func run() error {
-	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = target()
-		if tgo2 != nil {
-			return fmt_tgo4.Errorf("target: %w", tgo2)
-		}
-		_ = tgo1
+	var error_tgo1 error
+	_, error_tgo1 = target()
+	if error_tgo1 != nil {
+		return fmt.Errorf("target: %w", error_tgo1)
 	}
 	return nil
 }

@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo5 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -21,26 +19,26 @@ func next(fail bool) (int, error) {
 
 var direct = func(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
-	var tgo1 int
-	var tgo2 error
-	tgo1, tgo2 = next(fail)
-	if tgo2 != nil {
-		return tgo2
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = next(fail)
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
-	value := tgo1
+	value := value_tgo1
 	trace = append(trace, fmt.Sprint(value))
 	return nil
 }
 
 var wrapped = func(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
-	var tgo3 int
-	var tgo4 error
-	tgo3, tgo4 = next(fail)
-	if tgo4 != nil {
-		return fmt_tgo5.Errorf("next: %w", tgo4)
+	var value_tgo3 int
+	var error_tgo4 error
+	value_tgo3, error_tgo4 = next(fail)
+	if error_tgo4 != nil {
+		return fmt.Errorf("next: %w", error_tgo4)
 	}
-	value := tgo3
+	value := value_tgo3
 	trace = append(trace, fmt.Sprint(value))
 	return nil
 }
@@ -49,13 +47,13 @@ var collection = map[string][]func(bool) error{
 	"run": {
 		func(fail bool) error {
 			defer func() { trace = append(trace, "defer") }()
-			var tgo6 int
-			var tgo7 error
-			tgo6, tgo7 = next(fail)
-			if tgo7 != nil {
-				return tgo7
+			var value_tgo5 int
+			var error_tgo6 error
+			value_tgo5, error_tgo6 = next(fail)
+			if error_tgo6 != nil {
+				return error_tgo6
 			}
-			value := tgo6
+			value := value_tgo5
 			trace = append(trace, fmt.Sprint(value))
 			return nil
 		},
@@ -65,13 +63,13 @@ var collection = map[string][]func(bool) error{
 var nested = func() func(bool) error {
 	return func(fail bool) error {
 		defer func() { trace = append(trace, "defer") }()
-		var tgo8 int
-		var tgo9 error
-		tgo8, tgo9 = next(fail)
-		if tgo9 != nil {
-			return tgo9
+		var value_tgo7 int
+		var error_tgo8 error
+		value_tgo7, error_tgo8 = next(fail)
+		if error_tgo8 != nil {
+			return error_tgo8
 		}
-		value := tgo8
+		value := value_tgo7
 		trace = append(trace, fmt.Sprint(value))
 		return nil
 	}
@@ -79,14 +77,10 @@ var nested = func() func(bool) error {
 
 var initialized = func() error {
 	defer func() { trace = append(trace, "init-defer") }()
-	{
-		var tgo10 int
-		var tgo11 error
-		tgo10, tgo11 = next(true)
-		if tgo11 != nil {
-			return tgo11
-		}
-		_ = tgo10
+	var error_tgo9 error
+	_, error_tgo9 = next(true)
+	if error_tgo9 != nil {
+		return error_tgo9
 	}
 	trace = append(trace, "unreachable")
 	return nil

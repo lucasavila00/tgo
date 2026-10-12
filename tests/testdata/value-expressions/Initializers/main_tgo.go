@@ -151,32 +151,30 @@ func restart() int {
 	attempts := 0
 again:
 	{
-		{
-			var tgo21 int
-			var tgo22 bool = 0 == 0
-		tgo18:
-			for i_tgo20 := tgo21; ; {
-				if tgo22 {
-					tgo22 = 0 != 0
-					var tgo19 int
-					if attempts++; attempts == 1 {
-						goto again
-					} else if attempts == 2 {
-						break tgo18
-					} else {
-						tgo19 = 0
-					}
-					i_tgo20 = tgo19
+		var tgo21 int
+		var tgo22 bool = 0 == 0
+	tgo18:
+		for i_tgo20 := tgo21; ; {
+			if tgo22 {
+				tgo22 = 0 != 0
+				var tgo19 int
+				if attempts++; attempts == 1 {
+					goto again
+				} else if attempts == 2 {
+					break tgo18
 				} else {
+					tgo19 = 0
+				}
+				i_tgo20 = tgo19
+			} else {
 
-					i_tgo20++
-				}
-				if !(i_tgo20 < 1) {
-					break
-				}
-				{
-					panic("loop body")
-				}
+				i_tgo20++
+			}
+			if !(i_tgo20 < 1) {
+				break
+			}
+			{
+				panic("loop body")
 			}
 		}
 	}

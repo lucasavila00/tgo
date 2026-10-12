@@ -23,7 +23,7 @@ func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 		input:         r.input,
 		request:       r.request,
 		file:          r.file,
-		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}},
+		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}, hasGoto: r.functionHasGoto(body)},
 	}
 	output := functionRewrite.block(body)
 	if functionRewrite.functionState.frame.prepared {
@@ -53,7 +53,7 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 			if i == len(original.Results.List)-1 && j == count-1 {
 				break
 			}
-			value := r.name()
+			value := r.nameFor("zero")
 			prefix = append(prefix, variable(value,
 				r.temporaryTypeAt(r.input.source.inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
 					original.End()), nil))
@@ -63,10 +63,10 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 	return prefix
 }
 
-func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) expressionResult {
+func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation, discardSuccess bool) expressionResult {
 	call := marker.Args[0]
 	evaluation := r.expression(call)
-	saved := r.save(evaluation.values[0])
+	saved := r.saveResults(evaluation.values[0], discardSuccess, true)
 	statements := append(evaluation.statements, saved.statements...)
 	if len(saved.values) == 0 {
 		panic("propagation requires an error result")
@@ -86,12 +86,15 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ex
 	callError := saved.values[len(saved.values)-1]
 	failureStatements, failed := r.callFailure(callError, call)
 	statements = append(statements, failureStatements...)
-	errorValue := r.propagatedError(callError.expression, returnErrorType, operation)
+	errorValue := r.propagatedError(callError.expression, returnErrorType, operation, call)
 	results := append(append([]ast.Expr(nil), r.functionState.frame.values...), errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
 	r.request.inserted = true
 	r.request.lowered[marker] = true
+	if discardSuccess {
+		return expressionResult{statements: statements}
+	}
 	return expressionResult{statements: statements, values: saved.values[:len(saved.values)-1]}
 }
 
@@ -107,21 +110,17 @@ func (r *rewrite) frameSignature() *types.Signature {
 }
 
 func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type,
-	operation Propagation) ast.Expr {
+	operation Propagation, call ast.Expr) ast.Expr {
 	if !operation.Wrap {
 		return callError
 	}
 	if !types.AssignableTo(types.Universe.Lookup("error").Type(), returnErrorType) {
 		panic("wrapped errors do not fit the function return type")
 	}
-	if r.file.formatAlias == nil {
-		r.file.formatAlias = r.nameFor("fmt")
-		r.file.extraImports = append(r.file.extraImports, &ast.ImportSpec{Name: r.file.formatAlias,
-			Path: &ast.BasicLit{Kind: token.STRING, Value: `"fmt"`}})
-	}
+	formatPackage := r.formatPackage(call)
 	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
 	return &ast.CallExpr{
-		Fun:  &ast.SelectorExpr{X: r.file.formatAlias, Sel: ast.NewIdent("Errorf")},
+		Fun:  &ast.SelectorExpr{X: formatPackage, Sel: ast.NewIdent("Errorf")},
 		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},
 	}
 }
@@ -157,7 +156,7 @@ func (r *rewrite) callFailure(result expressionValue, call ast.Expr) ([]ast.Stmt
 	}
 	switch typ.Underlying().(type) {
 	case *types.Pointer, *types.Chan, *types.Interface:
-		zero := r.name()
+		zero := r.nameFor("zero")
 		return []ast.Stmt{variable(zero, r.temporaryType(typ, call), nil)}, &ast.BinaryExpr{X: value,
 			Op: token.NEQ, Y: zero}
 	default:
@@ -167,8 +166,8 @@ func (r *rewrite) callFailure(result expressionValue, call ast.Expr) ([]ast.Stmt
 
 func (r *rewrite) reflectedFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
 	reflectPackage := r.reflectPackage()
-	reflected := r.name()
-	failed := r.name()
+	reflected := r.nameFor("reflected")
+	failed := r.nameFor("failed")
 	valueAddress := &ast.UnaryExpr{Op: token.AND, X: value}
 	valueOf := &ast.CallExpr{Fun: &ast.SelectorExpr{X: reflectPackage, Sel: ast.NewIdent("ValueOf")},
 		Args: []ast.Expr{valueAddress}}

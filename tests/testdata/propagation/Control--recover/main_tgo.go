@@ -23,15 +23,13 @@ func run() error {
 			fmt.Print("r")
 		}
 	}()
-	{
-		var tgo1 int
-		var tgo2 error
-		tgo1, tgo2 = step("P")
-		if tgo2 != nil {
-			return tgo2
-		}
-		panic(tgo1)
+	var value_tgo1 int
+	var error_tgo2 error
+	value_tgo1, error_tgo2 = step("P")
+	if error_tgo2 != nil {
+		return error_tgo2
 	}
+	panic(value_tgo1)
 
 }
 

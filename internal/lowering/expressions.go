@@ -32,7 +32,7 @@ func (r *rewrite) expression(expr ast.Expr) expressionResult {
 
 func (r *rewrite) specialExpression(expr ast.Expr) (expressionResult, bool) {
 	if operation, ok := r.input.propagations[expr]; ok && !r.functionState.suppressed {
-		return r.propagatedCall(expr.(*ast.CallExpr), operation), true
+		return r.propagatedCall(expr.(*ast.CallExpr), operation, false), true
 	}
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {

@@ -1,7 +1,5 @@
 package main
 
-import fmt_tgo2 "fmt"
-
 import (
 	"errors"
 	"fmt"
@@ -40,11 +38,9 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	{
-		var tgo1 error = only()
-		if tgo1 != nil {
-			return fmt_tgo2.Errorf("only: %w", tgo1)
-		}
+	var error_tgo1 error = only()
+	if error_tgo1 != nil {
+		return fmt.Errorf("only: %w", error_tgo1)
 	}
 	fmt.Print("b")
 	return nil

@@ -1,0 +1,84 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+type failure struct{}
+
+func (*failure) Error() string { return "failure" }
+
+var sentinel = &failure{}
+
+func target(fail bool) (int, string, *failure) {
+	fmt.Print("T")
+	if fail {
+		return 1, "value", sentinel
+	}
+	return 1, "value", nil
+}
+
+func discarded(fail bool) error {
+	target(fail)!!
+	return nil
+}
+
+func saved() error {
+	value := 10
+	capture := func() int { return value }
+	value, text := target(false)!
+	fmt.Print(value, text, capture())
+	return nil
+}
+
+func blank() error {
+	_, _ = target(false)!
+	return nil
+}
+
+func shadowed() error {
+	fmt := "hidden"
+	_ = fmt
+	target(true)!!
+	return nil
+}
+
+func laterShadow() error {
+	target(false)!!
+	fmt := "hidden"
+	_ = fmt
+	target(true)!!
+	return nil
+}
+
+func jumped() error {
+	goto after
+	target(true)!!
+after:
+	target(false)!
+	return nil
+}
+
+func closure() error {
+	fmt := "hidden"
+	_ = fmt
+	call := func() error {
+		target(true)!!
+		return nil
+	}
+	return call()
+}
+
+func main() {
+	fmt.Print(discarded(false) == nil, "|")
+	err := discarded(true)
+	fmt.Print(errors.Is(err, sentinel), "|", err.Error(), "|")
+	fmt.Print(saved() == nil, "|")
+	fmt.Print(blank() == nil, "|")
+	fmt.Print(errors.Is(shadowed(), sentinel), "|")
+	fmt.Print(errors.Is(laterShadow(), sentinel), "|")
+	fmt.Print(jumped() == nil, "|")
+	fmt.Print(errors.Is(closure(), sentinel), "|")
+	fmt.Print(errors.Is(aliased(), sentinel))
+}

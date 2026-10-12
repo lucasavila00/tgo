@@ -12,8 +12,8 @@ func decimal(values []int) (float64, error) {
 }
 
 func newline(err error) (int, error) {
-	var tgo1 int
-	return tgo1, // leading comment
+	var zero_tgo1 int
+	return zero_tgo1, // leading comment
 		err // operand comment
 }
 

@@ -28,6 +28,10 @@ func (r *rewrite) recordValue(value expressionValue) {
 }
 
 func (r *rewrite) save(value expressionValue) expressionResult {
+	return r.saveResults(value, false, false)
+}
+
+func (r *rewrite) saveResults(value expressionValue, discardSuccess, errorResult bool) expressionResult {
 	expr := value.expression
 	original := value.original
 	count := r.resultCount(original)
@@ -44,12 +48,12 @@ func (r *rewrite) save(value expressionValue) expressionResult {
 	if count == 0 {
 		return r.result([]ast.Stmt{&ast.ExprStmt{X: expr}}, nil)
 	}
-	refs := make([]ast.Expr, count)
-	for i := range refs {
-		refs[i] = r.name()
-	}
+	refs := r.savedReferences(count, discardSuccess, errorResult)
 	var statements []ast.Stmt
 	for i, ref := range refs {
+		if ref.(*ast.Ident).Name == "_" {
+			continue
+		}
 		resultType := typ
 		if tuple, ok := typ.(*types.Tuple); ok {
 			resultType = tuple.At(i).Type()
@@ -143,6 +147,21 @@ func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {
 		return false
 	}
 	return true
+}
+
+func (r *rewrite) savedReferences(count int, discardSuccess, errorResult bool) []ast.Expr {
+	refs := make([]ast.Expr, count)
+	for i := range refs {
+		prefix := "value"
+		if errorResult && i == len(refs)-1 {
+			prefix = "error"
+		} else if discardSuccess {
+			refs[i] = ast.NewIdent("_")
+			continue
+		}
+		refs[i] = r.nameFor(prefix)
+	}
+	return refs
 }
 
 func (r *rewrite) implicitMapKey(value expressionValue) *ast.CompositeLit {

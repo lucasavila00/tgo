@@ -26,20 +26,18 @@ func run() error {
 		}
 	}()
 	a := []N{9, 9}
-	{
-		var tgo1 N
-		for tgo1 = range 2 {
-			var tgo2 []N = a
-			var tgo3 int
-			var tgo4 error
-			tgo3, tgo4 = step("I")
-			if tgo4 != nil {
-				return tgo4
-			}
-			tgo2[tgo3] = tgo1
-			{
-				fmt.Print(a[1])
-			}
+	var tgo1 N
+	for tgo1 = range 2 {
+		var value_tgo2 []N = a
+		var value_tgo3 int
+		var error_tgo4 error
+		value_tgo3, error_tgo4 = step("I")
+		if error_tgo4 != nil {
+			return error_tgo4
+		}
+		value_tgo2[value_tgo3] = tgo1
+		{
+			fmt.Print(a[1])
 		}
 	}
 	return nil
