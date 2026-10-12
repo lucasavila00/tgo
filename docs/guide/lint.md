@@ -18,6 +18,35 @@ The file-size check includes fixture inputs and reference programs. It skips
 names ending exactly in `_tgo.go` or `_tgo_test.go`. Go lint and formatting exclude
 `tests/testdata`; normal test files outside that directory remain checked.
 
+## Compiler dependencies
+
+Depguard checks imports in the existing lint job. It also checks test files
+inside compiler packages. The rules follow the package responsibilities in the
+[driver](../../internal/driver/readme.md),
+[checker](../../internal/checker/readme.md),
+[frontend](../../internal/frontend/readme.md), and
+[lowering](../../internal/lowering/readme.md) documentation.
+
+The current dependency direction is:
+
+| Package | Compiler packages it uses |
+| --- | --- |
+| `cmd/tgo` | `pkg/transpiler` |
+| `pkg/transpiler` | `internal/driver`, `internal/lowering` |
+| `internal/driver` | `internal/checker`, `internal/lowering` |
+| `internal/lowering` | `internal/checker`, `internal/frontend`, lowering helpers |
+| `internal/lowering/source` | `internal/checker` |
+| `internal/checker` | `internal/frontend`, private checker packages |
+| `internal/checker/types` | `internal/controlflow`, private upstream packages |
+| `internal/frontend`, `internal/controlflow`, `internal/lowering/names` | None |
+
+All internal packages must stay independent of the public API and command.
+Compiler packages below the driver must not import the driver. The frontend
+and control flow analysis must not import the checker or lowering. The checker
+must not import lowering. The private checker and its generated upstream
+packages follow these same rules. These rules do not limit standard library
+imports or external dependencies.
+
 ## Run the checks
 
 Where local validation is permitted, install the pinned tool and use:
