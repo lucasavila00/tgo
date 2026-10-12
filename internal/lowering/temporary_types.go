@@ -19,13 +19,7 @@ func variable(name *ast.Ident, typ ast.Expr, value ast.Expr) ast.Stmt {
 }
 
 func (r *rewrite) typeOf(expr ast.Expr) types.Type {
-	if typ := r.functionState.temporaryTypes[expr]; typ != nil {
-		return typ
-	}
-	if origin := r.functionState.origins[expr]; origin != nil {
-		expr = origin
-	}
-	return r.input.source.inventory.Checked.TypesInfo.TypeOf(expr)
+	return r.value(expr).typ
 }
 
 // temporaryType names the checked type without using a hidden source binding.

@@ -48,9 +48,8 @@ type functionState struct {
 	collectionOutputs   map[string]*collectionDestination
 	frame               *returnFrame
 	suppressed          bool
-	origins             map[ast.Expr]ast.Expr
 	deferredBases       map[ast.Expr]bool
-	temporaryTypes      map[ast.Expr]types.Type
+	values              map[ast.Expr]expressionValue
 }
 
 func (r *rewrite) name() *ast.Ident {

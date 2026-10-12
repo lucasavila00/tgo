@@ -8,30 +8,33 @@ import (
 )
 
 func (r *rewrite) recordOrigin(expression, original ast.Expr) {
-	if r.functionState.origins == nil {
-		r.functionState.origins = make(map[ast.Expr]ast.Expr)
+	value := r.value(expression)
+	value.original = original
+	if !value.temporary {
+		value.typ = r.input.source.inventory.Checked.TypesInfo.TypeOf(original)
 	}
-	r.functionState.origins[expression] = original
+	r.recordValue(value)
 }
 
 func (r *rewrite) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
-	if r.functionState.temporaryTypes == nil {
-		r.functionState.temporaryTypes = make(map[ast.Expr]types.Type)
+	r.recordValue(expressionValue{expression: expression, typ: typ, original: original, temporary: true})
+}
+
+func (r *rewrite) recordValue(value expressionValue) {
+	if r.functionState.values == nil {
+		r.functionState.values = make(map[ast.Expr]expressionValue)
 	}
-	r.functionState.temporaryTypes[expression] = typ
-	r.recordOrigin(expression, original)
+	r.functionState.values[value.expression] = value
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	original := expr
-	if origin := r.functionState.origins[expr]; origin != nil {
-		original = origin
-	}
+	value := r.value(expr)
+	original := value.original
 	count := r.resultCount(original)
-	if r.functionState.temporaryTypes[expr] != nil {
+	if value.temporary {
 		count = 1
 	}
-	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && r.functionState.temporaryTypes[expr] == nil {
+	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && !value.temporary {
 		if pair, ok := r.input.source.inventory.Parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
 			if _, pointer := r.input.source.inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
 				return r.materializeKey(expr.(*ast.CompositeLit), literal)
@@ -39,7 +42,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 	}
 	typ := r.typeOf(expr)
-	if r.functionState.temporaryTypes[expr] == nil {
+	if !value.temporary {
 		expr = r.contextLiteral(expr, original)
 	}
 	if count == 0 {
