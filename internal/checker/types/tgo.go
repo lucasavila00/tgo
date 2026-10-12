@@ -79,26 +79,31 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 		args[i] = new(operand)
 		check.expr(nil, args[i], expression)
 		if i == 0 && args[i].isValid() {
-			var typ Type
-			switch {
-			case id == _Delete && !hasDots(call):
-				typ = deleteKeyType(args[i].typ())
-			case id == _Append && !hasDots(call):
-				typ, _ = sliceElem(args[i])
-			case id == _Copy || id == _Append && hasDots(call):
-				if elem, _ := sliceElem(args[i]); elem != nil {
-					typ = NewSlice(elem)
-					if Identical(elem, universeByte) {
-						check.sliceSourceContext = typ
-					}
-				}
-			}
+			typ := check.collectionArgumentType(call, id, args[i])
 			for _, value := range call.Args[1:] {
 				check.expressionType(value, typ)
 			}
 		}
 	}
 	return args
+}
+
+func (check *Checker) collectionArgumentType(call *ast.CallExpr, id builtinId, argument *operand) Type {
+	var typ Type
+	switch {
+	case id == _Delete && !hasDots(call):
+		typ = deleteKeyType(argument.typ())
+	case id == _Append && !hasDots(call):
+		typ, _ = sliceElem(argument)
+	case id == _Copy || id == _Append && hasDots(call):
+		if elem, _ := sliceElem(argument); elem != nil {
+			typ = NewSlice(elem)
+			if Identical(elem, universeByte) {
+				check.sliceSourceContext = typ
+			}
+		}
+	}
+	return typ
 }
 
 // numericBuiltinArguments lets another argument supply a terminating if's type.
@@ -183,17 +188,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 		x.mode_, x.typ_ = value, typ
 		return expression
 	}
-	// A byte-slice source of copy or append can instead be a string.
-	// Keep its own string type when every value branch produces a string.
-	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) && len(values) != 0 {
-		strings := true
-		for _, branch := range values {
-			strings = strings && allString(branch.typ())
-		}
-		if strings {
-			context = nil
-		}
-	}
+	context = check.conditionalContext(context, values)
 	if context != nil {
 		for _, branch := range values {
 			check.assignment(branch, context, "conditional expression branch")
@@ -232,6 +227,21 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	}
 	x.mode_, x.typ_ = value, typ
 	return expression
+}
+
+func (check *Checker) conditionalContext(context Type, values []*operand) Type {
+	// A byte-slice source of copy or append can instead be a string.
+	// Keep its own string type when every value branch produces a string.
+	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) && len(values) != 0 {
+		strings := true
+		for _, branch := range values {
+			strings = strings && allString(branch.typ())
+		}
+		if strings {
+			context = nil
+		}
+	}
+	return context
 }
 
 func untypedConditionalType(values []*operand) Type {
