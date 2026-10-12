@@ -47,164 +47,182 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	return r.withBreakExit(s, &copy, append(before, &copy), exit)
 }
 
-func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
-	return r.switchStatementResult(s, nil, false)
+func (r *rewrite) switchStatement(statement *ast.SwitchStmt) []ast.Stmt {
+	return r.switchStatementResult(statement, nil, false)
 }
 
-func (r *rewrite) valueSwitchStatement(s *ast.SwitchStmt, result *ast.Ident) []ast.Stmt {
-	return r.switchStatementResult(s, result, true)
+func (r *rewrite) valueSwitchStatement(statement *ast.SwitchStmt, resultVariable *ast.Ident) []ast.Stmt {
+	return r.switchStatementResult(statement, resultVariable, true)
 }
 
-func (r *rewrite) switchStatementResult(s *ast.SwitchStmt, result *ast.Ident, value bool) []ast.Stmt {
-	roots := []ast.Node{s.Init, s.Tag}
-	for _, stmt := range s.Body.List {
-		for _, expr := range stmt.(*ast.CaseClause).List {
-			roots = append(roots, expr)
+func (r *rewrite) switchStatementResult(statement *ast.SwitchStmt, resultVariable *ast.Ident, producesValue bool) []ast.Stmt {
+	headerNodes := []ast.Node{statement.Init, statement.Tag}
+	for _, caseStatement := range statement.Body.List {
+		for _, caseExpression := range caseStatement.(*ast.CaseClause).List {
+			headerNodes = append(headerNodes, caseExpression)
 		}
 	}
-	exit := r.prepareBreakExit(s, roots...)
-	copy := *s
-	var init []ast.Stmt
-	if s.Init != nil {
-		init = r.header(s.Init)
+	exit := r.prepareBreakExit(statement, headerNodes...)
+	rewrittenSwitch := *statement
+	var initializerStatements []ast.Stmt
+	if statement.Init != nil {
+		initializerStatements = r.header(statement.Init)
 	}
-	tagBefore, tag := r.expression(s.Tag)
-	var cases []*ast.CaseClause
-	changedCases := false
-	for _, statement := range s.Body.List {
-		clause := statement.(*ast.CaseClause)
-		for _, expr := range clause.List {
-			if r.contains(expr) {
-				changedCases = true
+	tagStatements, tagExpressions := r.expression(statement.Tag)
+	var caseClauses []*ast.CaseClause
+	casesNeedStatements := false
+	for _, caseStatement := range statement.Body.List {
+		originalCase := caseStatement.(*ast.CaseClause)
+		for _, caseExpression := range originalCase.List {
+			if r.contains(caseExpression) {
+				casesNeedStatements = true
 			}
 		}
-		caseClause := *clause
-		caseClause.Body = nil
-		if value {
-			branchResult := result
-			if !r.source.inventory.Checked.TypesInfo.TGoCases[clause] {
+		rewrittenCase := *originalCase
+		rewrittenCase.Body = nil
+		if producesValue {
+			branchResult := resultVariable
+			if !r.source.inventory.Checked.TypesInfo.TGoCases[originalCase] {
 				branchResult = nil
 			}
-			caseClause.Body = r.conditionalBlock(&ast.BlockStmt{List: clause.Body}, branchResult).List
+			branchBody := &ast.BlockStmt{List: originalCase.Body}
+			rewrittenCase.Body = r.conditionalBlock(branchBody, branchResult).List
 		} else {
-			for _, body := range clause.Body {
-				caseClause.Body = append(caseClause.Body, r.statement(body)...)
+			for _, bodyStatement := range originalCase.Body {
+				rewrittenCase.Body = append(rewrittenCase.Body, r.statement(bodyStatement)...)
 			}
 		}
-		cases = append(cases, &caseClause)
+		caseClauses = append(caseClauses, &rewrittenCase)
 	}
-	copy.Body = &ast.BlockStmt{}
-	if !changedCases {
-		if len(tag) != 0 {
-			copy.Tag = tag[0]
+	rewrittenSwitch.Body = &ast.BlockStmt{}
+	if !casesNeedStatements {
+		if len(tagExpressions) != 0 {
+			rewrittenSwitch.Tag = tagExpressions[0]
 		}
-		for _, clause := range cases {
-			copy.Body.List = append(copy.Body.List, clause)
+		for _, rewrittenCase := range caseClauses {
+			rewrittenSwitch.Body.List = append(rewrittenSwitch.Body.List, rewrittenCase)
 		}
-		if len(tagBefore) == 0 && len(init) <= 1 {
-			if len(init) != 0 {
-				copy.Init = init[0]
+		if len(tagStatements) == 0 && len(initializerStatements) <= 1 {
+			if len(initializerStatements) != 0 {
+				rewrittenSwitch.Init = initializerStatements[0]
 			}
-			return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
+			return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{&rewrittenSwitch}, exit)
 		}
-		copy.Init = nil
-		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(append(init, tagBefore...), &copy)}}, exit)
+		rewrittenSwitch.Init = nil
+		switchStatements := append(initializerStatements, tagStatements...)
+		switchStatements = append(switchStatements, &rewrittenSwitch)
+		switchBlock := &ast.BlockStmt{List: switchStatements}
+		return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{switchBlock}, exit)
 	}
-	setup := append(init, tagBefore...)
+	selectionStatements := append(initializerStatements, tagStatements...)
 	var tagValue ast.Expr
-	if len(tag) != 0 {
-		tagValue = tag[0]
-		if tv := r.source.inventory.Checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
-			saved, values := r.save(tagValue)
-			setup = append(setup, saved...)
-			tagValue = values[0]
+	if len(tagExpressions) != 0 {
+		tagValue = tagExpressions[0]
+		tagType := r.source.inventory.Checked.TypesInfo.Types[statement.Tag]
+		if tagType.Value == nil {
+			savedTagStatements, savedTagValues := r.save(tagValue)
+			selectionStatements = append(selectionStatements, savedTagStatements...)
+			tagValue = savedTagValues[0]
 		}
 	}
-	selected := r.name()
-	setup = append(setup, variable(selected, r.temporaryType(types.Typ[types.Int], firstExpression(s)), integer(-1)))
+	selectedCase := r.name()
+	selectionStatements = append(selectionStatements, variable(selectedCase, r.temporaryType(types.Typ[types.Int], firstExpression(statement)), integer(-1)))
 	defaultCase := -1
-	for i, clause := range cases {
-		if len(clause.List) == 0 {
+	for i, rewrittenCase := range caseClauses {
+		if len(rewrittenCase.List) == 0 {
 			defaultCase = i
 		}
-		for _, expr := range clause.List {
-			before, values := r.expression(expr)
-			condition := values[0]
+		for _, caseExpression := range rewrittenCase.List {
+			operandStatements, operandValues := r.expression(caseExpression)
+			condition := operandValues[0]
 			if tagValue != nil {
 				condition = &ast.BinaryExpr{X: tagValue, Op: token.EQL, Y: condition}
 			}
-			body := append(before, &ast.IfStmt{Cond: condition, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{selected}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(i)}}}}})
-			setup = append(setup, &ast.IfStmt{Cond: &ast.BinaryExpr{X: selected, Op: token.EQL, Y: integer(-1)}, Body: &ast.BlockStmt{List: body}})
+			selectCase := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(i)}}
+			matchingCase := &ast.IfStmt{Cond: condition, Body: &ast.BlockStmt{List: []ast.Stmt{selectCase}}}
+			caseBody := append(operandStatements, matchingCase)
+			noCaseSelected := &ast.BinaryExpr{X: selectedCase, Op: token.EQL, Y: integer(-1)}
+			checkCase := &ast.IfStmt{Cond: noCaseSelected, Body: &ast.BlockStmt{List: caseBody}}
+			selectionStatements = append(selectionStatements, checkCase)
 		}
-		clause.List = []ast.Expr{integer(i)}
-		copy.Body.List = append(copy.Body.List, clause)
+		rewrittenCase.List = []ast.Expr{integer(i)}
+		rewrittenSwitch.Body.List = append(rewrittenSwitch.Body.List, rewrittenCase)
 	}
 	if defaultCase >= 0 {
-		setup = append(setup, &ast.IfStmt{Cond: &ast.BinaryExpr{X: selected, Op: token.EQL, Y: integer(-1)}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{selected}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(defaultCase)}}}}})
+		selectDefault := &ast.AssignStmt{Lhs: []ast.Expr{selectedCase}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(defaultCase)}}
+		noCaseSelected := &ast.BinaryExpr{X: selectedCase, Op: token.EQL, Y: integer(-1)}
+		defaultSelection := &ast.IfStmt{Cond: noCaseSelected, Body: &ast.BlockStmt{List: []ast.Stmt{selectDefault}}}
+		selectionStatements = append(selectionStatements, defaultSelection)
 	}
-	copy.Init = nil
-	copy.Tag = selected
-	return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(setup, &copy)}}, exit)
+	rewrittenSwitch.Init = nil
+	rewrittenSwitch.Tag = selectedCase
+	switchStatements := append(selectionStatements, &rewrittenSwitch)
+	switchBlock := &ast.BlockStmt{List: switchStatements}
+	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{switchBlock}, exit)
 }
 
-func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
-	return r.typeSwitchStatementResult(s, nil, false)
+func (r *rewrite) typeSwitchStatement(statement *ast.TypeSwitchStmt) []ast.Stmt {
+	return r.typeSwitchStatementResult(statement, nil, false)
 }
 
-func (r *rewrite) valueTypeSwitchStatement(s *ast.TypeSwitchStmt, result *ast.Ident) []ast.Stmt {
-	return r.typeSwitchStatementResult(s, result, true)
+func (r *rewrite) valueTypeSwitchStatement(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident) []ast.Stmt {
+	return r.typeSwitchStatementResult(statement, resultVariable, true)
 }
 
-func (r *rewrite) typeSwitchStatementResult(s *ast.TypeSwitchStmt, result *ast.Ident, value bool) []ast.Stmt {
-	exit := r.prepareBreakExit(s, s.Init, s.Assign)
-	copy := *s
-	var before []ast.Stmt
-	if s.Init != nil {
-		before = r.header(s.Init)
+func (r *rewrite) typeSwitchStatementResult(statement *ast.TypeSwitchStmt, resultVariable *ast.Ident, producesValue bool) []ast.Stmt {
+	exit := r.prepareBreakExit(statement, statement.Init, statement.Assign)
+	rewrittenSwitch := *statement
+	var headerStatements []ast.Stmt
+	if statement.Init != nil {
+		headerStatements = r.header(statement.Init)
 	}
 	var assertion *ast.TypeAssertExpr
-	switch assign := s.Assign.(type) {
+	switch guardStatement := statement.Assign.(type) {
 	case *ast.ExprStmt:
-		assertion = assign.X.(*ast.TypeAssertExpr)
+		assertion = guardStatement.X.(*ast.TypeAssertExpr)
 	case *ast.AssignStmt:
-		assertion = assign.Rhs[0].(*ast.TypeAssertExpr)
+		assertion = guardStatement.Rhs[0].(*ast.TypeAssertExpr)
 	}
-	setup, values := r.expression(assertion.X)
-	before = append(before, setup...)
+	guardStatements, guardValues := r.expression(assertion.X)
+	headerStatements = append(headerStatements, guardStatements...)
 	typeAssertion := *assertion
-	typeAssertion.X = values[0]
-	switch assign := s.Assign.(type) {
+	typeAssertion.X = guardValues[0]
+	switch guardStatement := statement.Assign.(type) {
 	case *ast.ExprStmt:
-		expressionStatement := *assign
+		expressionStatement := *guardStatement
 		expressionStatement.X = &typeAssertion
-		copy.Assign = &expressionStatement
+		rewrittenSwitch.Assign = &expressionStatement
 	case *ast.AssignStmt:
-		assignmentStatement := *assign
+		assignmentStatement := *guardStatement
 		assignmentStatement.Rhs = []ast.Expr{&typeAssertion}
-		copy.Assign = &assignmentStatement
+		rewrittenSwitch.Assign = &assignmentStatement
 	}
-	copy.Body = &ast.BlockStmt{}
-	for _, statement := range s.Body.List {
-		clause := *statement.(*ast.CaseClause)
-		clause.Body = nil
-		if value {
-			branchResult := result
-			if !r.source.inventory.Checked.TypesInfo.TGoCases[statement.(*ast.CaseClause)] {
+	rewrittenSwitch.Body = &ast.BlockStmt{}
+	for _, caseStatement := range statement.Body.List {
+		originalCase := caseStatement.(*ast.CaseClause)
+		rewrittenCase := *originalCase
+		rewrittenCase.Body = nil
+		if producesValue {
+			branchResult := resultVariable
+			if !r.source.inventory.Checked.TypesInfo.TGoCases[originalCase] {
 				branchResult = nil
 			}
-			clause.Body = r.conditionalBlock(&ast.BlockStmt{List: statement.(*ast.CaseClause).Body}, branchResult).List
+			branchBody := &ast.BlockStmt{List: originalCase.Body}
+			rewrittenCase.Body = r.conditionalBlock(branchBody, branchResult).List
 		} else {
-			for _, body := range statement.(*ast.CaseClause).Body {
-				clause.Body = append(clause.Body, r.statement(body)...)
+			for _, bodyStatement := range originalCase.Body {
+				rewrittenCase.Body = append(rewrittenCase.Body, r.statement(bodyStatement)...)
 			}
 		}
-		copy.Body.List = append(copy.Body.List, &clause)
+		rewrittenSwitch.Body.List = append(rewrittenSwitch.Body.List, &rewrittenCase)
 	}
-	if len(before) != 0 {
-		copy.Init = nil
-		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}, exit)
+	if len(headerStatements) != 0 {
+		rewrittenSwitch.Init = nil
+		switchStatements := append(headerStatements, &rewrittenSwitch)
+		switchBlock := &ast.BlockStmt{List: switchStatements}
+		return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{switchBlock}, exit)
 	}
-	return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
+	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{&rewrittenSwitch}, exit)
 }
 
 func firstExpression(node ast.Node) ast.Expr {

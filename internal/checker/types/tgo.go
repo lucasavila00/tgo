@@ -618,57 +618,59 @@ func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*
 	if statement, ok := statement.(*ast.IfStmt); ok {
 		return check.conditionalBranches(statement, context)
 	}
-	var body *ast.BlockStmt
+	var switchBody *ast.BlockStmt
 	switch statement := statement.(type) {
 	case *ast.SwitchStmt:
-		body = statement.Body
+		switchBody = statement.Body
 	case *ast.TypeSwitchStmt:
-		body = statement.Body
+		switchBody = statement.Body
 	}
 	if check.conditionalCases == nil {
 		check.conditionalCases = make(map[*ast.CaseClause]*conditionalCase)
 	}
-	hasDefault := false
-	for _, statement := range body.List {
-		clause := statement.(*ast.CaseClause)
-		hasDefault = hasDefault || clause.List == nil
+	hasDefaultCase := false
+	for _, caseStatement := range switchBody.List {
+		clause := caseStatement.(*ast.CaseClause)
+		hasDefaultCase = hasDefaultCase || clause.List == nil
 		check.conditionalCases[clause] = &conditionalCase{context: context}
 	}
-	if !hasDefault {
+	if !hasDefaultCase {
 		check.error(statement, InvalidSyntaxTree, "switch expression requires default")
 	}
-	ast.Walk(valueSwitchBreakVisitor{check: check, depth: -1}, statement)
+	// The first visited switch is the value switch, not a permitted break target.
+	ast.Walk(valueSwitchBreakVisitor{check: check, nestedBreakTargets: -1}, statement)
 	check.stmt(check.statementContext, statement)
-	var values []*operand
-	for _, statement := range body.List {
-		clause := statement.(*ast.CaseClause)
-		values = append(values, check.conditionalCases[clause].values...)
+	var branchValues []*operand
+	for _, caseStatement := range switchBody.List {
+		clause := caseStatement.(*ast.CaseClause)
+		branchValues = append(branchValues, check.conditionalCases[clause].values...)
 		delete(check.conditionalCases, clause)
 	}
-	if !hasDefault {
-		values = append(values, &operand{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]})
+	if !hasDefaultCase {
+		invalidBranch := &operand{expr: &ast.BadExpr{From: switchBody.Pos()}, typ_: Typ[Invalid]}
+		branchValues = append(branchValues, invalidBranch)
 	}
-	return values
+	return branchValues
 }
 
 func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*operand {
-	previous := check.statementContext
+	enclosingContext := check.statementContext
 	check.statementContext &^= breakOk | fallthroughOk | finalSwitchCase
-	defer func() { check.statementContext = previous }()
-	body := &ast.BlockStmt{Lbrace: clause.Colon, List: clause.Body, Rbrace: clause.End()}
-	values := check.conditionalBlockValues(body, context)
+	defer func() { check.statementContext = enclosingContext }()
+	caseBody := &ast.BlockStmt{Lbrace: clause.Colon, List: clause.Body, Rbrace: clause.End()}
+	branchValues := check.conditionalBlockValues(caseBody, context)
 	if check.Info != nil {
 		if check.TGoCases == nil {
 			check.TGoCases = make(map[*ast.CaseClause]bool)
 		}
-		check.TGoCases[clause] = check.TGoBranches[body]
+		check.TGoCases[clause] = check.TGoBranches[caseBody]
 	}
-	return values
+	return branchValues
 }
 
 type valueSwitchBreakVisitor struct {
-	check *Checker
-	depth int
+	check              *Checker
+	nestedBreakTargets int
 }
 
 func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
@@ -681,9 +683,9 @@ func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
 			return nil
 		}
 	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
-		visitor.depth++
+		visitor.nestedBreakTargets++
 	case *ast.BranchStmt:
-		if node.Tok == token.BREAK && node.Label == nil && visitor.depth == 0 {
+		if node.Tok == token.BREAK && node.Label == nil && visitor.nestedBreakTargets == 0 {
 			visitor.check.error(node, InvalidSyntaxTree, "break cannot target a switch expression")
 		}
 	}

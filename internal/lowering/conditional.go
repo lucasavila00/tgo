@@ -36,20 +36,20 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 }
 
 func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) ([]ast.Stmt, []ast.Expr) {
-	result := r.name()
-	typ := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
-	declaration := variable(result, r.temporaryType(typ, call), nil)
+	resultVariable := r.name()
+	resultType := types.Default(r.source.inventory.Checked.TypesInfo.TypeOf(call))
+	declaration := variable(resultVariable, r.temporaryType(resultType, call), nil)
 	if r.temporaryTypes == nil {
 		r.temporaryTypes = make(map[ast.Expr]types.Type)
 	}
 	if r.origins == nil {
 		r.origins = make(map[ast.Expr]ast.Expr)
 	}
-	r.temporaryTypes[result] = typ
-	r.origins[result] = call
-	body := r.valueStatement(statement, result)
+	r.temporaryTypes[resultVariable] = resultType
+	r.origins[resultVariable] = call
+	branchStatements := r.valueStatement(statement, resultVariable)
 	r.lowered[call] = true
-	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}
+	return append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable}
 }
 
 func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {

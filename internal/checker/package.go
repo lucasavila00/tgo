@@ -82,8 +82,14 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	}
 	loader.checking[metadata.ID] = true
 	defer delete(loader.checking, metadata.ID)
-	pkg := &Package{Fset: loader.fset, TypesInfo: newInfo(), GoFiles: metadata.GoFiles,
-		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]ast.Stmt)}
+	pkg := &Package{
+		Fset:           loader.fset,
+		TypesInfo:      newInfo(),
+		GoFiles:        metadata.GoFiles,
+		Operations:     make(map[string]types.TGoOperation),
+		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
+		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
+	}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
 		filenames = metadata.GoFiles
@@ -200,8 +206,15 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkg := &Package{Fset: metadata.Fset, Syntax: metadata.Syntax, GoFiles: metadata.GoFiles,
-		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]ast.Stmt)}
+	pkg := &Package{
+		Fset:           metadata.Fset,
+		Syntax:         metadata.Syntax,
+		GoFiles:        metadata.GoFiles,
+		TypesInfo:      newInfo(),
+		Operations:     make(map[string]types.TGoOperation),
+		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
+		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
+	}
 	loader.fset = metadata.Fset
 	return loader.check(metadata, pkg)
 }

@@ -33,7 +33,15 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 			case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.CompositeLit, *ast.KeyValueExpr, *ast.SliceExpr:
 				syntaxOperand = true
 			}
-			if offset+2 <= len(source) && (source[offset:offset+2] == "if" || offset+6 <= len(source) && source[offset:offset+6] == "switch") && (candidates[offset] || syntaxOperand) && offset > start {
+			startsConditional := false
+			if offset+2 <= len(source) {
+				startsConditional = source[offset:offset+2] == "if"
+			}
+			if offset+6 <= len(source) {
+				startsConditional = startsConditional || source[offset:offset+6] == "switch"
+			}
+			canStartOperand := candidates[offset] || syntaxOperand
+			if startsConditional && canStartOperand && offset > start {
 				start = offset
 			}
 		}
