@@ -11,7 +11,8 @@ import (
 // shortReturnStatement supplies omitted results without a function wrapper.
 func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record frontend.ShortReturn) []ast.Stmt {
 	returnMarker := statement.Results[0].(*ast.CallExpr)
-	statements, returnValues := r.operands(returnMarker.Args)
+	statementsEvaluation := r.operands(returnMarker.Args)
+	statements, returnValues := statementsEvaluation.statements, statementsEvaluation.expressions()
 	if record.ZeroSuccess {
 		if !r.functionState.frame.prepared {
 			r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)

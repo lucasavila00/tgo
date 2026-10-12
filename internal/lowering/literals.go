@@ -117,7 +117,7 @@ func (r *rewrite) contextMapLiteral(value,
 }
 
 // materializeKey constructs a struct or array key without hashing it early.
-func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) materializeKey(value, original *ast.CompositeLit) expressionResult {
 	var elements []ast.Expr
 	for _, element := range value.Elts {
 		if item, ok := element.(*ast.KeyValueExpr); ok {
@@ -134,7 +134,8 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 			values = append(values, element)
 			continue
 		}
-		saveStatements, refs := r.save(element)
+		saveEvaluation := r.save(r.value(element))
+		saveStatements, refs := saveEvaluation.statements, saveEvaluation.expressions()
 		statements = append(statements, saveStatements...)
 		values = append(values, refs[0])
 	}
@@ -164,7 +165,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 		statements = append(statements, &ast.AssignStmt{Lhs: []ast.Expr{place}, Tok: token.ASSIGN,
 			Rhs: []ast.Expr{values[i]}})
 	}
-	return statements, []ast.Expr{key}
+	return r.result(statements, []ast.Expr{key})
 }
 
 func (r *rewrite) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr {

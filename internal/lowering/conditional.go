@@ -32,19 +32,20 @@ func (r *rewrite) packageInitializer(expression ast.Expr) ast.Expr {
 	} else {
 		results.List = append(results.List, &ast.Field{Type: initializer.temporaryType(typ, expression)})
 	}
-	before, values := initializer.expression(expression)
+	beforeEvaluation := initializer.expression(expression)
+	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
 	body := &ast.BlockStmt{List: append(before, &ast.ReturnStmt{Results: values})}
 	return &ast.CallExpr{Fun: &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{}, Results: results}, Body: body}}
 }
 
-func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) conditionalCall(call *ast.CallExpr, statement ast.Stmt) expressionResult {
 	resultVariable := r.name()
 	resultType := types.Default(r.input.source.inventory.Checked.TypesInfo.TypeOf(call))
 	declaration := variable(resultVariable, r.temporaryType(resultType, call), nil)
 	r.recordTemporary(resultVariable, resultType, call)
 	branchStatements := r.valueStatement(statement, resultVariable)
 	r.request.lowered[call] = true
-	return append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable}
+	return r.result(append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable})
 }
 
 func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
@@ -65,7 +66,8 @@ func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident)
 	if statement.Init != nil {
 		initStatements = r.header(statement.Init)
 	}
-	conditionStatements, conditionValues := r.expression(statement.Cond)
+	conditionEvaluation := r.expression(statement.Cond)
+	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
 	output.Cond = conditionValues[0]
 	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
 		if len(initStatements) != 0 {
@@ -155,7 +157,8 @@ func (r *rewrite) conditionalLabeledTail(statement *ast.LabeledStmt, result *ast
 
 func (r *rewrite) conditionalExpressionTail(statement *ast.ExprStmt, result *ast.Ident) []ast.Stmt {
 	if tv := r.input.source.inventory.Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
-		statements, values := r.expression(statement.X)
+		evaluation := r.expression(statement.X)
+		statements, values := evaluation.statements, evaluation.expressions()
 		if result == nil {
 			for _, value := range values {
 				if tv.Value != nil {

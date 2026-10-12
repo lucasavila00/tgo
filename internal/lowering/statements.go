@@ -62,7 +62,8 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		return r.selectStatement(s)
 	case *ast.SendStmt:
 		output := *s
-		statements, values := r.operands([]ast.Expr{s.Chan, s.Value})
+		statementsEvaluation := r.operands([]ast.Expr{s.Chan, s.Value})
+		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		output.Chan = values[0]
 		output.Value = values[1]
 		return append(statements, &output)
@@ -73,7 +74,8 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 			return r.shortReturnStatement(s, record)
 		}
 		output := *s
-		statements, values := r.operands(s.Results)
+		statementsEvaluation := r.operands(s.Results)
+		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		output.Results = values
 		return append(statements, &output)
 	case *ast.AssignStmt:
@@ -91,12 +93,14 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		return r.forStatement(s)
 	case *ast.GoStmt:
 		output := *s
-		statements, values := r.expression(s.Call)
+		statementsEvaluation := r.expression(s.Call)
+		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		output.Call = values[0].(*ast.CallExpr)
 		return append(statements, &output)
 	case *ast.DeferStmt:
 		output := *s
-		statements, values := r.expression(s.Call)
+		statementsEvaluation := r.expression(s.Call)
+		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		output.Call = values[0].(*ast.CallExpr)
 		return append(statements, &output)
 	case *ast.LabeledStmt:

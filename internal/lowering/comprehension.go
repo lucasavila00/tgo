@@ -15,8 +15,7 @@ type collectionDestination struct {
 	typ    types.Type
 }
 
-func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Comprehension) ([]ast.Stmt,
-	[]ast.Expr) {
+func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Comprehension) expressionResult {
 	if r.functionState.comprehensionRanges == nil {
 		r.functionState.comprehensionRanges = make(map[*ast.RangeStmt]bool)
 		r.functionState.collectionOutputs = make(map[string]*collectionDestination)
@@ -45,13 +44,13 @@ func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Compreh
 		output = append(output, r.block(record.Body))
 	}
 	r.request.lowered[call] = true
-	return output, []ast.Expr{result}
+	return r.result(output, []ast.Expr{result})
 }
 
-func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) ([]ast.Stmt,
-	[]ast.Expr) {
+func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectionDestination) expressionResult {
 	r.request.lowered[call] = true
-	before, values := r.operands(call.Args)
+	beforeEvaluation := r.operands(call.Args)
+	before, values := beforeEvaluation.statements, beforeEvaluation.expressions()
 	keyType, element := types.ComprehensionTypes(destination.typ)
 	if keyType == nil {
 		value := r.name()
@@ -59,10 +58,10 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 		if destination.index != nil {
 			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result,
 				Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
-			return before, nil
+			return r.result(before, nil)
 		}
 		if destination.grow != nil {
-			return append(before, r.growComprehension(destination, value)...), nil
+			return r.result(append(before, r.growComprehension(destination, value)...), nil)
 		}
 		appendCall := &ast.CallExpr{Fun: ast.NewIdent("append"), Args: []ast.Expr{destination.result, value}}
 		before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{destination.result}, Tok: token.ASSIGN,
@@ -75,7 +74,7 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 			Index: key}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 	}
 
-	return before, nil
+	return r.result(before, nil)
 }
 
 // builtinHidden checks source declarations before emitting a builtin name.

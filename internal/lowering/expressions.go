@@ -7,53 +7,49 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) expression(expr ast.Expr) expressionResult {
 	if expr == nil {
-		return nil, nil
+		return r.result(nil, nil)
 	}
 	if !r.contains(expr) {
-		return nil, []ast.Expr{expr}
+		return r.result(nil, []ast.Expr{expr})
 	}
-	if statements, values, special := r.specialExpression(expr); special {
-		return statements, values
+	if result, special := r.specialExpression(expr); special {
+		return result
 	}
 	if parenthesized, ok := expr.(*ast.ParenExpr); ok {
-		statements, values := r.expression(parenthesized.X)
-		if len(values) != 1 {
-			return statements, values
+		inner := r.expression(parenthesized.X)
+		if len(inner.values) != 1 {
+			return inner
 		}
 		output := *parenthesized
-		output.X = values[0]
-		return r.finishExpression(expr, statements, &output)
+		output.X = inner.values[0].expression
+		return r.finishExpression(expr, inner.statements, &output)
 	}
 	statements, result := r.expressionSyntax(expr)
 	return r.finishExpression(expr, statements, result)
 }
 
-func (r *rewrite) specialExpression(expr ast.Expr) ([]ast.Stmt, []ast.Expr, bool) {
+func (r *rewrite) specialExpression(expr ast.Expr) (expressionResult, bool) {
 	if operation, ok := r.input.propagations[expr]; ok && !r.functionState.suppressed {
-		statements, values := r.propagatedCall(expr.(*ast.CallExpr), operation, false)
-		return statements, values, true
+		return r.propagatedCall(expr.(*ast.CallExpr), operation, false), true
 	}
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
-		return nil, nil, false
+		return expressionResult{}, false
 	}
 	if record := r.input.comprehensions[call]; record != nil {
-		statements, values := r.comprehensionCall(call, record)
-		return statements, values, true
+		return r.comprehensionCall(call, record), true
 	}
 	if identifier, ok := call.Fun.(*ast.Ident); ok {
 		if destination := r.functionState.collectionOutputs[identifier.Name]; destination != nil {
-			statements, values := r.comprehensionOutput(call, destination)
-			return statements, values, true
+			return r.comprehensionOutput(call, destination), true
 		}
 	}
 	if statement := r.input.conditionals[call]; statement != nil {
-		statements, values := r.conditionalCall(call, statement)
-		return statements, values, true
+		return r.conditionalCall(call, statement), true
 	}
-	return nil, nil, false
+	return expressionResult{}, false
 }
 
 func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
@@ -72,7 +68,8 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		call := *e
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
 		var values []ast.Expr
-		before, values = r.operands(operands)
+		beforeEvaluation := r.operands(operands)
+		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
 		call.Fun = values[0]
 		call.Args = values[1:]
 		result = &call
@@ -83,7 +80,8 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 			break
 		}
 		var values []ast.Expr
-		before, values = r.expression(e.X)
+		beforeEvaluation := r.expression(e.X)
+		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
 		unary.X = values[0]
 		result = &unary
 	case *ast.BinaryExpr:
@@ -95,19 +93,22 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	case *ast.StarExpr:
 		dereference := *e
 		var values []ast.Expr
-		before, values = r.expression(e.X)
+		beforeEvaluation := r.expression(e.X)
+		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
 		dereference.X = values[0]
 		result = &dereference
 	case *ast.TypeAssertExpr:
 		assertion := *e
 		var values []ast.Expr
-		before, values = r.expression(e.X)
+		beforeEvaluation := r.expression(e.X)
+		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
 		assertion.X = values[0]
 		result = &assertion
 	case *ast.IndexListExpr:
 		indexList := *e
 		var values []ast.Expr
-		before, values = r.expression(e.X)
+		beforeEvaluation := r.expression(e.X)
+		before, values = beforeEvaluation.statements, beforeEvaluation.expressions()
 		indexList.X = values[0]
 		result = &indexList
 	case *ast.SliceExpr:
@@ -118,25 +119,25 @@ func (r *rewrite) expressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	return before, result
 }
 
-func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.Expr) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) finishExpression(expr ast.Expr, before []ast.Stmt, result ast.Expr) expressionResult {
 	if result != expr {
 		r.recordOrigin(result, expr)
 	}
 	if expr == r.input.target && expr != r.functionState.suppressedRoot {
 		r.request.inserted = true
 		if r.functionName(expr) {
-			return append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result}
+			return r.result(append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result})
 		}
 		if tv := r.input.source.inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
-			return append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result}
+			return r.result(append(before, r.input.after([]ast.Expr{result})...), []ast.Expr{result})
 		}
-		// Read types from the original expression, not from the new tree.
-		saved, refs := r.save(result)
-		before = append(before, saved...)
-		before = append(before, r.input.after(refs)...)
-		return before, refs
+		saved := r.save(r.value(result))
+		before = append(before, saved.statements...)
+		before = append(before, r.input.after(saved.expressions())...)
+		saved.statements = before
+		return saved
 	}
-	return before, []ast.Expr{result}
+	return r.result(before, []ast.Expr{result})
 }
 
 func (r *rewrite) functionName(expr ast.Expr) bool {

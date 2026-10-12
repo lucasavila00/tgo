@@ -10,7 +10,8 @@ import (
 func (r *rewrite) forStatement(s *ast.ForStmt) []ast.Stmt {
 	output := *s
 	output.Body = r.block(s.Body)
-	conditionStatements, conditionValues := r.expression(s.Cond)
+	conditionEvaluation := r.expression(s.Cond)
+	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
 	var postStatements []ast.Stmt
 	if s.Post != nil {
 		postStatements = r.header(s.Post)
