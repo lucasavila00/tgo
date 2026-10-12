@@ -10,7 +10,8 @@ func (r *rewrite) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 	if e.Op == token.LAND || e.Op == token.LOR {
 		return r.logicalExpression(e)
 	}
-	statements, values := r.operands([]ast.Expr{e.X, e.Y})
+	statementsEvaluation := r.operands([]ast.Expr{e.X, e.Y})
+	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 	output := *e
 	output.X = values[0]
 	output.Y = values[1]
@@ -18,8 +19,10 @@ func (r *rewrite) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 }
 
 func (r *rewrite) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
-	leftStatements, leftValues := r.expression(expression.X)
-	rightStatements, rightValues := r.expression(expression.Y)
+	leftEvaluation := r.expression(expression.X)
+	leftStatements, leftValues := leftEvaluation.statements, leftEvaluation.expressions()
+	rightEvaluation := r.expression(expression.Y)
+	rightStatements, rightValues := rightEvaluation.statements, rightEvaluation.expressions()
 
 	output := *expression
 	output.X = leftValues[0]
@@ -55,7 +58,8 @@ func (r *rewrite) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr)
 			return statements, &output
 		}
 	}
-	statements, values := r.expression(e.X)
+	statementsEvaluation := r.expression(e.X)
+	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 	output.X = values[0]
 	return statements, &output
 }
@@ -72,13 +76,15 @@ func (r *rewrite) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	}
 	if r.addressableArray(e.X) && r.contains(e.Index) {
 		statements, base := r.arrayBase(e.X)
-		indexStatements, index := r.expression(e.Index)
+		indexEvaluation := r.expression(e.Index)
+		indexStatements, index := indexEvaluation.statements, indexEvaluation.expressions()
 		statements = append(statements, indexStatements...)
 		output.X = base
 		output.Index = index[0]
 		return statements, &output
 	}
-	statements, values := r.operands([]ast.Expr{e.X, e.Index})
+	statementsEvaluation := r.operands([]ast.Expr{e.X, e.Index})
+	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 	output.X = values[0]
 	output.Index = values[1]
 	return statements, &output
@@ -103,11 +109,13 @@ func (r *rewrite) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 			input = append(input, bound)
 		}
 	}
-	operandStatements, values := r.operands(input)
+	operandEvaluation := r.operands(input)
+	operandStatements, values := operandEvaluation.statements, operandEvaluation.expressions()
 	statements = append(statements, operandStatements...)
 	if mixed {
 		for i, value := range values {
-			boundStatements, savedBounds := r.save(value)
+			boundEvaluation := r.save(r.value(value))
+			boundStatements, savedBounds := boundEvaluation.statements, boundEvaluation.expressions()
 			statements = append(statements, boundStatements...)
 			values[i] = savedBounds[0]
 		}
@@ -140,7 +148,8 @@ func (r *rewrite) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 			input = append(input, element)
 		}
 	}
-	statements, values := r.operands(input)
+	statementsEvaluation := r.operands(input)
+	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 	output.Elts = make([]ast.Expr, len(e.Elts))
 	operandIndex := 0
 	for elementIndex, element := range e.Elts {

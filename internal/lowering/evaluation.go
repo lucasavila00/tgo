@@ -27,8 +27,8 @@ func (r *rewrite) recordValue(value expressionValue) {
 	r.functionState.values[value.expression] = value
 }
 
-func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	value := r.value(expr)
+func (r *rewrite) save(value expressionValue) expressionResult {
+	expr := value.expression
 	original := value.original
 	count := r.resultCount(original)
 	if value.temporary {
@@ -41,12 +41,12 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			}
 		}
 	}
-	typ := r.typeOf(expr)
+	typ := value.typ
 	if !value.temporary {
 		expr = r.contextLiteral(expr, original)
 	}
 	if count == 0 {
-		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
+		return r.result([]ast.Stmt{&ast.ExprStmt{X: expr}}, nil)
 	}
 	refs := make([]ast.Expr, count)
 	for i := range refs {
@@ -71,9 +71,11 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		statements = append(statements, &ast.AssignStmt{Lhs: refs, Tok: token.ASSIGN, Rhs: []ast.Expr{expr}})
 	}
 	if count == 1 && r.untypedBoolean(original) {
-		return statements, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+		comparison := &ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}
+		r.recordValue(expressionValue{expression: comparison, typ: types.Typ[types.UntypedBool], original: original})
+		return r.result(statements, []ast.Expr{comparison})
 	}
-	return statements, refs
+	return r.result(statements, refs)
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
@@ -104,33 +106,32 @@ func (r *rewrite) resultCount(expr ast.Expr) int {
 }
 
 // operands saves earlier values before a later operand adds statements.
-func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	var statements []ast.Stmt
-	var values []ast.Expr
-	for _, expr := range input {
-		operandStatements, operandValues := r.expression(expr)
-		if len(operandStatements) != 0 {
-			var saveStatements []ast.Stmt
-			saveStatements, values = r.savePreviousOperands(values)
-			statements = append(statements, saveStatements...)
-			statements = append(statements, operandStatements...)
+func (r *rewrite) operands(input []ast.Expr) expressionResult {
+	var result expressionResult
+	for _, expression := range input {
+		operand := r.expression(expression)
+		if len(operand.statements) != 0 {
+			saved := r.savePreviousOperands(result.values)
+			result.values = saved.values
+			result.statements = append(result.statements, saved.statements...)
+			result.statements = append(result.statements, operand.statements...)
 		}
-		values = append(values, operandValues...)
+		result.values = append(result.values, operand.values...)
 	}
-	return statements, values
+	return result
 }
 
-func (r *rewrite) savePreviousOperands(values []ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	var statements []ast.Stmt
+func (r *rewrite) savePreviousOperands(values []expressionValue) expressionResult {
+	result := expressionResult{values: values}
 	for i, value := range values {
-		if !r.operandNeedsSaving(value) {
+		if !r.operandNeedsSaving(value.expression) {
 			continue
 		}
-		saveStatements, savedValues := r.save(value)
-		statements = append(statements, saveStatements...)
-		values[i] = savedValues[0]
+		saved := r.save(value)
+		result.statements = append(result.statements, saved.statements...)
+		result.values[i] = saved.values[0]
 	}
-	return statements, values
+	return result
 }
 
 func (r *rewrite) operandNeedsSaving(value ast.Expr) bool {

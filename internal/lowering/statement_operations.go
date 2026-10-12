@@ -7,7 +7,8 @@ import (
 )
 
 func (r *rewrite) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
-	statements, values := r.expression(s.X)
+	statementsEvaluation := r.expression(s.X)
+	statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
@@ -44,7 +45,8 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 			output.Lhs[i] = place
 		}
 	}
-	valueStatements, values := r.operands(s.Rhs)
+	valueEvaluation := r.operands(s.Rhs)
+	valueStatements, values := valueEvaluation.statements, valueEvaluation.expressions()
 	statements = append(statements, valueStatements...)
 	output.Rhs = values
 	deferred := false
@@ -58,7 +60,8 @@ func (r *rewrite) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 				savedValues = append(savedValues, value)
 				continue
 			}
-			saveStatements, saved := r.save(value)
+			saveEvaluation := r.save(r.value(value))
+			saveStatements, saved := saveEvaluation.statements, saveEvaluation.expressions()
 			statements = append(statements, saveStatements...)
 			savedValues = append(savedValues, saved...)
 		}
@@ -77,7 +80,8 @@ func (r *rewrite) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 			continue
 		}
 		valueSpec := *value
-		statements, values := r.operands(value.Values)
+		statementsEvaluation := r.operands(value.Values)
+		statements, values := statementsEvaluation.statements, statementsEvaluation.expressions()
 		valueSpec.Values = values
 		output = append(output, statements...)
 		output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{&valueSpec}}})
@@ -100,7 +104,8 @@ func (r *rewrite) ifStatement(s *ast.IfStmt) []ast.Stmt {
 	if s.Init != nil {
 		initStatements = r.header(s.Init)
 	}
-	conditionStatements, conditionValues := r.expression(s.Cond)
+	conditionEvaluation := r.expression(s.Cond)
+	conditionStatements, conditionValues := conditionEvaluation.statements, conditionEvaluation.expressions()
 	output.Cond = conditionValues[0]
 	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
 		if len(initStatements) != 0 {

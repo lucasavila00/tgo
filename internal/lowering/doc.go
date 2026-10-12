@@ -20,9 +20,11 @@
 // Package initializer wrappers also get their own function state.
 // The [name allocator] reserves source names before generation starts.
 //
-// Expression lowering returns statements that must run first and references to
-// the resulting values. The caller puts the statements at the expression's
-// evaluation point. For use(first(), fetch()!, last()), operands saves first
+// Expression lowering returns one result: statements that must run first, and
+// values with their checked types and source expressions. Operand handling keeps
+// these records together until the caller builds the Go AST. A call that supplies
+// several values keeps its tuple type until it is evaluated into separate locals.
+// The caller puts the statements at the expression's evaluation point. For use(first(), fetch()!, last()), operands saves first
 // before it adds the statements for fetch. Statement lowering then places the
 // final use call after these statements.
 //

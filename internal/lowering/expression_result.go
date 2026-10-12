@@ -25,3 +25,31 @@ func (r *rewrite) value(expression ast.Expr) expressionValue {
 		original:   expression,
 	}
 }
+
+// expressionResult keeps evaluation steps with the values they produce.
+type expressionResult struct {
+	statements []ast.Stmt
+	values     []expressionValue
+}
+
+func (result expressionResult) expressions() []ast.Expr {
+	if result.values == nil {
+		return nil
+	}
+	expressions := make([]ast.Expr, len(result.values))
+	for i, value := range result.values {
+		expressions[i] = value.expression
+	}
+	return expressions
+}
+
+func (r *rewrite) result(statements []ast.Stmt, expressions []ast.Expr) expressionResult {
+	result := expressionResult{statements: statements}
+	if expressions != nil {
+		result.values = make([]expressionValue, len(expressions))
+		for i, expression := range expressions {
+			result.values[i] = r.value(expression)
+		}
+	}
+	return result
+}

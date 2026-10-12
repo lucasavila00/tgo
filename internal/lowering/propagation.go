@@ -60,12 +60,12 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 	return prefix
 }
 
-func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([]ast.Stmt, []ast.Expr) {
+func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) expressionResult {
 	call := marker.Args[0]
-	statements, callValues := r.expression(call)
-	saveStatements, savedValues := r.save(callValues[0])
-	statements = append(statements, saveStatements...)
-	if len(savedValues) == 0 {
+	evaluation := r.expression(call)
+	saved := r.save(evaluation.values[0])
+	statements := append(evaluation.statements, saved.statements...)
+	if len(saved.values) == 0 {
 		panic("propagation requires an error result")
 	}
 
@@ -79,16 +79,16 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 		r.functionState.frame.prepared = true
 	}
 
-	callError := savedValues[len(savedValues)-1]
+	callError := saved.values[len(saved.values)-1]
 	failureStatements, failed := r.callFailure(callError, call)
 	statements = append(statements, failureStatements...)
-	errorValue := r.propagatedError(callError, returnErrorType, operation)
+	errorValue := r.propagatedError(callError.expression, returnErrorType, operation)
 	results := append(append([]ast.Expr(nil), r.functionState.frame.values...), errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
 	r.request.inserted = true
 	r.request.lowered[marker] = true
-	return statements, savedValues[:len(savedValues)-1]
+	return expressionResult{statements: statements, values: saved.values[:len(saved.values)-1]}
 }
 
 func (r *rewrite) frameSignature() *types.Signature {
@@ -121,8 +121,9 @@ func (r *rewrite) propagatedError(callError ast.Expr, returnErrorType types.Type
 }
 
 // callFailure checks the call result before conversion to the caller's return type.
-func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
-	typ := r.typeOf(value)
+func (r *rewrite) callFailure(result expressionValue, call ast.Expr) ([]ast.Stmt, ast.Expr) {
+	value := result.expression
+	typ := result.typ
 	_, generic := types.Unalias(typ).(*types.TypeParam)
 	nilOnly := false
 	nilCapable := false
