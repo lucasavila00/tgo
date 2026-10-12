@@ -13,6 +13,46 @@ import (
 // on every visit. It leaves filters, nested ranges, and source jumps on append.
 func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Comprehension, result *ast.Ident, typ types.Type) []ast.Stmt {
 	key, _ := types.ComprehensionTypes(typ)
+	loop := r.exactComprehensionLoop(record, key)
+	if loop == nil {
+		return nil
+	}
+	sourceType := r.typeOf(loop.X).Underlying()
+	switch sourceType.(type) {
+	case *types.Slice, *types.Array:
+	default:
+		sourceKey, element := types.ComprehensionTypes(r.typeOf(loop.X))
+		if sourceKey != nil || element == nil {
+			return nil
+		}
+	}
+	output := *loop
+	var before []ast.Stmt
+	var count ast.Expr
+	if r.input.source.rangeElided(loop) {
+		count = &ast.BasicLit{Kind: token.INT, Value: strconv.FormatInt(sourceType.(*types.Array).Len(), 10)}
+	} else {
+		before, output.X = r.capture(loop.X)
+		count = &ast.CallExpr{Fun: ast.NewIdent("len"), Args: []ast.Expr{output.X}}
+	}
+	allocation := &ast.CallExpr{Fun: ast.NewIdent("make"), Args: []ast.Expr{r.temporaryType(typ, call), count}}
+	before = append(before, variable(result, r.temporaryType(typ, call), allocation))
+	if key == nil {
+		index := r.name()
+		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
+			object := r.input.source.inventory.Checked.TypesInfo.Defs[sourceKey]
+			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.file.bindings[object]))
+			output.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
+		} else {
+			output.Key = index
+			output.Tok = token.DEFINE
+		}
+		r.functionState.collectionOutputs[record.Output].index = index
+	}
+	return append(before, &ast.BlockStmt{List: r.rangeStatement(&output)})
+}
+
+func (r *rewrite) exactComprehensionLoop(record *frontend.Comprehension, key types.Type) *ast.RangeStmt {
 	if r.builtinHidden("make") || r.builtinHidden("len") || len(record.Body.List) != 1 {
 		return nil
 	}
@@ -53,37 +93,5 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	if changesCount {
 		return nil
 	}
-	sourceType := r.typeOf(loop.X).Underlying()
-	switch sourceType.(type) {
-	case *types.Slice, *types.Array:
-	default:
-		sourceKey, element := types.ComprehensionTypes(r.typeOf(loop.X))
-		if sourceKey != nil || element == nil {
-			return nil
-		}
-	}
-	output := *loop
-	var before []ast.Stmt
-	var count ast.Expr
-	if r.input.source.rangeElided(loop) {
-		count = &ast.BasicLit{Kind: token.INT, Value: strconv.FormatInt(sourceType.(*types.Array).Len(), 10)}
-	} else {
-		before, output.X = r.capture(loop.X)
-		count = &ast.CallExpr{Fun: ast.NewIdent("len"), Args: []ast.Expr{output.X}}
-	}
-	allocation := &ast.CallExpr{Fun: ast.NewIdent("make"), Args: []ast.Expr{r.temporaryType(typ, call), count}}
-	before = append(before, variable(result, r.temporaryType(typ, call), allocation))
-	if key == nil {
-		index := r.name()
-		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
-			object := r.input.source.inventory.Checked.TypesInfo.Defs[sourceKey]
-			saved := variable(index, r.temporaryType(types.Typ[types.Int], call), ast.NewIdent(r.file.bindings[object]))
-			output.Body = &ast.BlockStmt{List: append([]ast.Stmt{saved}, loop.Body.List...)}
-		} else {
-			output.Key = index
-			output.Tok = token.DEFINE
-		}
-		r.functionState.collectionOutputs[record.Output].index = index
-	}
-	return append(before, &ast.BlockStmt{List: r.rangeStatement(&output)})
+	return loop
 }
