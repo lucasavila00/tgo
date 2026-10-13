@@ -75,7 +75,7 @@ func (s *mappedSource) wrapConditional(filename string, original *token.File, st
 	offsets := insertedOffsets(len(before), s.offsets[start])
 	offsets = append(offsets, s.offsets[start:end]...)
 	offsets = append(offsets, insertedOffsets(len(after), s.offsets[end-1])...)
-	s.replace(start, end, before+s.text[start:end]+after, offsets)
+	s.apply(sourceEdit{start, end, before + s.text[start:end] + after, offsets})
 	return nil
 }
 

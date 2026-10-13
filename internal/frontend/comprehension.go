@@ -135,7 +135,7 @@ func (s *mappedSource) wrapComprehension(
 	insert(");", to)
 	comments(to, tokens[first].offset)
 	insert(strings.Repeat("}", len(clauses))+"})", tokens[end].offset)
-	s.replace(start, tokens[end].offset+1, text.String(), offsets)
+	s.apply(sourceEdit{start, tokens[end].offset + 1, text.String(), offsets})
 }
 
 func comprehensionRanges(body *ast.BlockStmt) []*ast.RangeStmt {

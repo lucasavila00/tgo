@@ -17,36 +17,6 @@ type Parsed struct {
 	ShortReturns   map[string]ShortReturn
 }
 
-type mappedSource struct {
-	input   string
-	text    string
-	offsets []int
-}
-
-func originalSource(input []byte) mappedSource {
-	source := mappedSource{input: string(input), text: string(input), offsets: make([]int, len(input)+1)}
-	for i := range source.offsets {
-		source.offsets[i] = i
-	}
-	return source
-}
-
-func (s *mappedSource) replace(start, end int, text string, offsets []int) {
-	s.text = s.text[:start] + text + s.text[end:]
-	updatedOffsets := append([]int(nil), s.offsets[:start]...)
-	updatedOffsets = append(updatedOffsets, offsets...)
-	updatedOffsets = append(updatedOffsets, s.offsets[end:]...)
-	s.offsets = updatedOffsets
-}
-
-func insertedOffsets(count, offset int) []int {
-	result := make([]int, count)
-	for i := range result {
-		result[i] = offset
-	}
-	return result
-}
-
 // ParseFile parses added expressions and maps syntax positions to the input.
 // Conditional bodies remain statements in the original enclosing function.
 func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed,
@@ -117,7 +87,7 @@ func prepareSource(sourceName string, input []byte, used map[string]bool,
 		}
 		edit := edits[index]
 		text := "/*" + edit.name + "*/"
-		source.replace(edit.start, edit.end, text, insertedOffsets(len(text), edit.start))
+		source.apply(sourceEdit{edit.start, edit.end, text, insertedOffsets(len(text), edit.start)})
 		edits = append(edits[:index], edits[index+1:]...)
 	}
 	return source

@@ -145,24 +145,18 @@ func (s *mappedSource) prepareConditionals(filename string, original *token.File
 	if len(edits) == 0 {
 		return false
 	}
-	var text strings.Builder
-	offsets := make([]int, 0, len(s.offsets)+len(edits)*32)
-	previous := 0
+	replacements := make([]sourceEdit, 0, len(edits))
 	for i := len(edits) - 1; i >= 0; i-- {
 		edit := edits[i]
 		before, after := edit.name+"(func(){", "})"
-		text.WriteString(s.text[previous:edit.start])
-		offsets = append(offsets, s.offsets[previous:edit.start]...)
-		text.WriteString(before)
-		offsets = append(offsets, insertedOffsets(len(before), s.offsets[edit.start])...)
-		text.WriteString(s.text[edit.start:edit.end])
+		offsets := insertedOffsets(len(before), s.offsets[edit.start])
 		offsets = append(offsets, s.offsets[edit.start:edit.end]...)
-		text.WriteString(after)
 		offsets = append(offsets, insertedOffsets(len(after), s.offsets[edit.end-1])...)
-		previous = edit.end
+		replacements = append(replacements, sourceEdit{
+			start: edit.start, end: edit.end,
+			text: before + s.text[edit.start:edit.end] + after, offsets: offsets,
+		})
 	}
-	text.WriteString(s.text[previous:])
-	offsets = append(offsets, s.offsets[previous:]...)
-	s.text, s.offsets = text.String(), offsets
+	s.apply(replacements...)
 	return true
 }

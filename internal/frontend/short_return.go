@@ -58,7 +58,7 @@ func (s *mappedSource) prepareShortReturn(
 		replacementOffsets := insertedOffsets(len(markerPrefix), s.offsets[tokens[operandIndex].offset])
 		replacementOffsets = append(replacementOffsets, s.offsets[operandStart:operandEnd]...)
 		replacementOffsets = append(replacementOffsets, insertedOffsets(len(markerSuffix), s.offsets[returnEnd-1])...)
-		s.replace(tokens[operandIndex].offset, returnEnd, replacementText, replacementOffsets)
+		s.apply(sourceEdit{tokens[operandIndex].offset, returnEnd, replacementText, replacementOffsets})
 		return true, nil
 	}
 	return false, nil
