@@ -19,6 +19,14 @@ no entry point can reach. It checks the repository with tests included, then
 checks public functions under `pkg/` from `cmd/tgo` without tests. It fails on
 any finding. The second check catches public APIs kept alive only by tests.
 
-`make lint` prepares the checker, runs the source-size and dead-code checks, runs Go linters,
+`check-function-comments` requires an attached comment on every named Go
+function and method, including private helpers, tests, benchmarks, `main`, and
+`init`. It checks tracked handwritten files. It skips fixture programs under
+`tests/testdata`, generated Go files, and `_tgo.go` and `_tgo_test.go` outputs.
+Anonymous functions have no declaration name and are outside this rule. Empty
+comments and tool directives alone do not satisfy it.
+
+`make lint` prepares the checker, runs the source-size, function-comment, and dead-code
+checks, runs Go linters,
 and checks Go formatting. The pull request workflow runs the same command.
 See [source checks](../docs/guide/lint.md) for tool versions and limits.

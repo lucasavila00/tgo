@@ -1,7 +1,8 @@
 # Source checks in CI
 
 The pull request workflow runs `make lint` before documentation and tests. It
-prepares the private checker, checks source-file size, runs Go lint checks, and
+prepares the private checker, checks source-file size and function comments,
+runs Go lint checks, and
 checks formatting.
 
 ## Tools and limits
@@ -23,6 +24,17 @@ Split work into steps with clear inputs and results when a limit is exceeded.
 The file-size check includes fixture inputs and reference programs. It skips
 names ending exactly in `_tgo.go` or `_tgo_test.go`. Go lint and formatting exclude
 `tests/testdata`; normal test files outside that directory remain checked.
+
+## Function comments
+
+Every named handwritten Go function and method needs an attached comment. This
+includes private helpers, tests, benchmarks, `main`, and `init`. Explain its
+purpose and important changes to its inputs or state in one or two lines.
+
+The check reads tracked Go files. It skips fixture programs under
+`tests/testdata`, files marked as generated, and `_tgo.go` and `_tgo_test.go`
+outputs. It does not check anonymous functions. Empty comments and tool
+directives alone fail the check.
 
 ## Dead code
 
