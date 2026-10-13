@@ -10,8 +10,8 @@
 // operations, fixed before rewriting starts. Request state owns generated names
 // and completion records. File state owns imports and binding changes, including
 // names used by closures. Function state owns return values, labels, jumps, and
-// saved values. An address operation uses a local context to delay insertion
-// until its address checks finish; it does not change the function's state.
+// saved values. An address operation keeps its insertion delay in a local
+// context until its address checks finish.
 //
 // Shared operations call the rule dispatcher with the current context when an
 // operand contains TGo syntax. A source closure gets new function state. A value

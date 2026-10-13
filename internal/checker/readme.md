@@ -6,33 +6,25 @@
 import "github.com/lucasavila00/tgo/internal/checker"
 ```
 
-Package checker checks TGo types, name scope, and jumps before code generation.
+Package checker decides whether TGo source is valid before code generation.
 
-It checks the syntax from the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) and supplies types and declarations to [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>). A successful check means that the source follows TGo's rules. The [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) also checks the generated output with Go's unmodified checker.
+It checks types, names, and jumps in the source program. For example, fetch\(\)\! must have a final error result, and the source function must accept that error. An if expression checks each completing branch against the required type. A branch that returns from the function does not supply a value.
 
-### Check TGo expressions in their source context
+### Keep the source function's rules
 
-For a function fetch that returns \(Value, error\), fetch\(\)\! provides a Value to the surrounding expression. The checker verifies the error result and the enclosing function's return type. It also checks nested uses, such as outer\(inner\(\)\!\)\!, within the same source package check.
+Frontend markers represent added syntax. The checker checks their statements in the enclosing source scope. Returns, defers, and jumps keep their source targets. The shared control\-flow analysis tells checking and lowering which paths can produce a value.
 
-If and switch expressions get their type from their use or branch values. For example, this assignment requires both branch values to fit int:
+TGo checking uses a patched Go checker. The pinned version and patch make its source reproducible; see [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>). Its type objects stay separate from stock go/types objects. The driver checks generated Go with stock Go.
 
+A loader owns imported types and completed checks for each package and test variant. Its constructor receives the target architecture's type sizes. Each package supplies syntax and TGo records together; checking registers the records before type analysis. Each checker owns its TGo state. Go's environment owns the current function, scope, and statement context.
+
+## func TargetSizes
+
+```go
+func TargetSizes(root string) (types.Sizes, error)
 ```
-var count int = if ready { 1 } else { 0 }
-```
 
-Switch cases keep Go scopes, including the types of type\-switch bindings. A branch that returns from the function does not supply a value. The shared [control flow analysis](<https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md>) determines whether a branch can reach its end. Returns, defers, and jumps inside added expressions belong to the source function, even when the frontend uses temporary function syntax to represent them.
-
-A comprehension declares the slice or map type that it builds. The checker uses that type to check each output value. Names from a range clause are available to later clauses and the output, but not outside the comprehension.
-
-Short returns use the source function's declared result types. Both forms require unnamed results and a final type that implements error. A trailing form also requires that final type to accept nil. Supplied operands follow the same assignment rules as ordinary returns.
-
-### Use one compatible set of type information
-
-The standard Go checker does not know TGo's expression rules. This package uses a patched copy of it and a matching reader for compiled dependency types. Both come from the same pinned Go version. Run make prepare to generate them; see [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) before changing that version or its patch.
-
-Types from this copy are separate from go/types objects. Keep them separate when checking ordinary Go for the public Load API. That API exposes the original Go package and its go/types objects to callers.
-
-A loader shares dependency types and completed checks between packages. It keeps each test variant separate and uses the target architecture's type sizes. Thus, all source checks use the same types and build settings.
+TargetSizes reads the Go target used to check architecture\-dependent types.
 
 ## type Loader
 
@@ -40,9 +32,6 @@ Loader checks source packages and reads compiled dependency types. It shares pri
 
 ```go
 type Loader struct {
-    Root     string
-    TGoFiles map[string]string
-    Used     map[string]bool
     // contains filtered or unexported fields
 }
 ```
@@ -50,10 +39,10 @@ type Loader struct {
 ### func NewLoader
 
 ```go
-func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool) (*Loader, error)
+func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool, sizes types.Sizes) *Loader
 ```
 
-NewLoader records dependency exports before any source package is checked. Every source check uses the module's selected Go target architecture.
+NewLoader creates one owner for source checks and imported types. sizes must describe the module's selected Go target architecture.
 
 ### func \(\*Loader\) Check
 

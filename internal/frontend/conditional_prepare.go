@@ -72,12 +72,11 @@ type conditionalSyntax struct {
 	used     map[string]bool
 }
 
-// prepareConditionals wraps independent operands together. A nested operand
+// prepare plans independent operands together. A nested operand
 // is prepared before its containing expression; ambiguous syntax uses AST recovery.
 func (syntax conditionalSyntax) prepare(source mappedSource) []conditionalReplacement {
-	s := &source
 	var starts []int
-	for offset, operand := range expressionConditionalTokens(s.text) {
+	for offset, operand := range expressionConditionalTokens(source.text) {
 		if operand {
 			starts = append(starts, offset)
 		}
@@ -86,7 +85,7 @@ func (syntax conditionalSyntax) prepare(source mappedSource) []conditionalReplac
 		return nil
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(starts)))
-	tokens := sourceTokens(s.text)
+	tokens := sourceTokens(source.text)
 	var replacements []conditionalReplacement
 	nextName := 1
 	depth := -1
@@ -95,7 +94,7 @@ func (syntax conditionalSyntax) prepare(source mappedSource) []conditionalReplac
 		if tokens[index].depth < depth {
 			continue
 		}
-		end := conditionalEnd(syntax.filename, s.text, start, tokens)
+		end := conditionalEnd(syntax.filename, source.text, start, tokens)
 		if end < 0 || len(replacements) > 0 && end > replacements[len(replacements)-1].edit.start {
 			continue
 		}

@@ -11,8 +11,7 @@
 //	}
 //
 // The first branch supplies "ready" only when stopped is false. The checker
-// must check that value's type. Code generation must assign it to the result
-// only on paths that reach it. The checker records which branches need a
+// checks that value's type. Lowering assigns it to the result on those paths. The checker records which branches need a
 // value. Lowering uses those checked facts.
 //
 // Branch reports two facts. Tail says that execution can reach the last
@@ -24,8 +23,8 @@
 // owns mutable label entries because a goto can refer to a later label. Once
 // construction is complete, reachability only reads the links.
 //
-// The analysis follows possible paths through loops, switches, and labeled
-// jumps. It does not enter a separate function body. The caller supplies the
+// Paths include loops, switches, and labels. Each analysis stays in its source
+// function. The caller supplies the
 // rules that syntax alone cannot show, such as which calls terminate execution
 // and which expressions contain TGo branch statements.
 package controlflow

@@ -6,7 +6,11 @@
 import "github.com/lucasavila00/tgo/internal/lowering/source"
 ```
 
-Package source records evaluation sites and parent links in checked syntax. It keeps source facts separate from the state used to emit Go statements.
+Package source records checked facts that lowering needs before statements move.
+
+Go syntax does not always evaluate an expression. An array length is constant; some range operands do not run; a deferred call runs when its function returns. The inventory records these limits with each expression's physical file and byte offsets. It also records the source function that owns a return.
+
+Parent links describe the original syntax. Lowering uses them to find source jump targets and contextual types after it constructs replacement statements. This input stays unchanged during emission. Each rewrite owns separate output state, so the same checked source can produce independent outputs.
 
 ## func RangeElided
 
