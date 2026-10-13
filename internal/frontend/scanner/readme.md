@@ -6,13 +6,23 @@
 import "github.com/lucasavila00/tgo/internal/frontend/scanner"
 ```
 
-Package scanner reads Go tokens and TGo postfix error operators.
+Package scanner reads Go tokens and TGo error and return operators.
 
-In TGo mode, \! or \!\! after a closing parenthesis is one token. Spaces and comments can precede the suffix; the two bytes of \!\! must be adjacent. The token can end a statement, so newlines, comments, and end of input follow Go's semicolon insertion rules. The parser checks whether the preceding expression is a call. Go's error\-list type keeps diagnostics compatible with frontend callers.
+In TGo mode, \! or \!\! after a closing parenthesis is one token. Spaces and comments can precede the suffix; the two bytes of \!\! must be adjacent. A suffix can end a statement. The .. token starts or ends a short return, while Go's ... token retains its meaning.
 
-scripts/prepare\-frontend.sh builds the scanner from the pinned Go source and applies the tracked frontend patch.
+Semicolon insertion follows the source tokens, including newlines in comments. Buffered lookahead scans each token once and retains its exact span. The parser can inspect future tokens without changing the end of the current token. Physical file identity stays separate from the logical source name used to resolve line directives.
+
+scripts/prepare\-frontend.sh builds the scanner from the shared pinned Go source and applies the tracked frontend patch.
 
 Package scanner implements a scanner for Go source text. It takes a \[\]byte as source which can then be tokenized through repeated calls to the Scan method.
+
+## Constants
+
+ShortReturn identifies .. without changing Go's ellipsis token.
+
+```go
+const ShortReturn token.Token = -1
+```
 
 ## type ErrorHandler
 
@@ -30,6 +40,19 @@ ErrorList retains Go's diagnostic type for parser callers.
 type ErrorList = scanner.ErrorList
 ```
 
+## type Lexeme
+
+Lexeme stores one scanned token and its exact source span.
+
+```go
+type Lexeme struct {
+    Pos     token.Pos
+    Token   token.Token
+    Literal string
+    End     token.Pos
+}
+```
+
 ## type Mode
 
 A Mode value is a set of flags \(or 0\). They control scanner behavior.
@@ -43,7 +66,7 @@ type Mode uint
 ```go
 const (
     ScanComments Mode = 1 << iota // return comments as COMMENT tokens
-    TGo                           // recognize postfix operators and their statement endings
+    TGo                           // recognize TGo error and short-return operators
 
 )
 ```
@@ -67,7 +90,7 @@ type Scanner struct {
 func (s *Scanner) End() token.Pos
 ```
 
-End returns the position immediately after the last scanned token. If [Scanner.Scan](<#Scanner.Scan>) has not been called yet, End returns \[token.NoPos\].
+End returns the end of the last token returned by Scan.
 
 ### func \(\*Scanner\) Init
 
@@ -89,26 +112,20 @@ func (s *Scanner) InitSource(file *token.File, sourceName string, input []byte, 
 
 InitSource keeps file's physical identity and resolves line directives from sourceName. The caller sets the file's initial logical position before scanning.
 
+### func \(\*Scanner\) Peek
+
+```go
+func (s *Scanner) Peek(index int) Lexeme
+```
+
+Peek returns a future token without changing the token delivered to the parser. Each token is scanned once; Scan later consumes the same stored result.
+
 ### func \(\*Scanner\) Scan
 
 ```go
-func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string)
+func (s *Scanner) Scan() (token.Pos, token.Token, string)
 ```
 
-Scan scans the next token and returns the token position, the token, and its literal string if applicable. The source end is indicated by \[token.EOF\].
-
-If the returned token is a literal \(\[token.IDENT\], \[token.INT\], \[token.FLOAT\], \[token.IMAG\], \[token.CHAR\], \[token.STRING\]\) or \[token.COMMENT\], the literal string has the corresponding value.
-
-If the returned token is a keyword, the literal string is the keyword.
-
-If the returned token is \[token.SEMICOLON\], the corresponding literal string is ";" if the semicolon was present in the source, and "\\n" if the semicolon was inserted because of a newline or at EOF. If the newline is within a /\*...\*/ comment, the SEMICOLON token is synthesized immediately after the COMMENT token; its position is that of the actual newline within the comment.
-
-If the returned token is \[token.ILLEGAL\], the literal string is the offending character.
-
-In all other cases, Scan returns an empty literal string.
-
-For more tolerant parsing, Scan will return a valid token if possible even if a syntax error was encountered. Thus, even if the resulting token sequence contains no illegal tokens, a client may not assume that no error occurred. Instead it must check the scanner's ErrorCount or the number of calls of the error handler, if there was one installed.
-
-Scan adds line information to the file added to the file set with Init. Token positions are relative to that file and thus relative to the file set.
+Scan returns the next token and keeps its end separate from lookahead state.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

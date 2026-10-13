@@ -48,6 +48,11 @@ func (p *parser) startsHeaderComprehension() bool {
 	if !generator {
 		return false
 	}
+	return p.headerExpressionFollows(index)
+}
+
+// headerExpressionFollows checks whether the token after the brace requires an expression.
+func (p *parser) headerExpressionFollows(index int) bool {
 	following, _ := p.peekHeaderToken(index)
 	switch following.Token {
 	case token.LBRACK, token.PERIOD, token.LPAREN, token.LBRACE:

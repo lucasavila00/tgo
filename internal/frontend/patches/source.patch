@@ -192,7 +192,7 @@
  	defer decNestLev(incNestLev(p))
  
  	if p.trace {
-@@ -2168,16 +2181,16 @@
+@@ -2168,16 +2181,20 @@
  		p.next()
  		switch p.tok {
  		case token.IF:
@@ -201,18 +201,22 @@
  		case token.LBRACE:
  			else_ = p.parseBlockStmt()
 -			p.expectSemi()
-+			if !value { p.expectSemi() }
++			if !value {
++				p.expectSemi()
++			}
  		default:
  			p.errorExpected(p.pos, "if statement or block")
  			else_ = &ast.BadStmt{From: p.pos, To: p.pos}
  		}
  	} else {
 -		p.expectSemi()
-+		if !value { p.expectSemi() }
++		if !value {
++			p.expectSemi()
++		}
  	}
  
  	return &ast.IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
-@@ -2230,6 +2243,10 @@
+@@ -2230,6 +2247,10 @@
  }
  
  func (p *parser) parseSwitchStmt() ast.Stmt {
@@ -223,12 +227,14 @@
  	if p.trace {
  		defer un(trace(p, "SwitchStmt"))
  	}
-@@ -2273,7 +2290,7 @@
+@@ -2273,7 +2294,9 @@
  		list = append(list, p.parseCaseClause())
  	}
  	rbrace := p.expect(token.RBRACE)
 -	p.expectSemi()
-+	if !value { p.expectSemi() }
++	if !value {
++		p.expectSemi()
++	}
  	body := &ast.BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
  
  	if typeSwitch {
@@ -248,7 +254,7 @@
  
  const (
  	ScanComments    Mode = 1 << iota // return comments as COMMENT tokens
-+	TGo // recognize postfix operators and their statement endings
++	TGo // recognize TGo error and short-return operators
  	dontInsertSemis                  // do not automatically insert semicolons - for testing only
  )
  

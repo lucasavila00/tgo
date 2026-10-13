@@ -48,5 +48,23 @@ The preparation-based parser shared edits for independent values. Deep nesting
 repeated preparation and subtree parsing, with quadratic worst-case cost.
 The current parser reads all TGo grammar directly in one parse.
 
+The direct parser used Go 1.27.1, Linux amd64, the same CPU model, and
+`GOMAXPROCS=2`. These samples use one iteration per case:
+
+```sh
+go test ./internal/frontend -run '^$' -bench '^BenchmarkConditionalParsing$' -benchtime=1x
+```
+
+| Input | Direct parser | Allocated bytes |
+| --- | ---: | ---: |
+| 32 independent values | 0.183 ms | 68.2 KB |
+| 512 independent values | 14.7 ms | 5.95 MB |
+| 512 nested values | 39.6 ms | 6.52 MB |
+
+Nested parsing no longer repeats subtree preparation. Helper naming still
+searches from name 1 for each helper. This adds repeated work as the number of
+forms grows. The independent-value sample is slower than batched preparation;
+the nested-value sample is faster.
+
 Read the [driver](../internal/driver/readme.md), [checker](../internal/checker/readme.md),
 and [frontend](../internal/frontend/readme.md) for the current process.
