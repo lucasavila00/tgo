@@ -52,6 +52,7 @@ func TestUnaryTokens(t *testing.T) {
 	for _, input := range []string{
 		"return !\nfalse", "!!flag", "f() != nil", "f()\n!flag", "f()/*\n*/!flag",
 		"//line virtual.go:20\nreturn !flag", "f()\n!\nflag",
+		"return value ..\nnext()", "return ..\nerr", "func f(x..T) {}", "x.. /*\n*/next()",
 	} {
 		t.Run(input, func(t *testing.T) {
 			ordinary := scanInput(input, ScanComments)

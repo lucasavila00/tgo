@@ -6,23 +6,15 @@
 import "github.com/lucasavila00/tgo/internal/frontend/scanner"
 ```
 
-Package scanner reads Go tokens and TGo error and return operators.
+Package scanner reads Go tokens and TGo postfix error operators.
 
-In TGo mode, \! or \!\! after a closing parenthesis is one token. Spaces and comments can precede the suffix; the two bytes of \!\! must be adjacent. A suffix can end a statement. The .. token starts or ends a short return, while Go's ... token retains its meaning.
+In TGo mode, \! or \!\! after a closing parenthesis is one token. Spaces and comments can precede the suffix; the two bytes of \!\! must be adjacent. A suffix can end a statement. Other tokens retain Go's meaning.
 
 Semicolon insertion follows the source tokens, including newlines in comments. Buffered lookahead scans each token once and retains its exact span. The parser can inspect future tokens without changing the end of the current token. Physical file identity stays separate from the logical source name used to resolve line directives.
 
 scripts/prepare\-frontend.sh builds the scanner from the shared pinned Go source and applies the tracked frontend patch.
 
 Package scanner implements a scanner for Go source text. It takes a \[\]byte as source which can then be tokenized through repeated calls to the Scan method.
-
-## Constants
-
-ShortReturn identifies .. without changing Go's ellipsis token.
-
-```go
-const ShortReturn token.Token = -1
-```
 
 ## type ErrorHandler
 
@@ -66,7 +58,7 @@ type Mode uint
 ```go
 const (
     ScanComments Mode = 1 << iota // return comments as COMMENT tokens
-    TGo                           // recognize TGo error and short-return operators
+    TGo                           // recognize postfix error operators
 
 )
 ```

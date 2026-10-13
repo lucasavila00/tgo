@@ -3,12 +3,10 @@ package parser
 import (
 	"go/ast"
 	"go/token"
-
-	"github.com/lucasavila00/tgo/internal/frontend/scanner"
 )
 
-// parseTGoReturnStmt reads ordinary results or results shortened with .. .
-// The scanner ends a trailing form at a newline, comment newline, or EOF.
+// parseTGoReturnStmt reads return operands and an adjacent pair of dots.
+// A trailing pair ends at the next physical line, explicit semicolon, closing brace, or EOF.
 func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 	previousLevel := p.returnOperandLevel
 	p.returnOperandLevel = p.exprLev
@@ -17,38 +15,63 @@ func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 	statement := &ast.ReturnStmt{Return: position}
 	operator := token.NoPos
 	ellipsis, ellipsisEnd := token.NoPos, token.NoPos
-	zeroSuccess := p.tok == scanner.ShortReturn
+	zeroSuccess := p.startsShortReturn()
 	if zeroSuccess {
 		operator = p.pos
-		p.next()
+		p.consumeShortReturn()
 	}
 	if p.tok != token.SEMICOLON && p.tok != token.RBRACE && p.tok != token.EOF {
 		statement.Results = p.parseList(true)
 	} else if zeroSuccess {
 		p.error(operator, "short return requires an error operand")
 	}
-	if p.tok == token.ELLIPSIS {
-		following, _ := p.peekHeaderToken(0)
-		if zeroSuccess || following.Token == scanner.ShortReturn {
-			ellipsis, ellipsisEnd = p.pos, p.end()
-			p.next()
-		}
+	if p.tok == token.ELLIPSIS && (zeroSuccess || p.shortReturnFollows()) {
+		ellipsis, ellipsisEnd = p.pos, p.end()
+		p.next()
 	}
-	if p.tok == scanner.ShortReturn {
+	implicitEnd := false
+	if p.startsShortReturn() {
 		if zeroSuccess {
 			p.error(p.pos, "short return permits .. only before or after its operands")
 		}
 		operator = p.pos
-		p.next()
-		if p.tok != token.SEMICOLON && p.tok != token.RBRACE && p.tok != token.EOF {
+		lastLine := p.consumeShortReturn()
+		implicitEnd = p.tok == token.EOF || p.lineFor(p.pos) > lastLine
+		if !implicitEnd && p.tok != token.SEMICOLON && p.tok != token.RBRACE {
 			p.error(operator, "short return permits .. only before or after its operands")
 		}
 	}
 	if operator.IsValid() {
 		p.recordShortReturn(statement, operator, zeroSuccess, ellipsis, ellipsisEnd)
 	}
-	p.expectSemi()
+	if !implicitEnd {
+		p.expectSemi()
+	}
 	return statement
+}
+
+// startsShortReturn checks two adjacent Go period tokens at the current parser position.
+func (p *parser) startsShortReturn() bool {
+	if p.tok != token.PERIOD {
+		return false
+	}
+	next := p.scanner.Peek(0)
+	return next.Token == token.PERIOD && next.Pos == p.end()
+}
+
+// shortReturnFollows checks an adjacent pair immediately after the current ellipsis.
+func (p *parser) shortReturnFollows() bool {
+	first, next := p.peekHeaderToken(0)
+	second := p.scanner.Peek(next)
+	return first.Token == token.PERIOD && second.Token == token.PERIOD && second.Pos == first.End
+}
+
+// consumeShortReturn consumes both dots and returns the physical line of the second dot.
+func (p *parser) consumeShortReturn() int {
+	p.expect(token.PERIOD)
+	line := p.lineFor(p.pos)
+	p.expect(token.PERIOD)
+	return line
 }
 
 // recordShortReturn stores operands in one helper call at their original positions.
@@ -73,23 +96,4 @@ func (p *parser) recordShortReturn(statement *ast.ReturnStmt, operator token.Pos
 		p.forms.ShortReturns = append(p.forms.ShortReturns,
 			ShortReturn{Statement: statement, Call: call, Position: operator, ZeroSuccess: zeroSuccess})
 	}
-}
-
-// parseNonReturnDots keeps Go's selector diagnostic outside a return operand list.
-func (p *parser) parseNonReturnDots(expression ast.Expr) ast.Expr {
-	position := p.pos + 1
-	p.error(position, "expected selector or type assertion, found '.'")
-	p.next()
-	if p.tok == token.SEMICOLON && p.lit == "\n" {
-		p.next()
-	}
-	return &ast.SelectorExpr{X: expression, Sel: &ast.Ident{NamePos: position, Name: "_"}}
-}
-
-// parseUnexpectedDots keeps Go's operand diagnostic when .. starts an ordinary expression.
-func (p *parser) parseUnexpectedDots() ast.Expr {
-	position := p.pos
-	p.error(position, "expected operand, found '.'")
-	p.advance(stmtStart)
-	return &ast.BadExpr{From: position, To: p.pos}
 }

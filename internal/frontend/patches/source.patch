@@ -72,16 +72,7 @@
  
  	p.top = true
  	p.mode = mode
-@@ -307,6 +320,8 @@
- 		switch {
- 		case p.tok == token.SEMICOLON && p.lit == "\n":
- 			msg += ", found newline"
-+		case p.tok == scanner.ShortReturn:
-+			msg += ", found '..'"
- 		case p.tok.IsLiteral():
- 			// print 123 rather than 'INT', etc.
- 			msg += ", found " + p.lit
-@@ -1459,9 +1474,11 @@
+@@ -1459,9 +1472,11 @@
  		return typ
  	}
  
@@ -95,18 +86,16 @@
  
  	return &ast.FuncLit{Type: typ, Body: body}
  }
-@@ -1474,6 +1491,10 @@
+@@ -1474,6 +1489,8 @@
  	}
  
  	switch p.tok {
-+	case scanner.ShortReturn:
-+		return p.parseUnexpectedDots()
 +	case token.IF, token.SWITCH:
 +		return p.parseValueConditional()
  	case token.IDENT:
  		x := p.parseIdent()
  		return x
-@@ -1700,15 +1721,7 @@
+@@ -1700,15 +1717,7 @@
  		defer un(trace(p, "LiteralValue"))
  	}
  
@@ -123,24 +112,23 @@
  }
  
  func (p *parser) parsePrimaryExpr(x ast.Expr) ast.Expr {
-@@ -1727,6 +1740,16 @@
+@@ -1727,7 +1736,15 @@
  	for n = 1; ; n++ {
  		incNestLev(p)
  		switch p.tok {
-+		case scanner.ShortReturn:
-+			if p.returnOperandLevel >= 0 && p.exprLev == p.returnOperandLevel {
-+				return x
-+			}
-+			x = p.parseNonReturnDots(x)
 +		case token.NOT:
 +			if p.lit == "" {
 +				return x
 +			}
 +			x = p.parsePostfix(x)
  		case token.PERIOD:
++			if p.returnOperandLevel >= 0 && p.exprLev == p.returnOperandLevel && p.startsShortReturn() {
++				return x
++			}
  			p.next()
  			switch p.tok {
-@@ -1759,12 +1782,12 @@
+ 			case token.IDENT:
+@@ -1759,12 +1776,12 @@
  			// determine if '{' belongs to a composite literal or a block statement
  			switch t.(type) {
  			case *ast.BadExpr, *ast.Ident, *ast.SelectorExpr:
@@ -155,7 +143,7 @@
  					return x
  				}
  				// x is possibly a composite literal type
-@@ -1940,6 +1963,8 @@
+@@ -1940,6 +1957,8 @@
  		pos, tok := p.pos, p.tok
  		p.next()
  		var y []ast.Expr
@@ -164,7 +152,7 @@
  		isRange := false
  		if mode == rangeOk && p.tok == token.RANGE && (tok == token.DEFINE || tok == token.ASSIGN) {
  			pos := p.pos
-@@ -1947,8 +1972,10 @@
+@@ -1947,8 +1966,10 @@
  			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRhs()}}
  			isRange = true
  		} else {
@@ -175,7 +163,7 @@
  		return &ast.AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}, isRange
  	}
  
-@@ -2047,15 +2074,7 @@
+@@ -2047,15 +2068,7 @@
  		defer un(trace(p, "ReturnStmt"))
  	}
  
@@ -192,7 +180,7 @@
  }
  
  func (p *parser) parseBranchStmt(tok token.Token) *ast.BranchStmt {
-@@ -2152,6 +2171,10 @@
+@@ -2152,6 +2165,10 @@
  }
  
  func (p *parser) parseIfStmt() *ast.IfStmt {
@@ -203,7 +191,7 @@
  	defer decNestLev(incNestLev(p))
  
  	if p.trace {
-@@ -2168,16 +2191,20 @@
+@@ -2168,16 +2185,20 @@
  		p.next()
  		switch p.tok {
  		case token.IF:
@@ -227,7 +215,7 @@
  	}
  
  	return &ast.IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
-@@ -2230,6 +2257,10 @@
+@@ -2230,6 +2251,10 @@
  }
  
  func (p *parser) parseSwitchStmt() ast.Stmt {
@@ -238,7 +226,7 @@
  	if p.trace {
  		defer un(trace(p, "SwitchStmt"))
  	}
-@@ -2273,7 +2304,9 @@
+@@ -2273,7 +2298,9 @@
  		list = append(list, p.parseCaseClause())
  	}
  	rbrace := p.expect(token.RBRACE)
@@ -265,7 +253,7 @@
  
  const (
  	ScanComments    Mode = 1 << iota // return comments as COMMENT tokens
-+	TGo // recognize TGo error and short-return operators
++	TGo // recognize postfix error operators
  	dontInsertSemis                  // do not automatically insert semicolons - for testing only
  )
  
@@ -311,18 +299,7 @@
  			return pos, token.SEMICOLON, "\n"
  		case '"':
  			insertSemi = true
-@@ -892,6 +899,10 @@
- 				s.next()
- 				s.next() // consume last '.'
- 				tok = token.ELLIPSIS
-+			} else if s.mode&TGo != 0 && s.ch == '.' {
-+				s.next()
-+				tok, lit = ShortReturn, ".."
-+				insertSemi = (s.insertSemi || s.previous == token.ELLIPSIS) && s.previous != token.RETURN
- 			}
- 		case ',':
- 			tok = token.COMMA
-@@ -964,6 +975,14 @@
+@@ -964,6 +971,14 @@
  			tok = s.switch2(token.ASSIGN, token.EQL)
  		case '!':
  			tok = s.switch2(token.NOT, token.NEQ)
@@ -337,7 +314,7 @@
  		case '&':
  			if s.ch == '^' {
  				s.next()
-@@ -995,5 +1014,9 @@
+@@ -995,5 +1010,9 @@
  		s.insertSemi = insertSemi
  	}
  

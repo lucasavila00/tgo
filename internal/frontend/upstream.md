@@ -9,9 +9,9 @@ Run `make prepare` before building or testing the compiler.
 patch requires a shifted match. The package folders retain Go's BSD license.
 
 Grammar rules read every supported TGo form and retain exact source nodes.
-The scanner reads postfix and short-return operators, applies semicolon
-insertion, and stores tokens needed for lookahead. Source spans and line
-directives refer to the original input.
+The scanner reads postfix operators, applies Go semicolon insertion, and
+stores tokens needed for lookahead. The return grammar reads two adjacent
+periods as `..`. Source spans and line directives refer to the original input.
 
 The frontend publishes records only after parsing succeeds. It saves source
 call names before naming syntax containers and creating checker calls. Value
