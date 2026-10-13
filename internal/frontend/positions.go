@@ -13,9 +13,9 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
 	result.File = file
 	result.recordComprehensions(file)
-	for expression, operation := range markerExpressions(fset, file, result.Propagations) {
+	for expression, operation := range bindPostfixCalls(fset, file, result.Propagations) {
 		result.Propagations[operation.Name] = operation
-		wrapMarker(file, original, expression, operation)
+		replacePostfixOperand(file, original, expression, operation)
 	}
 	return result
 }

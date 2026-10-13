@@ -34,7 +34,7 @@ type Comprehension struct {
 
 ## type Marker
 
-Marker records a postfix operation in Go\-compatible source.
+Marker records a call's postfix operator and original source span.
 
 ```go
 type Marker struct {
@@ -42,6 +42,8 @@ type Marker struct {
     Wrap     bool
     CallName string
     Position token.Position
+    // EndOffset is the byte offset just after the operator in the input.
+    EndOffset int
 }
 ```
 
