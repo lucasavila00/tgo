@@ -13,15 +13,15 @@ func (r *Context) contextLiteral(value, original ast.Expr) ast.Expr {
 	if !ok || literal.Type != nil {
 		return value
 	}
-	parent := r.Input.Inventory.Parents[original]
+	parent := r.input.Inventory.Parents[original]
 	if pair, ok := parent.(*ast.KeyValueExpr); ok {
-		parent = r.Input.Inventory.Parents[pair]
+		parent = r.input.Inventory.Parents[pair]
 	}
 	container, ok := parent.(*ast.CompositeLit)
 	if !ok {
 		return value
 	}
-	typ := r.Input.Inventory.Checked.TypesInfo.TypeOf(container).Underlying()
+	typ := r.input.Inventory.Checked.TypesInfo.TypeOf(container).Underlying()
 	pointer := false
 	if p, ok := typ.(*types.Pointer); ok {
 		typ = p.Elem().Underlying()
@@ -74,7 +74,7 @@ func (r *Context) contextMapLiteral(value,
 	container,
 	wrapper *ast.CompositeLit,
 	pointer bool) ast.Expr {
-	pair := r.Input.Inventory.Parents[original].(*ast.KeyValueExpr)
+	pair := r.input.Inventory.Parents[original].(*ast.KeyValueExpr)
 	if pair.Key == original {
 		r.prepareCollectionImports()
 		empty := r.contextLiteral(&ast.CompositeLit{Type: container.Type}, container)
@@ -129,7 +129,7 @@ func (r *Context) materializeKey(value, original *ast.CompositeLit) Result {
 	var statements []ast.Stmt
 	var values []ast.Expr
 	for _, element := range elements {
-		if tv, ok := r.Input.Inventory.Checked.TypesInfo.Types[element]; ok && (tv.Value != nil ||
+		if tv, ok := r.input.Inventory.Checked.TypesInfo.Types[element]; ok && (tv.Value != nil ||
 			tv.IsNil()) {
 			values = append(values, element)
 			continue
@@ -145,7 +145,7 @@ func (r *Context) materializeKey(value, original *ast.CompositeLit) Result {
 	index := 0
 	for i, element := range value.Elts {
 		var place ast.Expr
-		switch typ := r.Input.Inventory.Checked.TypesInfo.TypeOf(original).Underlying().(type) {
+		switch typ := r.input.Inventory.Checked.TypesInfo.TypeOf(original).Underlying().(type) {
 		case *types.Struct:
 			name := typ.Field(i).Name()
 			if item, ok := element.(*ast.KeyValueExpr); ok {
@@ -156,7 +156,7 @@ func (r *Context) materializeKey(value, original *ast.CompositeLit) Result {
 			var position ast.Expr = Integer(index)
 			if item, ok := element.(*ast.KeyValueExpr); ok {
 				position = item.Key
-				positionValue, _ := constant.Int64Val(r.Input.Inventory.Checked.TypesInfo.Types[item.Key].Value)
+				positionValue, _ := constant.Int64Val(r.input.Inventory.Checked.TypesInfo.Types[item.Key].Value)
 				index = int(positionValue)
 			}
 			place = &ast.IndexExpr{X: key, Index: position}

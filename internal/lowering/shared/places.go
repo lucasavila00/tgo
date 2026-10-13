@@ -6,12 +6,12 @@ import (
 	"go/token"
 )
 
-// Capture saves addressable operands without reading the destination.
+// Capture evaluates a nonconstant operand once and returns its saved value.
 func (r *Context) Capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	beforeEvaluation := r.Expression(expr)
 	before, values := beforeEvaluation.Statements, beforeEvaluation.Expressions()
 	value := values[0]
-	if tv := r.Input.Inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+	if tv := r.input.Inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 		return before, value
 	}
 	if len(before) != 0 && r.isTarget(expr) {
@@ -26,7 +26,7 @@ func (r *Context) Capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 func (r *Context) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
-	if call, ok := expr.(*ast.CallExpr); ok && r.Input.Comprehensions[call] != nil {
+	if call, ok := expr.(*ast.CallExpr); ok && r.input.Comprehensions[call] != nil {
 		statementsEvaluation := r.Expression(call)
 		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 		return statements, values[0]
@@ -46,8 +46,8 @@ func (r *Context) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &dereference
 	case *ast.IndexExpr:
 		index := *e
-		kind := storageKinds(r.Input.Inventory.Checked.TypesInfo.TypeOf(e.X))
-		if kind == arrayStorage|otherStorage && r.Input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
+		kind := storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(e.X))
+		if kind == arrayStorage|otherStorage && r.input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 			before, index.X = r.genericBase(e.X)
 		} else if kind == arrayStorage {
 			before, index.X = r.place(e.X)
@@ -60,28 +60,28 @@ func (r *Context) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &index
 	case *ast.SelectorExpr:
 		selector := *e
-		if r.Input.Inventory.Checked.TypesInfo.Selections[e] == nil {
+		if r.input.Inventory.Checked.TypesInfo.Selections[e] == nil {
 			result = &selector
 			break
 		}
 		if _,
-			pointer := r.Input.Inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
+			pointer := r.input.Inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
 			before, selector.X = r.Capture(e.X)
 		} else {
 			before, selector.X = r.place(e.X)
 		}
 		result = &selector
 	}
-	if expr == r.Input.Target && expr != r.functionState.suppressedRoot {
-		r.Request.Inserted = true
-		if r.functionState.suppressedRoot != nil {
+	if expr == r.input.Target && expr != r.addressRoot {
+		r.request.inserted = true
+		if r.addressRoot != nil {
 			savedEvaluation := r.Save(r.ValueOf(r.typedAddress(result, expr)))
 			saved, values := savedEvaluation.Statements, savedEvaluation.Expressions()
 			before = append(before, saved...)
 			result = &ast.StarExpr{X: values[0]}
-			before = append(before, r.Input.After([]ast.Expr{result})...)
+			before = append(before, r.input.After([]ast.Expr{result})...)
 		} else {
-			before = append(before, r.Input.After(nil)...)
+			before = append(before, r.input.After(nil)...)
 		}
 	}
 	return before, result
@@ -89,16 +89,15 @@ func (r *Context) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 
 // address completes address checks before it inserts statements.
 func (r *Context) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	previous := r.functionState.suppressedRoot
-	r.functionState.suppressedRoot = expr
-	before, place := r.place(expr)
-	r.functionState.suppressedRoot = previous
+	addressContext := *r
+	addressContext.addressRoot = expr
+	before, place := addressContext.place(expr)
 	savedEvaluation := r.Save(r.ValueOf(r.typedAddress(place, expr)))
 	saved, values := savedEvaluation.Statements, savedEvaluation.Expressions()
 	before = append(before, saved...)
-	if expr == r.Input.Target {
-		r.Request.Inserted = true
-		before = append(before, r.Input.After([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
+	if expr == r.input.Target {
+		r.request.inserted = true
+		before = append(before, r.input.After([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
 	}
 	return before, values[0]
 }

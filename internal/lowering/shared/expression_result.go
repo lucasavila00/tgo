@@ -11,7 +11,7 @@ func (r *Context) ValueOf(expression ast.Expr) Value {
 	}
 	return Value{
 		Expression: expression,
-		Type:       r.Input.Inventory.Checked.TypesInfo.TypeOf(expression),
+		Type:       r.input.Inventory.Checked.TypesInfo.TypeOf(expression),
 		Original:   expression,
 	}
 }

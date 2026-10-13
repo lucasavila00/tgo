@@ -14,16 +14,18 @@ type After func(results []ast.Expr) []ast.Stmt
 
 // Context owns one function rewrite and shares file and request state.
 type Context struct {
-	Input         *Input
-	Request       *Request
+	input         *Input
+	dispatch      Dispatch
+	request       *requestState
 	file          *fileState
 	functionState *functionState
+	// addressRoot delays insertion at this address operand until its checks finish.
+	addressRoot ast.Expr
 }
 
 // Input holds source facts and the selected operations. Build it before emission.
 type Input struct {
 	Inventory      *source.Inventory
-	Dispatch       Dispatch
 	Target         ast.Expr
 	After          After
 	Propagations   map[ast.Expr]Propagation
@@ -32,13 +34,13 @@ type Input struct {
 	ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 
-// Request owns progress and fresh names for the complete output request.
-type Request struct {
+// requestState owns progress and fresh names for the complete output request.
+type requestState struct {
 	names          names.Allocator
-	Inserted       bool
-	Lowered        map[ast.Expr]bool
-	LoweredReturns map[*ast.ReturnStmt]bool
-	Err            error
+	inserted       bool
+	lowered        map[ast.Expr]bool
+	loweredReturns map[*ast.ReturnStmt]bool
+	err            error
 }
 
 // functionState owns evaluation and control flow within one function.
@@ -47,11 +49,9 @@ type functionState struct {
 	labels              map[string]string
 	breakExits          map[*ast.BranchStmt]*ast.Ident
 	controlTargets      map[ast.Stmt]ast.Stmt
-	suppressedRoot      ast.Expr
 	comprehensionRanges map[*ast.RangeStmt]bool
 	collectionOutputs   map[string]*CollectionDestination
 	frame               *returnFrame
-	suppressed          bool
 	deferredBases       map[ast.Expr]bool
 	values              map[ast.Expr]Value
 }
@@ -63,7 +63,7 @@ func (r *Context) Name() *ast.Ident {
 
 // NameFor adds the source name to a fresh generated identifier.
 func (r *Context) NameFor(sourceName string) *ast.Ident {
-	return r.Request.names.Fresh(sourceName)
+	return r.request.names.Fresh(sourceName)
 }
 
 // fileState owns output imports, declarations, and binding changes.
@@ -83,12 +83,23 @@ type fileState struct {
 	typeImports       map[*types.Package]*ast.Ident
 }
 
-// New starts a rewrite with checked source facts and current-context dispatch.
-func New(inventory *source.Inventory, dispatch Dispatch) *Context {
+// New starts a rewrite from complete source facts and selected operations.
+// The caller must keep input maps and syntax unchanged while the rewrite runs.
+func New(input Input, dispatch Dispatch) *Context {
 	return &Context{
-		Input:         &Input{Inventory: inventory, Dispatch: dispatch},
-		Request:       &Request{},
+		input:    &input,
+		dispatch: dispatch,
+		request: &requestState{
+			lowered:        make(map[ast.Expr]bool),
+			loweredReturns: make(map[*ast.ReturnStmt]bool),
+		},
 		file:          &fileState{},
 		functionState: &functionState{},
 	}
+}
+
+// Output contains the generated files and the selected insertion's completion.
+type Output struct {
+	Files    map[string][]byte
+	Inserted bool
 }

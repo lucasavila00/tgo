@@ -35,7 +35,7 @@ func (r *Context) Statement(statement ast.Stmt) []ast.Stmt {
 	if !r.Contains(statement) && !r.hasMappedBranch(statement) {
 		return []ast.Stmt{statement}
 	}
-	output := r.Input.Dispatch.Statement(r, statement)
+	output := r.dispatch.Statement(r, statement)
 	if len(output) <= 1 || !r.functionState.hasGoto {
 		return output
 	}
@@ -73,7 +73,7 @@ func (r *Context) StatementSyntax(statement ast.Stmt) []ast.Stmt {
 	case *ast.ExprStmt:
 		return r.expressionStatement(s)
 	case *ast.ReturnStmt:
-		if record, found := r.Input.ShortReturns[s]; found {
+		if record, found := r.input.ShortReturns[s]; found {
 			return r.shortReturnStatement(s, record)
 		}
 		output := *s
@@ -125,8 +125,8 @@ func (r *Context) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
-			call, _ := r.Input.Inventory.Parents[n].(*ast.CallExpr)
-			if r.Input.Conditionals[call] == nil && r.Input.Comprehensions[call] == nil {
+			call, _ := r.input.Inventory.Parents[n].(*ast.CallExpr)
+			if r.input.Conditionals[call] == nil && r.input.Comprehensions[call] == nil {
 				return false
 			}
 		}
@@ -163,13 +163,13 @@ func (r *Context) Header(statement ast.Stmt) []ast.Stmt {
 	if !r.Contains(statement) && !r.hasMappedBranch(statement) {
 		return []ast.Stmt{statement}
 	}
-	return r.Input.Dispatch.Statement(r, statement)
+	return r.dispatch.Statement(r, statement)
 }
 
 func (r *Context) hasGoto(label *ast.LabeledStmt) bool {
 	var node ast.Node = label
 	for {
-		parent := r.Input.Inventory.Parents[node]
+		parent := r.input.Inventory.Parents[node]
 		if parent == nil {
 			break
 		}

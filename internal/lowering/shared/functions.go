@@ -14,11 +14,11 @@ type returnFrame struct {
 	values   []ast.Expr
 }
 
-func (r *Context) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) (*ast.FuncType,
-	*ast.BlockStmt) {
+func (r *Context) functionBody(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) *ast.BlockStmt {
 	functionRewrite := &Context{
-		Input:         r.Input,
-		Request:       r.Request,
+		input:         r.input,
+		dispatch:      r.dispatch,
+		request:       r.request,
 		file:          r.file,
 		functionState: &functionState{frame: &returnFrame{function: node, typ: typ}, hasGoto: r.functionHasGoto(body)},
 	}
@@ -26,21 +26,22 @@ func (r *Context) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 	if functionRewrite.functionState.frame.prepared {
 		output.List = append(functionRewrite.functionState.frame.prefix, output.List...)
 	}
-	if functionRewrite.Input.Inventory.Checked.TypesInfo.TGoReturnBlocks[body] {
+	if functionRewrite.input.Inventory.Checked.TypesInfo.TGoReturnBlocks[body] {
 		output = functionRewrite.returnBlock(typ, output)
 	}
 	if aliases := functionRewrite.file.aliasStatements[node]; len(aliases) != 0 {
 		output.List = append(aliases, output.List...)
 	}
-	return typ, output
+	return output
 }
 
 // prepareReturns saves zero values for the results before the error.
-func (r *Context) prepareReturns(original *ast.FuncType) []ast.Stmt {
+func (r *Context) prepareReturns(original *ast.FuncType) ([]ast.Stmt, []ast.Expr) {
 	if original.Results == nil {
 		panic("propagation requires an error return")
 	}
 	var prefix []ast.Stmt
+	var values []ast.Expr
 	for i, field := range original.Results.List {
 		count := len(field.Names)
 		if count == 0 {
@@ -52,21 +53,21 @@ func (r *Context) prepareReturns(original *ast.FuncType) []ast.Stmt {
 			}
 			value := r.NameFor("zero")
 			prefix = append(prefix, Variable(value,
-				r.temporaryTypeAt(r.Input.Inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
+				r.temporaryTypeAt(r.input.Inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
 					original.End()), nil))
-			r.functionState.frame.values = append(r.functionState.frame.values, value)
+			values = append(values, value)
 		}
 	}
-	return prefix
+	return prefix, values
 }
 
 func (r *Context) frameSignature() *types.Signature {
 	var signature *types.Signature
 	switch function := r.functionState.frame.function.(type) {
 	case *ast.FuncDecl:
-		signature = r.Input.Inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
+		signature = r.input.Inventory.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
 	case *ast.FuncLit:
-		signature = r.Input.Inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
+		signature = r.input.Inventory.Checked.TypesInfo.TypeOf(function).(*types.Signature)
 	}
 	return signature
 }
@@ -77,11 +78,11 @@ func (r *Context) ErrorReturnType() types.Type {
 	return signature.Results().At(signature.Results().Len() - 1).Type()
 }
 
-// FailureResults prepares zero values once in the function that owns the return.
-func (r *Context) FailureResults() []ast.Expr {
+// PrepareFailureResults prepares zero values once in the function that owns the return.
+func (r *Context) PrepareFailureResults() []ast.Expr {
 	frame := r.functionState.frame
 	if !frame.prepared {
-		frame.prefix = r.prepareReturns(frame.typ)
+		frame.prefix, frame.values = r.prepareReturns(frame.typ)
 		frame.prepared = true
 	}
 	return append([]ast.Expr(nil), frame.values...)

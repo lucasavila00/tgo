@@ -14,7 +14,7 @@ func (r *Context) ExpressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.FuncLit:
 		function := *e
-		function.Type, function.Body = r.function(e, e.Type, e.Body)
+		function.Body = r.functionBody(e, e.Type, e.Body)
 		result = &function
 	case *ast.CallExpr:
 		if r.unsafeOperand(e) {
@@ -80,17 +80,17 @@ func (r *Context) FinishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 	if result != expr {
 		r.recordOrigin(result, expr)
 	}
-	if expr == r.Input.Target && expr != r.functionState.suppressedRoot {
-		r.Request.Inserted = true
+	if expr == r.input.Target && expr != r.addressRoot {
+		r.request.inserted = true
 		if r.functionName(expr) {
-			return r.ResultOf(append(before, r.Input.After([]ast.Expr{result})...), []ast.Expr{result})
+			return r.ResultOf(append(before, r.input.After([]ast.Expr{result})...), []ast.Expr{result})
 		}
-		if tv := r.Input.Inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
-			return r.ResultOf(append(before, r.Input.After([]ast.Expr{result})...), []ast.Expr{result})
+		if tv := r.input.Inventory.Checked.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+			return r.ResultOf(append(before, r.input.After([]ast.Expr{result})...), []ast.Expr{result})
 		}
 		saved := r.Save(r.ValueOf(result))
 		before = append(before, saved.Statements...)
-		before = append(before, r.Input.After(saved.Expressions())...)
+		before = append(before, r.input.After(saved.Expressions())...)
 		saved.Statements = before
 		return saved
 	}
@@ -100,16 +100,16 @@ func (r *Context) FinishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 func (r *Context) functionName(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.Ident:
-		_, ok := r.Input.Inventory.Checked.TypesInfo.Uses[e].(*types.Func)
+		_, ok := r.input.Inventory.Checked.TypesInfo.Uses[e].(*types.Func)
 		return ok
 	case *ast.SelectorExpr:
-		if r.Input.Inventory.Checked.TypesInfo.Selections[e] != nil {
+		if r.input.Inventory.Checked.TypesInfo.Selections[e] != nil {
 			return false
 		}
-		_, ok := r.Input.Inventory.Checked.TypesInfo.Uses[e.Sel].(*types.Func)
+		_, ok := r.input.Inventory.Checked.TypesInfo.Uses[e.Sel].(*types.Func)
 		return ok
 	case *ast.IndexExpr:
-		return r.Input.Inventory.Checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
+		return r.input.Inventory.Checked.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
 	case *ast.IndexListExpr:
 		return r.functionName(e.X)
 	}
@@ -117,8 +117,8 @@ func (r *Context) functionName(expr ast.Expr) bool {
 }
 
 func (r *Context) addressableArray(expr ast.Expr) bool {
-	array := storageKinds(r.Input.Inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
-	return array && r.Input.Inventory.Checked.TypesInfo.Types[expr].Addressable()
+	array := storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
+	return array && r.input.Inventory.Checked.TypesInfo.Types[expr].Addressable()
 }
 
 func (r *Context) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
@@ -141,7 +141,7 @@ func (r *Context) untypedBoolean(expr ast.Expr) bool {
 			return r.untypedBoolean(e.X)
 		}
 	case *ast.Ident:
-		if obj := r.Input.Inventory.Checked.TypesInfo.Uses[e]; obj != nil {
+		if obj := r.input.Inventory.Checked.TypesInfo.Uses[e]; obj != nil {
 			if basic, ok := obj.Type().(*types.Basic); ok {
 				return basic.Kind() == types.UntypedBool
 			}

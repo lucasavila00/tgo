@@ -18,17 +18,15 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	if site.Reason != "" {
 		return nil, fmt.Errorf("expression has no current-function evaluation: %s", site.Reason)
 	}
-	r := newRewrite(s)
-	r.Input.Target = target
-	r.Input.After = shared.After(after)
+	r := newRewrite(s, shared.Input{Target: target, After: shared.After(after)})
 	output, err := r.Emit()
 	if err != nil {
 		return nil, err
 	}
-	if !r.Request.Inserted {
+	if !output.Inserted {
 		return nil, fmt.Errorf("expression site was not lowered: %s:%d", site.File, site.Start)
 	}
-	return output, nil
+	return output.Files, nil
 }
 
 // LowerPropagations replaces checked TGo operations with ordinary Go.
@@ -36,13 +34,12 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
 	checked := s.inventory.Checked
-	r := newRewrite(s)
-	r.Input.Propagations = make(map[ast.Expr]shared.Propagation)
-	r.Input.Comprehensions = checked.Comprehensions
-	r.Input.Conditionals = checked.Conditionals
-	r.Input.ShortReturns = checked.ShortReturns
-	r.Request.LoweredReturns = make(map[*ast.ReturnStmt]bool)
-	r.Request.Lowered = make(map[ast.Expr]bool)
+	input := shared.Input{
+		Propagations:   make(map[ast.Expr]shared.Propagation),
+		Comprehensions: checked.Comprehensions,
+		Conditionals:   checked.Conditionals,
+		ShortReturns:   checked.ShortReturns,
+	}
 	for site, expression := range s.inventory.Expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -59,8 +56,9 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 		if site.Reason != "" {
 			return nil, fmt.Errorf("propagation has no current-function evaluation: %s", site.Reason)
 		}
-		r.Input.Propagations[call] = shared.Propagation(operation)
+		input.Propagations[call] = shared.Propagation(operation)
 	}
+	r := newRewrite(s, input)
 	output, err := r.Emit()
 	if err != nil {
 		return nil, err
@@ -68,5 +66,5 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	if err := r.CheckLoweredOperations(); err != nil {
 		return nil, err
 	}
-	return output, nil
+	return output.Files, nil
 }

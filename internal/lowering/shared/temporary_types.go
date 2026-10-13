@@ -32,9 +32,9 @@ func (r *Context) TemporaryType(typ types.Type, original ast.Expr) ast.Expr {
 func (r *Context) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
 	nameCheck := r.checkTypeNames(typ, position)
 	if nameCheck.problem != "" {
-		if r.Request.Err == nil {
+		if r.request.err == nil {
 			errorPosition := r.temporaryTypeErrorPosition(original)
-			r.Request.Err = fmt.Errorf(
+			r.request.err = fmt.Errorf(
 				"%s: cannot name type %s in a generated typed temporary: %s; expose the type with an accessible name",
 				errorPosition,
 				typ,
@@ -44,7 +44,7 @@ func (r *Context) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		return ast.NewIdent("invalid")
 	}
 	text := types.TypeString(types.Default(typ), func(pkg *types.Package) string {
-		if pkg == r.Input.Inventory.Checked.Types {
+		if pkg == r.input.Inventory.Checked.Types {
 			return ""
 		}
 		if r.file.typeImports == nil {

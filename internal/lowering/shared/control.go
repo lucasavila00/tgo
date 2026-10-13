@@ -20,7 +20,7 @@ func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.Contains(s.Key) || r.Contains(s.Value)) {
-		if value := r.Input.Inventory.Checked.TypesInfo.Types[s.X].Value; value != nil &&
+		if value := r.input.Inventory.Checked.TypesInfo.Types[s.X].Value; value != nil &&
 			value.Kind() == constant.Int {
 			return r.withBreakExit(s, &output, r.integerRange(s, &output, statements), exit)
 		}
@@ -110,7 +110,7 @@ func (r *Context) switchStatementResult(
 	var tagValue ast.Expr
 	if len(tagExpressions) != 0 {
 		tagValue = tagExpressions[0]
-		tagInfo := r.Input.Inventory.Checked.TypesInfo.Types[statement.Tag]
+		tagInfo := r.input.Inventory.Checked.TypesInfo.Types[statement.Tag]
 		if tagInfo.Value == nil {
 			savedTagEvaluation := r.Save(r.ValueOf(tagValue))
 			savedTagStatements, savedTagValues := savedTagEvaluation.Statements, savedTagEvaluation.Expressions()
@@ -259,7 +259,7 @@ func (r *Context) typeSwitchStatementResult(
 func (r *Context) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ident, transform ValueBlock) []ast.Stmt {
 	if transform != nil {
 		branchResult := resultVariable
-		if !r.Input.Inventory.Checked.TypesInfo.TGoCases[clause] {
+		if !r.input.Inventory.Checked.TypesInfo.TGoCases[clause] {
 			branchResult = nil
 		}
 		branchBody := &ast.BlockStmt{List: clause.Body}

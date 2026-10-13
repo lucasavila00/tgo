@@ -15,7 +15,7 @@ func (r *Context) unsafeOperand(call *ast.CallExpr) bool {
 	case *ast.SelectorExpr:
 		id = function.Sel
 	}
-	builtin, ok := r.Input.Inventory.Checked.TypesInfo.Uses[id].(*types.Builtin)
+	builtin, ok := r.input.Inventory.Checked.TypesInfo.Uses[id].(*types.Builtin)
 	if !ok || builtin.Pkg() == nil || builtin.Pkg().Path() != "unsafe" {
 		return false
 	}

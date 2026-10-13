@@ -8,10 +8,10 @@ import (
 )
 
 func (r *Context) temporaryTypeErrorPosition(original ast.Expr) token.Position {
-	position := r.Input.Inventory.Checked.Fset.Position(original.Pos())
+	position := r.input.Inventory.Checked.Fset.Position(original.Pos())
 	var selected token.Pos
 	var best int
-	for expression, operation := range r.Input.Propagations {
+	for expression, operation := range r.input.Propagations {
 		distance := int(expression.Pos() - original.Pos())
 		if distance < 0 {
 			distance = -distance
@@ -56,7 +56,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 		}
 		c.visitName(types.Universe.Lookup(types.Default(typ).String()).(*types.TypeName))
 	case *types.TypeParam:
-		scope := c.Context.Input.Inventory.Checked.Types.Scope().Innermost(c.position)
+		scope := c.Context.input.Inventory.Checked.Types.Scope().Innermost(c.position)
 		_, resolved := scope.LookupParent(typ.Obj().Name(), c.position)
 		if resolved != typ.Obj() {
 			c.parameterNames[typ] = c.Context.parameterAlias(typ).Name
@@ -97,7 +97,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 }
 
 func (c *typeNameCheck) visitName(object *types.TypeName) {
-	checked := c.Context.Input.Inventory.Checked
+	checked := c.Context.input.Inventory.Checked
 	if object.Pkg() != nil && object.Pkg() != checked.Types {
 		if !object.Exported() {
 			c.problem = "the type is private to " + object.Pkg().Path()
@@ -114,7 +114,7 @@ func (c *typeNameCheck) visitName(object *types.TypeName) {
 func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 	for i := 0; i < typ.NumFields(); i++ {
 		field := typ.Field(i)
-		if field.Pkg() != nil && field.Pkg() != c.Context.Input.Inventory.Checked.Types && !field.Exported() {
+		if field.Pkg() != nil && field.Pkg() != c.Context.input.Inventory.Checked.Types && !field.Exported() {
 			c.problem = "the type has a private field from " + field.Pkg().Path()
 		}
 		c.visit(field.Type())
@@ -124,7 +124,7 @@ func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 func (c *typeNameCheck) visitInterface(typ *types.Interface) {
 	for i := 0; i < typ.NumExplicitMethods(); i++ {
 		method := typ.ExplicitMethod(i)
-		if method.Pkg() != nil && method.Pkg() != c.Context.Input.Inventory.Checked.Types &&
+		if method.Pkg() != nil && method.Pkg() != c.Context.input.Inventory.Checked.Types &&
 			!method.Exported() {
 			c.problem = "the type has a private method from " + method.Pkg().Path()
 		}
