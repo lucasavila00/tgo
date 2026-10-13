@@ -1,24 +1,33 @@
 --- a/parser/interface.go
 +++ b/parser/interface.go
-@@ -81,7 +81,12 @@
+@@ -81,7 +81,13 @@
  // errors were found, the result is a partial AST (with [ast.Bad]* nodes
  // representing the fragments of erroneous source code). Multiple errors
  // are returned via a scanner.ErrorList which is sorted by source position.
 -func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast.File, err error) {
 +func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (*ast.File, error) {
-+	return ParseFileWithPostfix(fset, filename, src, mode, nil)
++	file, _, err := ParseTGoFile(fset, filename, filename, src, mode)
++	return file, err
 +}
 +
-+// ParseFileWithPostfix parses a file and records each call's postfix operator through postfix.
-+func ParseFileWithPostfix(fset *token.FileSet, filename string, src any, mode Mode, postfix Postfix) (f *ast.File, err error) {
++// ParseTGoFile parses all TGo forms with physical file identity and logical source positions.
++func ParseTGoFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode) (f *ast.File, forms Forms, err error) {
  	if fset == nil {
  		panic("parser.ParseFile: no token.FileSet provided (fset == nil)")
  	}
-@@ -95,6 +100,7 @@
+@@ -89,12 +95,14 @@
+ 	// get source
+ 	text, err := readSource(filename, src)
+ 	if err != nil {
+-		return nil, err
++		return nil, forms, err
+ 	}
+ 
  	file := fset.AddFile(filename, -1, len(text))
  
  	var p parser
-+	p.postfix = postfix
++	p.forms = &forms
++	p.sourceName = sourceName
  	defer func() {
  		if e := recover(); e != nil {
  			// resume same panic if it's not a bailout
@@ -33,24 +42,82 @@
  	"go/token"
  	"strings"
  )
-@@ -38,6 +38,7 @@
+@@ -38,6 +38,10 @@
  	file    *token.File
  	errors  scanner.ErrorList
  	scanner scanner.Scanner
-+	postfix Postfix
++	forms *Forms
++	postfixEnds map[token.Pos]token.Pos
++	headerAssignment bool
++	sourceName string
  
  	// Tracing/debugging
  	mode   Mode // parsing mode
-@@ -77,7 +78,7 @@
+@@ -77,7 +81,14 @@
  func (p *parser) init(file *token.File, src []byte, mode Mode) {
  	p.file = file
  	eh := func(pos token.Position, msg string) { p.errors.Add(pos, msg) }
 -	p.scanner.Init(p.file, src, eh, scanner.ScanComments)
-+	p.scanner.Init(p.file, src, eh, scanner.ScanComments | scanner.TGo)
++	sourceName := p.sourceName
++	if sourceName == "" {
++		sourceName = file.Name()
++	}
++	if sourceName != file.Name() {
++		file.AddLineColumnInfo(0, sourceName, 1, 1)
++	}
++	p.scanner.InitSource(p.file, sourceName, src, eh, scanner.ScanComments|scanner.TGo)
  
  	p.top = true
  	p.mode = mode
-@@ -1727,6 +1728,11 @@
+@@ -307,6 +318,8 @@
+ 		switch {
+ 		case p.tok == token.SEMICOLON && p.lit == "\n":
+ 			msg += ", found newline"
++		case p.tok == scanner.ShortReturn:
++			msg += ", found '..'"
+ 		case p.tok.IsLiteral():
+ 			// print 123 rather than 'INT', etc.
+ 			msg += ", found " + p.lit
+@@ -1459,9 +1472,10 @@
+ 		return typ
+ 	}
+ 
+-	p.exprLev++
++	previousLevel, previousHeader := p.exprLev, p.headerAssignment
++	p.exprLev, p.headerAssignment = 0, false
+ 	body := p.parseBody()
+-	p.exprLev--
++	p.exprLev, p.headerAssignment = previousLevel, previousHeader
+ 
+ 	return &ast.FuncLit{Type: typ, Body: body}
+ }
+@@ -1474,6 +1488,8 @@
+ 	}
+ 
+ 	switch p.tok {
++	case token.IF, token.SWITCH:
++		return p.parseValueConditional()
+ 	case token.IDENT:
+ 		x := p.parseIdent()
+ 		return x
+@@ -1700,15 +1716,7 @@
+ 		defer un(trace(p, "LiteralValue"))
+ 	}
+ 
+-	lbrace := p.expect(token.LBRACE)
+-	var elts []ast.Expr
+-	p.exprLev++
+-	if p.tok != token.RBRACE {
+-		elts = p.parseElementList()
+-	}
+-	p.exprLev--
+-	rbrace := p.expectClosing(token.RBRACE, "composite literal")
+-	return &ast.CompositeLit{Type: typ, Lbrace: lbrace, Elts: elts, Rbrace: rbrace}
++	return p.parseTGoLiteralValue(typ)
+ }
+ 
+ func (p *parser) parsePrimaryExpr(x ast.Expr) ast.Expr {
+@@ -1727,6 +1735,11 @@
  	for n = 1; ; n++ {
  		incNestLev(p)
  		switch p.tok {
@@ -62,17 +129,122 @@
  		case token.PERIOD:
  			p.next()
  			switch p.tok {
+@@ -1759,12 +1772,12 @@
+ 			// determine if '{' belongs to a composite literal or a block statement
+ 			switch t.(type) {
+ 			case *ast.BadExpr, *ast.Ident, *ast.SelectorExpr:
+-				if p.exprLev < 0 {
++				if p.exprLev < 0 && !p.startsHeaderComprehension() {
+ 					return x
+ 				}
+ 				// x is possibly a composite literal type
+ 			case *ast.IndexExpr, *ast.IndexListExpr:
+-				if p.exprLev < 0 {
++				if p.exprLev < 0 && !p.startsHeaderComprehension() {
+ 					return x
+ 				}
+ 				// x is possibly a composite literal type
+@@ -1940,6 +1953,8 @@
+ 		pos, tok := p.pos, p.tok
+ 		p.next()
+ 		var y []ast.Expr
++		previousHeader := p.headerAssignment
++		p.headerAssignment = false
+ 		isRange := false
+ 		if mode == rangeOk && p.tok == token.RANGE && (tok == token.DEFINE || tok == token.ASSIGN) {
+ 			pos := p.pos
+@@ -1947,8 +1962,10 @@
+ 			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRhs()}}
+ 			isRange = true
+ 		} else {
++			p.headerAssignment = p.exprLev < 0
+ 			y = p.parseList(true)
+ 		}
++		p.headerAssignment = previousHeader
+ 		return &ast.AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}, isRange
+ 	}
+ 
+@@ -2047,15 +2064,7 @@
+ 		defer un(trace(p, "ReturnStmt"))
+ 	}
+ 
+-	pos := p.pos
+-	p.expect(token.RETURN)
+-	var x []ast.Expr
+-	if p.tok != token.SEMICOLON && p.tok != token.RBRACE {
+-		x = p.parseList(true)
+-	}
+-	p.expectSemi()
+-
+-	return &ast.ReturnStmt{Return: pos, Results: x}
++	return p.parseTGoReturnStmt()
+ }
+ 
+ func (p *parser) parseBranchStmt(tok token.Token) *ast.BranchStmt {
+@@ -2152,6 +2161,10 @@
+ }
+ 
+ func (p *parser) parseIfStmt() *ast.IfStmt {
++	return p.parseIf(false)
++}
++
++func (p *parser) parseIf(value bool) *ast.IfStmt {
+ 	defer decNestLev(incNestLev(p))
+ 
+ 	if p.trace {
+@@ -2168,16 +2181,16 @@
+ 		p.next()
+ 		switch p.tok {
+ 		case token.IF:
+-			else_ = p.parseIfStmt()
++			else_ = p.parseIf(value)
+ 		case token.LBRACE:
+ 			else_ = p.parseBlockStmt()
+-			p.expectSemi()
++			if !value { p.expectSemi() }
+ 		default:
+ 			p.errorExpected(p.pos, "if statement or block")
+ 			else_ = &ast.BadStmt{From: p.pos, To: p.pos}
+ 		}
+ 	} else {
+-		p.expectSemi()
++		if !value { p.expectSemi() }
+ 	}
+ 
+ 	return &ast.IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
+@@ -2230,6 +2243,10 @@
+ }
+ 
+ func (p *parser) parseSwitchStmt() ast.Stmt {
++	return p.parseSwitch(false)
++}
++
++func (p *parser) parseSwitch(value bool) ast.Stmt {
+ 	if p.trace {
+ 		defer un(trace(p, "SwitchStmt"))
+ 	}
+@@ -2273,7 +2290,7 @@
+ 		list = append(list, p.parseCaseClause())
+ 	}
+ 	rbrace := p.expect(token.RBRACE)
+-	p.expectSemi()
++	if !value { p.expectSemi() }
+ 	body := &ast.BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
+ 
+ 	if typeSwitch {
 --- a/scanner/scanner.go
 +++ b/scanner/scanner.go
-@@ -41,6 +41,7 @@
+@@ -41,6 +41,9 @@
  	lineOffset int       // current line offset
  	insertSemi bool      // insert a semicolon before next newline
  	nlPos      token.Pos // position of newline in preceding comment
 +	previous token.Token // previous non-comment token
++	pending []Lexeme
++	deliveredEnd token.Pos
  
  	endPosValid bool
  	endPos      token.Pos // overrides the offset as the default end position
-@@ -116,6 +117,7 @@
+@@ -116,6 +119,7 @@
  
  const (
  	ScanComments    Mode = 1 << iota // return comments as COMMENT tokens
@@ -80,7 +252,25 @@
  	dontInsertSemis                  // do not automatically insert semicolons - for testing only
  )
  
-@@ -829,6 +831,7 @@
+@@ -774,7 +778,7 @@
+ 
+ // End returns the position immediately after the last scanned token.
+ // If [Scanner.Scan] has not been called yet, End returns [token.NoPos].
+-func (s *Scanner) End() token.Pos {
++func (s *Scanner) scanEnd() token.Pos {
+ 	// Handles special case:
+ 	// - Makes sure we return [token.NoPos], even when [Scanner.Init] has consumed a BOM.
+ 	// - When the previous token was a synthetic [token.SEMICOLON] inside a multi-line
+@@ -819,7 +823,7 @@
+ // Scan adds line information to the file added to the file
+ // set with Init. Token positions are relative to that file
+ // and thus relative to the file set.
+-func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
++func (s *Scanner) scan() (pos token.Pos, tok token.Token, lit string) {
+ scanAgain:
+ 	s.endPosValid = false
+ 	if s.nlPos.IsValid() {
+@@ -829,6 +833,7 @@
  		s.endPos = pos + 1
  		s.endPosValid = true
  		s.nlPos = token.NoPos
@@ -88,7 +278,7 @@
  		return
  	}
  
-@@ -862,6 +865,7 @@
+@@ -862,6 +867,7 @@
  		case eof:
  			if s.insertSemi {
  				s.insertSemi = false // EOF consumed
@@ -96,7 +286,7 @@
  				return pos, token.SEMICOLON, "\n"
  			}
  			tok = token.EOF
-@@ -870,6 +874,7 @@
+@@ -870,6 +876,7 @@
  			// set in the first place and exited early
  			// from s.skipWhitespace()
  			s.insertSemi = false // newline consumed
@@ -104,7 +294,18 @@
  			return pos, token.SEMICOLON, "\n"
  		case '"':
  			insertSemi = true
-@@ -964,6 +969,14 @@
+@@ -892,6 +899,10 @@
+ 				s.next()
+ 				s.next() // consume last '.'
+ 				tok = token.ELLIPSIS
++			} else if s.mode&TGo != 0 && s.ch == '.' {
++				s.next()
++				tok, lit = ShortReturn, ".."
++				insertSemi = (s.insertSemi || s.previous == token.ELLIPSIS) && s.previous != token.RETURN
+ 			}
+ 		case ',':
+ 			tok = token.COMMA
+@@ -964,6 +975,14 @@
  			tok = s.switch2(token.ASSIGN, token.EQL)
  		case '!':
  			tok = s.switch2(token.NOT, token.NEQ)
@@ -119,7 +320,7 @@
  		case '&':
  			if s.ch == '^' {
  				s.next()
-@@ -995,5 +1008,9 @@
+@@ -995,5 +1014,9 @@
  		s.insertSemi = insertSemi
  	}
  

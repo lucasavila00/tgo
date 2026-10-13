@@ -1,29 +1,23 @@
-// Package frontend lets the compiler read TGo with Go's parser.
+// Package frontend reads TGo source for the compiler.
 //
-// The private Go parser reads ! and !! on call expressions. It records the
-// exact operand and operator span. After parsing succeeds, the frontend saves
-// source call names and builds calls for checking. This keeps generated helper
-// names out of error context. Failed attempts reserve no postfix helper names.
+// The private Go parser reads every supported TGo form in one parse. It
+// records the exact source nodes for error operators, value expressions,
+// comprehensions, and short returns. Grammar rules decide which call an
+// operator belongs to and which braces belong to an expression.
 //
-// Preparation converts if and switch expressions, comprehensions, and short
-// returns to temporary Go syntax and records their meaning. A temporary call
-// represents a value expression; its branches still belong to the enclosing
-// source function. Checking applies TGo rules to these records. Lowering uses
-// them to generate ordinary Go statements.
+// # Keep source meaning before building checker calls
 //
-// # Keep source edits and source meaning separate
+// After parsing succeeds, the frontend reserves source identifiers and saves
+// source call names. It then names the recorded syntax containers and builds
+// calls for checking. A single bottom-up walk inserts postfix calls, so a
+// nested generated helper cannot enter another call's error context.
 //
-// Each preparation rule returns an edit and its TGo record. One file preparation
-// owns the prepared text, records, and positions. It applies text edits and
-// position changes together. Errors and syntax nodes thus keep the positions
-// of the input, even when a replacement has a different length.
+// Conditional branches and comprehension clauses remain statements in the
+// enclosing source function. Their syntax containers let checking and lowering
+// apply TGo rules without changing return targets or source bindings.
 //
-// Conditional syntax can be ambiguous with an ordinary Go statement. Its
-// preparation and parser recovery share recognition and replacement rules.
-// Preparation handles clear operands first. If Go parsing fails, recovery can
-// identify another operand and request the same kind of edit. This preserves
-// ordinary Go statement parsing and allows nested TGo forms.
-//
-// ParseFile returns the completed tree and TGo records together. Type checking
-// and code generation use that result; source preparation does not choose types.
+// Physical file names identify files for Go build selection. Logical source
+// names and line directives identify positions in diagnostics. The scanner
+// records both from the original input. ParseFile returns the completed syntax
+// and source records together.
 package frontend

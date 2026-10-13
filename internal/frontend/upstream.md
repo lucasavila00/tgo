@@ -8,15 +8,16 @@ Run `make prepare` before building or testing the compiler.
 `patches/source.patch`. Generated files stay outside Git. The script stops if a
 patch requires a shifted match. The package folders retain Go's BSD license.
 
-The scanner reads `!` and adjacent `!!` after a closing parenthesis as postfix
-tokens. Each suffix can end a statement. The parser checks the current operand
-and records its node and suffix span. This puts operand selection in the grammar.
+Grammar rules read every supported TGo form and retain exact source nodes.
+The scanner reads postfix and short-return operators, applies semicolon
+insertion, and stores tokens needed for lookahead. Source spans and line
+directives refer to the original input.
 
-The frontend publishes records only after parsing succeeds. It saves all source
-call names before one walk builds checker calls. Thus a nested helper cannot
-appear in another call's error context.
+The frontend publishes records only after parsing succeeds. It saves source
+call names before naming syntax containers and creating checker calls. Value
+branches and comprehension clauses retain the enclosing source function.
 
 To update Go, change the shared version pin, review the patch against that
-version, and regenerate the sources. Check ordinary Go syntax, postfix grammar,
-mixed TGo forms, diagnostics, and fixture snapshots. Handwritten parser behavior
-is in `parser/tgo.go`; scanner changes remain in the tracked patch.
+version, and regenerate. Check ordinary Go syntax, TGo grammar, diagnostics,
+and fixture snapshots. Handwritten grammar rules are in `parser/tgo_*.go`;
+scanner extensions are in `scanner/`. The tracked patch supplies upstream hooks.

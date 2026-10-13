@@ -6,6 +6,8 @@ import (
 	"go/format"
 	"go/token"
 
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
+
 	"golang.org/x/tools/go/ast/astutil"
 )
 
@@ -17,37 +19,44 @@ type Marker struct {
 	Position token.Position
 }
 
-type parsedPostfix struct {
-	operand    ast.Expr
-	start, end token.Pos
-	marker     Marker
-}
-
 type postfixBinding struct {
 	name string
 	end  token.Pos
 }
 
 // bindPostfixCalls records source names before any nested operand is replaced.
-// It converts parsed suffix positions to input positions for checking and normalization.
-func (result *Parsed) bindPostfixCalls(fset *token.FileSet, prepared, original *token.File,
-	offsets []int, operations []parsedPostfix) map[ast.Expr]postfixBinding {
-	bindings := make(map[ast.Expr]postfixBinding, len(operations))
-	for _, operation := range operations {
-		call := ast.Unparen(operation.operand).(*ast.CallExpr)
-		var name bytes.Buffer
-		if err := format.Node(&name, fset, call.Fun); err != nil {
-			panic(err)
+func (result *Parsed) bindPostfixCalls(fset *token.FileSet, forms parser.Forms,
+	input []byte, used map[string]bool) map[ast.Expr]postfixBinding {
+	bindings := make(map[ast.Expr]postfixBinding, len(forms.Postfix))
+	containers := syntaxContainers(forms)
+	for _, operation := range forms.Postfix {
+		call := ast.Unparen(operation.Operand).(*ast.CallExpr)
+		name := freshMarkerName(used, "tgoPropagation")
+		result.Propagations[name] = Marker{
+			Name: name, Wrap: operation.Wrap, Position: fset.Position(operation.Start),
+			CallName: sourceCallName(fset, call.Fun, input, containers),
 		}
-		marker := operation.marker
-		marker.CallName = name.String()
-		marker.Position = original.Position(original.Pos(offsets[prepared.Offset(operation.start)]))
-		result.Propagations[marker.Name] = marker
-		bindings[operation.operand] = postfixBinding{
-			name: marker.Name, end: original.Pos(offsets[prepared.Offset(operation.end)-1] + 1),
-		}
+		bindings[operation.Operand] = postfixBinding{name: name, end: operation.End}
 	}
 	return bindings
+}
+
+// sourceCallName formats ordinary callees and retains source syntax for added forms.
+func sourceCallName(fset *token.FileSet, expression ast.Expr, input []byte, containers map[ast.Node]bool) string {
+	containsSyntax := false
+	ast.Inspect(expression, func(node ast.Node) bool {
+		containsSyntax = containsSyntax || containers[node]
+		return !containsSyntax
+	})
+	if containsSyntax {
+		file := fset.File(expression.Pos())
+		return string(input[file.Offset(expression.Pos()):file.Offset(expression.End())])
+	}
+	var name bytes.Buffer
+	if err := format.Node(&name, fset, expression); err != nil {
+		panic(err)
+	}
+	return name.String()
 }
 
 // normalizePostfix replaces recorded operands with checker calls in one bottom-up walk.

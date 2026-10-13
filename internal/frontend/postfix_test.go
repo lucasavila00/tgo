@@ -83,7 +83,7 @@ func TestPostfixFailedParseNames(t *testing.T) {
 	}
 }
 
-// TestPostfixMixedSyntaxNames checks helper names and spans after preparation and parser recovery.
+// TestPostfixMixedSyntaxNames checks helper names and spans across mixed TGo syntax.
 func TestPostfixMixedSyntaxNames(t *testing.T) {
 	for _, expression := range []string{
 		"if ok { target()! } else { target()!! }",

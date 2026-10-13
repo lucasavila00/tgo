@@ -22,7 +22,7 @@ func TestParsePropagationPositions(t *testing.T) {
 	}
 }
 
-// TestParseErrorKeepsOriginalPosition checks that a parser error refers to the input after postfix replacement.
+// TestParseErrorKeepsOriginalPosition checks a parser error position after a postfix operator.
 func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 	input := "package p\nfunc f() { _ = call()! + }\n"
 	_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))

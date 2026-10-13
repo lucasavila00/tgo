@@ -5,7 +5,6 @@ import (
 	stock "go/parser"
 	"go/token"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -45,22 +44,19 @@ func TestPostfixGrammarChecksOperand(t *testing.T) {
 // TestPostfixGrammarRecordsRawCalls checks operand identity and raw AST before normalization.
 func TestPostfixGrammarRecordsRawCalls(t *testing.T) {
 	input := "package p\nfunc f() { _ = factory()!()!! }"
-	var operands []ast.Expr
-	var suffixes []string
 	set := token.NewFileSet()
-	file, err := ParseFileWithPostfix(set, "main.tgo", input, SkipObjectResolution,
-		func(operand ast.Expr, start, end token.Pos, wrap bool) {
-			operands = append(operands, operand)
-			suffixes = append(suffixes, input[set.Position(start).Offset:set.Position(end).Offset])
-			if wrap != (suffixes[len(suffixes)-1] == "!!") {
-				t.Fatalf("wrong operator meaning: %v", suffixes)
-			}
-		})
-	if err != nil || len(operands) != 2 || strings.Join(suffixes, ",") != "!,!!" {
-		t.Fatalf("operands: %v; suffixes: %v; error: %v", operands, suffixes, err)
+	file, forms, err := ParseTGoFile(set, "main.tgo", "main.tgo", input, SkipObjectResolution)
+	if err != nil || len(forms.Postfix) != 2 {
+		t.Fatalf("operands: %v; error: %v", forms.Postfix, err)
 	}
-	outer := operands[1].(*ast.CallExpr)
-	if outer.Fun != operands[0] {
+	for _, operation := range forms.Postfix {
+		suffix := input[set.Position(operation.Start).Offset:set.Position(operation.End).Offset]
+		if operation.Wrap != (suffix == "!!") || (suffix != "!" && suffix != "!!") {
+			t.Fatalf("suffix: %q; operation: %+v", suffix, operation)
+		}
+	}
+	outer := forms.Postfix[1].Operand.(*ast.CallExpr)
+	if outer.Fun != forms.Postfix[0].Operand {
 		t.Fatal("parser changed the raw call operand")
 	}
 	assignment := file.Decls[0].(*ast.FuncDecl).Body.List[0].(*ast.AssignStmt)

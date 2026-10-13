@@ -80,8 +80,8 @@ func checkPhysicalAndLogicalPosition(t *testing.T, set *token.FileSet, parsed *P
 	}
 }
 
-// TestPreparedFormsLogicalSourcePositions checks the same logical position map for each TGo record.
-func TestPreparedFormsLogicalSourcePositions(t *testing.T) {
+// TestTGoRecordsLogicalSourcePositions checks the same logical position map for each TGo record.
+func TestTGoRecordsLogicalSourcePositions(t *testing.T) {
 	for _, test := range []struct {
 		body   string
 		starts []string
