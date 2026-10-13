@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestInsertGenericStorage checks that inserted statements preserve generic array and slice storage behavior.
 func TestInsertGenericStorage(t *testing.T) {
 	for _, test := range []struct{ name, body, target, want string }{
 		{"read", `fmt.Print(a[index()])`, "index()", "IM7IM1"},
@@ -32,6 +33,7 @@ func main(){run([2]int{1,2},[2]int{7,8});run([]int{1,2},[]int{7,8})}
 	}
 }
 
+// TestInsertStorage checks that inserted statements preserve array storage, addresses, and pointer receivers.
 func TestInsertStorage(t *testing.T) {
 	cases := []struct{ name, code, target, want string }{
 		{"array slice", `func main() { a:=[2]int{1,2}; s:=a[:bound()]; s[0]=9; fmt.Print(a[0]) }`, "bound()", "BM9"},

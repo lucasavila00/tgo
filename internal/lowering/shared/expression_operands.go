@@ -6,6 +6,7 @@ import (
 	"go/token"
 )
 
+// binaryExpression lowers binary operands in order and delegates short-circuit operators to branch lowering.
 func (r *Context) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 	if e.Op == token.LAND || e.Op == token.LOR {
 		return r.logicalExpression(e)
@@ -18,6 +19,7 @@ func (r *Context) binaryExpression(e *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 	return statements, &output
 }
 
+// logicalExpression puts the right operand's added statements inside the branch that evaluates it.
 func (r *Context) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast.Expr) {
 	leftEvaluation := r.Expression(expression.X)
 	leftStatements, leftValues := leftEvaluation.Statements, leftEvaluation.Expressions()
@@ -47,6 +49,7 @@ func (r *Context) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast
 	return statements, result
 }
 
+// selectorExpression lowers a selector receiver while retaining storage for an implicit pointer method receiver.
 func (r *Context) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
 	if selection := r.input.Inventory.Checked.TypesInfo.Selections[e]; selection != nil &&
@@ -66,6 +69,7 @@ func (r *Context) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr)
 	return statements, &output
 }
 
+// indexExpression lowers an index in operand order, retaining array storage when later work changes its contents.
 func (r *Context) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
 	if storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage &&
@@ -93,6 +97,7 @@ func (r *Context) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	return statements, &output
 }
 
+// sliceExpression lowers slice bounds in order while retaining array storage or a saved slice header.
 func (r *Context) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	var statements []ast.Stmt
 	output := *e
@@ -138,6 +143,7 @@ func (r *Context) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	return statements, &output
 }
 
+// compositeExpression lowers literal keys and values in order without treating field names as evaluated keys.
 func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr) {
 	var statements []ast.Stmt
 	output := *e

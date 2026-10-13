@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestPostfixOperatorMeaning checks that ! preserves the error and !! requests added context.
 func TestPostfixOperatorMeaning(t *testing.T) {
 	for _, test := range []struct {
 		name   string

@@ -6,11 +6,13 @@ import (
 	"testing"
 )
 
+// TestReturnErrorShorthand checks accepted short returns and source diagnostics for rejected forms.
 func TestReturnErrorShorthand(t *testing.T) {
 	t.Run("Valid", testShortReturnFixtures)
 	t.Run("Rejected", testShortReturnErrors)
 }
 
+// testShortReturnFixtures checks short-return snapshots and compares their runtime results with Go references.
 func testShortReturnFixtures(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/return-error-shorthand")
 	if err != nil {
@@ -26,6 +28,7 @@ func testShortReturnFixtures(t *testing.T) {
 	}
 }
 
+// testShortReturnErrors checks source diagnostics for rejected short-return fixtures.
 func testShortReturnErrors(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/return-error-shorthand-rejected")
 	if err != nil {

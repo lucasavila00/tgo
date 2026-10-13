@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestParsePropagationPositions checks postfix positions with nesting, line directives, and non-ASCII input.
 func TestParsePropagationPositions(t *testing.T) {
 	for _, input := range []string{
 		"package p\nfunc f() error { _ = call()!; return nil }",
@@ -21,6 +22,7 @@ func TestParsePropagationPositions(t *testing.T) {
 	}
 }
 
+// TestParseErrorKeepsOriginalPosition checks that a parser error refers to the input after postfix replacement.
 func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 	input := "package p\nfunc f() { _ = call()! + }\n"
 	_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
@@ -29,6 +31,7 @@ func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 	}
 }
 
+// checkPropagationPositions checks each parsed marker and requires one marker per propagation record.
 func checkPropagationPositions(t *testing.T, input string) {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -46,6 +49,8 @@ func checkPropagationPositions(t *testing.T, input string) {
 	}
 }
 
+// checkPropagationCallPosition checks one marker span and its physical and adjusted source positions.
+// It returns one for a checked marker and zero for other nodes.
 func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSet, parsed *Parsed, node ast.Node) int {
 	t.Helper()
 	call, ok := node.(*ast.CallExpr)
@@ -86,6 +91,7 @@ func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSe
 	return 1
 }
 
+// TestParseMalformedGo checks that incomplete ordinary Go returns a diagnostic.
 func TestParseMalformedGo(t *testing.T) {
 	for _, input := range []string{"", "package", "func f() {}", "package p\nvar x = "} {
 		t.Run(input, func(t *testing.T) {

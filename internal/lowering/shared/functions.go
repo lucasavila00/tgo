@@ -14,6 +14,8 @@ type returnFrame struct {
 	values   []ast.Expr
 }
 
+// functionBody lowers a function with fresh return and jump state and shared file bindings.
+// It adds generated zero-result storage and type aliases to the copied body.
 func (r *Context) functionBody(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt) *ast.BlockStmt {
 	functionRewrite := &Context{
 		input:         r.input,
@@ -61,6 +63,7 @@ func (r *Context) prepareReturns(original *ast.FuncType) ([]ast.Stmt, []ast.Expr
 	return prefix, values
 }
 
+// frameSignature reads the checked signature of the function that owns the current return state.
 func (r *Context) frameSignature() *types.Signature {
 	var signature *types.Signature
 	switch function := r.functionState.frame.function.(type) {

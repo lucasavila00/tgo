@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// TestCollectionComprehensions checks comprehension snapshots and runtime results against Go reference programs.
 func TestCollectionComprehensions(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/comprehensions")
 	if err != nil {
@@ -24,6 +25,7 @@ func TestCollectionComprehensions(t *testing.T) {
 	}
 }
 
+// TestComprehensionErrors checks source diagnostics for invalid comprehensions.
 func TestComprehensionErrors(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/comprehensions-rejected")
 	if err != nil {
@@ -36,6 +38,7 @@ func TestComprehensionErrors(t *testing.T) {
 	}
 }
 
+// checkFeatureFixture checks generated snapshots and compares compiled and reference program output.
 func checkFeatureFixture(t *testing.T, dir string) {
 	t.Helper()
 	compiled := compileFixture(t, dir)

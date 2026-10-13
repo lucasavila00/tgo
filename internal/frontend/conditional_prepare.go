@@ -117,6 +117,8 @@ func (syntax conditionalSyntax) prepare(source mappedSource) []conditionalReplac
 	return replacements
 }
 
+// replacement builds a marker call around a conditional without changing source text.
+// The returned edit retains the conditional bytes and their input positions.
 func (syntax conditionalSyntax) replacement(source mappedSource, start, end int, name string) conditionalReplacement {
 	before, after := name+"(func(){", "})"
 	offsets := insertedOffsets(len(before), source.offsets[start])

@@ -5,6 +5,8 @@ import (
 	"go/token"
 )
 
+// sequenceZero builds a call that supplies the sequence element's zero value without iterating the sequence.
+// It records the generic helper and iter import once per file.
 func (r *Context) sequenceZero(sequence ast.Expr) ast.Expr {
 	if r.file.zeroSequence == nil {
 		r.file.zeroSequence, r.file.iterAlias = r.Name(), r.NameFor("iter")
@@ -18,6 +20,7 @@ func (r *Context) sequenceZero(sequence ast.Expr) ast.Expr {
 	return &ast.CallExpr{Fun: r.file.zeroSequence, Args: []ast.Expr{sequence}}
 }
 
+// zeroDeclaration builds a generic helper that returns its element type's zero value and leaves its argument unused.
 func zeroDeclaration(name, parameter, argument, zero *ast.Ident, input ast.Expr) *ast.FuncDecl {
 	return &ast.FuncDecl{Name: name, Type: &ast.FuncType{
 		TypeParams: &ast.FieldList{List: []*ast.Field{{Names: []*ast.Ident{parameter},

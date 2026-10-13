@@ -2,6 +2,7 @@ package driver
 
 import "testing"
 
+// TestGeneratedName checks that output names retain Go target and test suffixes.
 func TestGeneratedName(t *testing.T) {
 	for source, want := range map[string]string{
 		"main.tgo": "main_tgo.go", "main_test.tgo": "main_tgo_test.go",

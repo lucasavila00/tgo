@@ -6,6 +6,7 @@ import (
 	"go/token"
 )
 
+// expressionStatement lowers an expression used for its effects and discards any stored results.
 func (r *Context) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	statementsEvaluation := r.Expression(s.X)
 	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
@@ -44,6 +45,7 @@ func BlankDestinations(expressions []ast.Expr) bool {
 	return len(expressions) != 0
 }
 
+// assignmentStatement prepares destinations and values in source order before emitting assignment stores.
 func (r *Context) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 	output := *s
 	var statements []ast.Stmt
@@ -82,6 +84,7 @@ func (r *Context) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 	return append(statements, &output)
 }
 
+// declarationStatement lowers declaration initializers in order and keeps their statements before each declaration.
 func (r *Context) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 	declaration := s.Decl.(*ast.GenDecl)
 	var output []ast.Stmt
@@ -102,6 +105,7 @@ func (r *Context) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 	return output
 }
 
+// ifStatement lowers both branch bodies and combines them with the rewritten initializer and condition.
 func (r *Context) ifStatement(statement *ast.IfStmt) []ast.Stmt {
 	body := r.Block(statement.Body)
 	alternative := statement.Else
@@ -139,6 +143,7 @@ func (r *Context) IfStatement(statement *ast.IfStmt, body *ast.BlockStmt, altern
 	return []ast.Stmt{&ast.BlockStmt{List: append(statements, &output)}}
 }
 
+// labeledStatement keeps goto entry and labeled break or continue targets valid when one statement expands.
 func (r *Context) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 	output := *s
 	jump := r.hasGoto(s)
@@ -195,6 +200,7 @@ func (r *Context) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 	return []ast.Stmt{&output}
 }
 
+// scopedBlock reuses a sole block or puts the statement list in a new block.
 func scopedBlock(statements []ast.Stmt) *ast.BlockStmt {
 	if len(statements) == 1 {
 		if block, ok := statements[0].(*ast.BlockStmt); ok {
@@ -204,6 +210,7 @@ func scopedBlock(statements []ast.Stmt) *ast.BlockStmt {
 	return &ast.BlockStmt{List: statements}
 }
 
+// labelFinalStatement attaches a control label to the last generated statement, leaving setup before it.
 func labelFinalStatement(output *ast.LabeledStmt, statements []ast.Stmt) []ast.Stmt {
 	if len(statements) == 1 {
 		if block, ok := statements[0].(*ast.BlockStmt); ok {

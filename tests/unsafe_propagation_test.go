@@ -10,6 +10,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestPropagationUnsafeRejected checks diagnostics for propagation inside unsafe layout builtin operands.
 func TestPropagationUnsafeRejected(t *testing.T) {
 	entries, err := os.ReadDir("testdata/propagation-rejected")
 	if err != nil {

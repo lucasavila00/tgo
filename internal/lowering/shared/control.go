@@ -29,6 +29,8 @@ func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	return r.withBreakExit(s, &output, append(statements, &output), exit)
 }
 
+// rangeAssignments receives range values in fresh locals and moves destination evaluation into each iteration.
+// It updates the copied range so stores occur in source order.
 func (r *Context) rangeAssignments(original, output *ast.RangeStmt, statements []ast.Stmt) []ast.Stmt {
 	var stores []ast.Stmt
 	var destinations []ast.Expr
@@ -60,6 +62,7 @@ func (r *Context) rangeAssignments(original, output *ast.RangeStmt, statements [
 	return statements
 }
 
+// switchStatement lowers an ordinary switch without a branch result destination.
 func (r *Context) switchStatement(statement *ast.SwitchStmt) []ast.Stmt {
 	return r.switchStatementResult(statement, nil, nil)
 }
@@ -71,6 +74,8 @@ func (r *Context) ValueSwitchStatement(
 	return r.switchStatementResult(statement, resultVariable, transform)
 }
 
+// switchStatementResult lowers switch headers and cases, testing case expressions only until a match.
+// It uses the supplied branch transformer when the switch produces a value.
 func (r *Context) switchStatementResult(
 	statement *ast.SwitchStmt,
 	resultVariable *ast.Ident,
@@ -151,6 +156,7 @@ func (r *Context) switchStatementResult(
 	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{switchBlock}, exit)
 }
 
+// switchCases copies and lowers case bodies and reports whether case expressions need added statements.
 func (r *Context) switchCases(
 	statement *ast.SwitchStmt,
 	resultVariable *ast.Ident,
@@ -172,6 +178,7 @@ func (r *Context) switchCases(
 	return caseClauses, casesNeedStatements
 }
 
+// switchCaseSelection builds ordered case tests that stop evaluating expressions after the first match.
 func (r *Context) switchCaseSelection(
 	expressions []ast.Expr,
 	tagValue ast.Expr,
@@ -196,6 +203,7 @@ func (r *Context) switchCaseSelection(
 	return selectionStatements
 }
 
+// typeSwitchStatement lowers an ordinary type switch without a branch result destination.
 func (r *Context) typeSwitchStatement(statement *ast.TypeSwitchStmt) []ast.Stmt {
 	return r.typeSwitchStatementResult(statement, nil, nil)
 }
@@ -207,6 +215,8 @@ func (r *Context) ValueTypeSwitchStatement(
 	return r.typeSwitchStatementResult(statement, resultVariable, transform)
 }
 
+// typeSwitchStatementResult lowers the type-switch header and copies its cases while retaining case bindings.
+// It uses the supplied branch transformer when the switch produces a value.
 func (r *Context) typeSwitchStatementResult(
 	statement *ast.TypeSwitchStmt,
 	resultVariable *ast.Ident,
@@ -256,6 +266,7 @@ func (r *Context) typeSwitchStatementResult(
 	return r.withBreakExit(statement, &rewrittenSwitch, []ast.Stmt{&rewrittenSwitch}, exit)
 }
 
+// switchCaseBody lowers a case body, passing result storage only to cases that supply a value.
 func (r *Context) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ident, transform ValueBlock) []ast.Stmt {
 	if transform != nil {
 		branchResult := resultVariable
@@ -272,6 +283,7 @@ func (r *Context) switchCaseBody(clause *ast.CaseClause, resultVariable *ast.Ide
 	return rewrittenBody
 }
 
+// firstExpression finds the first expression in source traversal order for generated-type diagnostics.
 func firstExpression(node ast.Node) ast.Expr {
 	var result ast.Expr
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -287,6 +299,7 @@ func firstExpression(node ast.Node) ast.Expr {
 	return result
 }
 
+// switchHeaderNodes collects the initializer, tag, and case expressions whose moved code can contain a break.
 func switchHeaderNodes(statement *ast.SwitchStmt) []ast.Node {
 	headerNodes := []ast.Node{statement.Init, statement.Tag}
 	for _, caseStatement := range statement.Body.List {

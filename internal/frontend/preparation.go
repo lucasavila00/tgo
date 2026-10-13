@@ -20,6 +20,7 @@ type preparedSyntax struct {
 	positions *token.File
 }
 
+// preparePostfix replaces postfix operators in the prepared source and records their meaning.
 func (preparation *sourcePreparation) preparePostfix(sourceName string, input []byte) {
 	replacements := postfixReplacements(sourceName, input, preparation.used)
 	edits := make([]sourceEdit, len(replacements))
@@ -30,6 +31,8 @@ func (preparation *sourcePreparation) preparePostfix(sourceName string, input []
 	preparation.source.apply(edits...)
 }
 
+// prepareExpressions applies short-return, conditional, and comprehension edits until none remain.
+// It updates source positions and feature records with each edit.
 func (preparation *sourcePreparation) prepareExpressions(conditionals conditionalSyntax) error {
 	for {
 		shortReturn, err := preparation.source.shortReturn(preparation.original, preparation.used)
@@ -58,6 +61,7 @@ func (preparation *sourcePreparation) prepareExpressions(conditionals conditiona
 	}
 }
 
+// applyConditionals applies planned replacements and records each conditional at its input position.
 func (preparation *sourcePreparation) applyConditionals(replacements []conditionalReplacement) {
 	if len(replacements) == 0 {
 		return

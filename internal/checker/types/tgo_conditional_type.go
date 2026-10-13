@@ -1,5 +1,7 @@
 package types
 
+// untypedConditionalType finds the common untyped branch type.
+// It returns nil when there is no common type or a nil branch needs a supplied type.
 func untypedConditionalType(values []*operand) Type {
 	var typ Type
 	for _, branch := range values {

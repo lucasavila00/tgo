@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestInsertJumps checks that inserted statements preserve label, goto, and continue behavior.
 func TestInsertJumps(t *testing.T) {
 	cases := []struct{ name, code, target, want string }{
 		{"labeled short declaration", `func run() { goto L; L: x:=right(); fmt.Print(x) }`, "right()", "RM1"},

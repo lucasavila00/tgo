@@ -12,6 +12,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestReadablePropagation checks generated names, discarded results, import bindings, and required goto blocks.
 func TestReadablePropagation(t *testing.T) {
 	work := copyFixture(t, "testdata/propagation/Readability")
 	transpiler.Compile(work)
@@ -34,6 +35,7 @@ func TestReadablePropagation(t *testing.T) {
 	}
 }
 
+// checkDiscardedPropagation checks that discarded values need no storage and the error keeps its source type.
 func checkDiscardedPropagation(t *testing.T, function *ast.FuncDecl) {
 	t.Helper()
 	if len(function.Body.List) != 4 {
@@ -57,6 +59,7 @@ func checkDiscardedPropagation(t *testing.T, function *ast.FuncDecl) {
 	}
 }
 
+// checkFormatBinding checks that each generated error wrapper uses the expected fmt import binding.
 func checkFormatBinding(t *testing.T, function *ast.FuncDecl, prefix string) {
 	t.Helper()
 	found := false
@@ -76,6 +79,7 @@ func checkFormatBinding(t *testing.T, function *ast.FuncDecl, prefix string) {
 	}
 }
 
+// checkReadableFunction checks the generated-code requirements for one readability fixture function.
 func checkReadableFunction(t *testing.T, function *ast.FuncDecl) {
 	t.Helper()
 	switch function.Name.Name {

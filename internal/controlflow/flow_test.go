@@ -9,6 +9,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/controlflow"
 )
 
+// TestBranchPaths checks final-statement and branch-end reachability across jumps, loops, switches, and calls.
 func TestBranchPaths(t *testing.T) {
 	for _, test := range []struct {
 		name, source string

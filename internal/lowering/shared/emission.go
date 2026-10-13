@@ -73,6 +73,7 @@ func (r *Context) Contains(node ast.Node) bool {
 	return false
 }
 
+// isTarget reports whether the expression is an insertion target or a recorded TGo expression.
 func (r *Context) isTarget(expression ast.Expr) bool {
 	if expression == r.input.Target && expression != nil {
 		return true
@@ -144,6 +145,7 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 	return rewritten.Interface().(ast.Node)
 }
 
+// checkLoweredElements reports a comprehension output marker that remains absent from the emitted-operation records.
 func (r *Context) checkLoweredElements() error {
 	s := r.input.Inventory
 	for _, file := range s.Checked.Syntax {
@@ -164,6 +166,7 @@ func (r *Context) checkLoweredElements() error {
 	return nil
 }
 
+// containsElement reports whether syntax contains a checked comprehension output marker.
 func (r *Context) containsElement(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(child ast.Node) bool {
@@ -177,6 +180,7 @@ func (r *Context) containsElement(node ast.Node) bool {
 	return found
 }
 
+// containsShortReturn reports whether the source range contains a checked short return.
 func (r *Context) containsShortReturn(node ast.Node) bool {
 	for statement := range r.input.ShortReturns {
 		if contains(node, statement) {

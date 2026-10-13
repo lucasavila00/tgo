@@ -6,6 +6,7 @@ import (
 	"go/token"
 )
 
+// selectStatement lowers select operands in source order before selection and retains the chosen case body.
 func (r *Context) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	var roots []ast.Node
 	for _, statement := range s.Body.List {
@@ -32,6 +33,7 @@ func (r *Context) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	return r.withBreakExit(s, &output, append(statements, &output), exit)
 }
 
+// selectClause returns operand setup, copied communication, and the body that runs after this case is selected.
 func (r *Context) selectClause(original *ast.CommClause, communicationChanged bool) ([]ast.Stmt,
 	*ast.CommClause) {
 	clause := *original
@@ -54,6 +56,7 @@ func (r *Context) selectClause(original *ast.CommClause, communicationChanged bo
 	return statements, &clause
 }
 
+// selectSend captures the channel and sent value before selection and builds a send using those saved operands.
 func (r *Context) selectSend(original *ast.SendStmt) ([]ast.Stmt, ast.Stmt) {
 	channelStatements, channel := r.Capture(original.Chan)
 	valueStatements, value := r.Capture(original.Value)
@@ -64,6 +67,7 @@ func (r *Context) selectSend(original *ast.SendStmt) ([]ast.Stmt, ast.Stmt) {
 	return statements, &send
 }
 
+// selectReceiveExpression captures the channel before selection and places an inserted action after the receive.
 func (r *Context) selectReceiveExpression(original *ast.ExprStmt) ([]ast.Stmt, ast.Stmt, []ast.Stmt) {
 	receive := ast.Unparen(original.X).(*ast.UnaryExpr)
 	channelStatements, channel := r.Capture(receive.X)
@@ -84,6 +88,7 @@ func (r *Context) selectReceiveExpression(original *ast.ExprStmt) ([]ast.Stmt, a
 	return statements, communication, body
 }
 
+// selectReceiveAssignment receives into fresh locals and evaluates destinations only in the selected case.
 func (r *Context) selectReceiveAssignment(original *ast.AssignStmt) ([]ast.Stmt, ast.Stmt, []ast.Stmt) {
 	receive := ast.Unparen(original.Rhs[0]).(*ast.UnaryExpr)
 	statements, channel := r.Capture(receive.X)
@@ -124,6 +129,7 @@ func (r *Context) selectReceiveAssignment(original *ast.AssignStmt) ([]ast.Stmt,
 	return statements, communication, body
 }
 
+// selectReceiveType reads a receive result's checked type, including the Boolean comma-ok result.
 func (r *Context) selectReceiveType(receive *ast.UnaryExpr, index int) types.Type {
 	typ := r.TypeOf(receive)
 	if tuple, ok := typ.(*types.Tuple); ok {

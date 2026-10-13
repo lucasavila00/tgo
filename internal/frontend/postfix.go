@@ -131,6 +131,8 @@ func wrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	file.Comments = comments
 }
 
+// precedingCall finds the call or parenthesized operand ending nearest to a postfix marker.
+// For equal ends, it selects the expression with the earliest start.
 func precedingCall(file *ast.File, position token.Pos) ast.Expr {
 	var selected ast.Expr
 	ast.Inspect(file, func(node ast.Node) bool {

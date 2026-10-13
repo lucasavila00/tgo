@@ -6,6 +6,8 @@ import (
 	"reflect"
 )
 
+// finish maps syntax positions to the input and attaches parsed nodes to feature records.
+// It replaces postfix comment markers with calls that the checker can identify.
 func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File,
 	offsets []int) *Parsed {
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
@@ -32,6 +34,8 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 	return result
 }
 
+// mapPositions changes every syntax position to its input position.
+// The visited map prevents a shared node from being changed twice.
 func mapPositions(node ast.Node, prepared, original *token.File, offsets []int, visited map[ast.Node]bool) {
 	if node == nil || reflect.ValueOf(node).IsNil() {
 		return

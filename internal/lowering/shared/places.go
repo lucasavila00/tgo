@@ -102,6 +102,7 @@ func (r *Context) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	return before, values[0]
 }
 
+// typedAddress builds an address expression and records its pointer type as a generated value.
 func (r *Context) typedAddress(value, original ast.Expr) ast.Expr {
 	expr := &ast.UnaryExpr{Op: token.AND, X: value}
 	r.recordTemporary(expr, types.NewPointer(r.TypeOf(original)), original)

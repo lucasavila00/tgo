@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestParseConditionalExpressions checks if values in nested operands, branches, and control statements.
 func TestParseConditionalExpressions(t *testing.T) {
 	for _, source := range []string{
 		`func f(ok bool) string { return if ok { "yes" } else { "no" } }`,
@@ -33,6 +34,7 @@ func TestParseConditionalExpressions(t *testing.T) {
 	}
 }
 
+// TestPropagationSourcePositionsAndComments checks that postfix spans and source comments survive parsing.
 func TestPropagationSourcePositionsAndComments(t *testing.T) {
 	input := "package p\nfunc f() error {\n x := next()! // keep this comment\n _ = x\n return nil\n}\n"
 	set := token.NewFileSet()
@@ -67,6 +69,7 @@ func TestPropagationSourcePositionsAndComments(t *testing.T) {
 	}
 }
 
+// TestPropagationRequiresCall checks that postfix operators reject an operand that is not a call.
 func TestPropagationRequiresCall(t *testing.T) {
 	for _, operator := range []string{"!", "!!"} {
 		t.Run(operator, func(t *testing.T) {
@@ -85,6 +88,7 @@ func TestPropagationRequiresCall(t *testing.T) {
 	}
 }
 
+// TestConditionalNamesKeepSourceBindings checks that marker names avoid names declared in the input.
 func TestConditionalNamesKeepSourceBindings(t *testing.T) {
 	input := "package p\nfunc tgoConditional1() int {return 4}; func f() int { return if " +
 		"true { tgoConditional1() } else { 0 } }"
@@ -97,6 +101,7 @@ func TestConditionalNamesKeepSourceBindings(t *testing.T) {
 	}
 }
 
+// TestConditionalInsideStatementCondition checks if values inside builtin calls and statement conditions.
 func TestConditionalInsideStatementCondition(t *testing.T) {
 	input := `package p
 func checkCopy(ok bool) {
@@ -126,6 +131,7 @@ func checkCopy(ok bool) {
 	}
 }
 
+// TestConditionalBatchGrammar checks nested if values beside statements, labels, slices, and maps.
 func TestConditionalBatchGrammar(t *testing.T) {
 	input := `package p
 func f(ok bool, xs []int) {
@@ -155,6 +161,7 @@ again:
 	}
 }
 
+// TestConditionalBatchIndependentOperands checks that every independent if value is recorded.
 func TestConditionalBatchIndependentOperands(t *testing.T) {
 	var source strings.Builder
 	source.WriteString("package p\nfunc f(ok bool) {\n")
@@ -172,6 +179,7 @@ func TestConditionalBatchIndependentOperands(t *testing.T) {
 	}
 }
 
+// TestParseSwitchExpressions checks value and type switches in nested operands and branches.
 func TestParseSwitchExpressions(t *testing.T) {
 	for _, source := range []string{
 		`func f(n int) int {return switch n {case 1: 2; default: 3}}`,
@@ -202,6 +210,7 @@ func TestParseSwitchExpressions(t *testing.T) {
 	}
 }
 
+// checkConditionalPositions parses the input and checks conditional and identifier positions against its bytes.
 func checkConditionalPositions(t *testing.T, source string) {
 	t.Helper()
 	input := "package p\n" + source

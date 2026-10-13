@@ -12,11 +12,13 @@ import (
 // After receives references to the evaluated expression results.
 type After func(results []ast.Expr) []ast.Stmt
 
+// newRewrite connects the checked source to the rule dispatchers and creates fresh rewrite state.
 func newRewrite(source *Source, input shared.Input) *shared.Context {
 	input.Inventory = &source.inventory
 	return shared.New(input, shared.Dispatch{Expression: expression, Statement: statement})
 }
 
+// statement selects propagation without success storage for discarded results; it lowers other statements normally.
 func statement(r *shared.Context, stmt ast.Stmt) []ast.Stmt {
 	if expr, ok := stmt.(*ast.ExprStmt); ok {
 		if statements, handled := discardedPropagation(r, expr.X); handled {
@@ -32,6 +34,7 @@ func statement(r *shared.Context, stmt ast.Stmt) []ast.Stmt {
 	return r.StatementSyntax(stmt)
 }
 
+// expression lowers selected expressions and retains checked values through rule dispatch and parentheses.
 func expression(r *shared.Context, expr ast.Expr) shared.Result {
 	if expr == nil {
 		return r.ResultOf(nil, nil)
@@ -55,6 +58,7 @@ func expression(r *shared.Context, expr ast.Expr) shared.Result {
 	return r.FinishExpression(expr, statements, result)
 }
 
+// specialExpression selects the propagation, comprehension, or value-expression rule from the checked source records.
 func specialExpression(r *shared.Context, expr ast.Expr) (shared.Result, bool) {
 	if operation, ok := r.PropagationAt(expr); ok {
 		return propagation.Expression(r, expr.(*ast.CallExpr), operation, false), true

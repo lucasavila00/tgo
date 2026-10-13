@@ -13,6 +13,8 @@ type sourceToken struct {
 	depth  int
 }
 
+// sourceTokens scans text into tokens with byte spans and delimiter depth.
+// Syntax planners use these records to find expression and statement boundaries.
 func sourceTokens(source string) []sourceToken {
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, len(source))

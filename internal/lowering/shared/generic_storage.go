@@ -11,6 +11,7 @@ const (
 	otherStorage = 2
 )
 
+// storageKinds classifies possible types as array or other storage, including generic type constraints.
 func storageKinds(typ types.Type) int {
 	typ = types.Unalias(typ)
 	if parameter, ok := typ.(*types.TypeParam); ok {
@@ -36,6 +37,8 @@ func storageKinds(typ types.Type) int {
 	}
 }
 
+// parameterAlias reserves a type-parameter alias and adds its declaration to the owning function.
+// It reuses the alias for later generated declarations in the same file.
 func (r *Context) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 	if alias := r.file.parameterAliases[parameter]; alias != nil {
 		return alias
@@ -105,6 +108,7 @@ func (r *Context) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	return before, base
 }
 
+// genericBaseGetter builds a getter that returns original array storage or the saved slice or map header.
 func genericBaseGetter(typeAlias, isArray *ast.Ident, place ast.Expr, savedHeader *ast.Ident) *ast.FuncLit {
 	arrayAddress := &ast.UnaryExpr{Op: token.AND, X: place}
 	returnArray := &ast.ReturnStmt{Results: []ast.Expr{arrayAddress}}
@@ -117,6 +121,7 @@ func genericBaseGetter(typeAlias, isArray *ast.Ident, place ast.Expr, savedHeade
 	return &ast.FuncLit{Type: functionType, Body: &ast.BlockStmt{List: []ast.Stmt{arrayCase, returnHeader}}}
 }
 
+// deferredPlace reports whether destination syntax contains a generated storage getter whose check occurs at the store.
 func (r *Context) deferredPlace(expr ast.Expr) bool {
 	found := false
 	ast.Inspect(expr, func(node ast.Node) bool {
@@ -132,6 +137,7 @@ func (r *Context) deferredPlace(expr ast.Expr) bool {
 	return found
 }
 
+// orderedStores builds separate stores in source order so each destination check occurs at its own store.
 func (r *Context) orderedStores(lhs, rhs []ast.Expr, tok token.Token) []ast.Stmt {
 	var output []ast.Stmt
 	for i, place := range lhs {

@@ -2,6 +2,7 @@ package names
 
 import "testing"
 
+// TestFreshGeneratedNames checks generated names keep prefixes and avoid existing names.
 func TestFreshGeneratedNames(t *testing.T) {
 	allocator := &Allocator{}
 	allocator.Reserve("fmt", "fmt_tgo1", "tgo3")

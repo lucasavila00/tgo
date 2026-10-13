@@ -9,6 +9,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
+// TestInsertOmittedLiteralType checks statement insertion when a composite literal gets its type from a map.
 func TestInsertOmittedLiteralType(t *testing.T) {
 	for _, target := range []string{"{value()}", "value()"} {
 		t.Run(target, func(t *testing.T) {
@@ -34,6 +35,7 @@ func main(){m:=map[Key]int{{value()}:value()};fmt.Print(m[Key{1}])}
 	}
 }
 
+// TestInsertOmittedLiteralContexts checks contextual literal types across nested maps, slices, pointers, and arrays.
 func TestInsertOmittedLiteralContexts(t *testing.T) {
 	for _, test := range []struct{ name, code, target, want string }{
 		{"slice", `a:=[][]int{{value()}};fmt.Print(a)`, "{value()}", "VM[[1]]"},
@@ -70,6 +72,7 @@ func main(){` + test.code + `}`
 	}
 }
 
+// TestInsertPrivateLiteralTypeRejected checks diagnostics for an unnameable imported literal type.
 func TestInsertPrivateLiteralTypeRejected(t *testing.T) {
 	dir := t.TempDir()
 	input := `package main
@@ -98,6 +101,7 @@ func main() { _ = foreign.Map{{value()}:value()} }
 	t.Fatal("missing expression site")
 }
 
+// TestInsertBooleanContext checks that inserted statements preserve named boolean types and evaluation order.
 func TestInsertBooleanContext(t *testing.T) {
 	for _, target := range []string{"left()==right()", "(left()==right()) && (right()==left())", "right()"} {
 		t.Run(target, func(t *testing.T) {
@@ -128,6 +132,7 @@ func main() { use((left()==right()) && (right()==left())) }
 	}
 }
 
+// TestInsertEarlierContext checks that an earlier boolean argument retains its named type when a later call is saved.
 func TestInsertEarlierContext(t *testing.T) {
 	input := `package main
 import "fmt"

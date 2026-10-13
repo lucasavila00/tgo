@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestExpressionResultsKeepTypes checks saved values retain contextual, tuple, comma-ok, and void result types.
 func TestExpressionResultsKeepTypes(t *testing.T) {
 	dir := t.TempDir()
 	input := `package example
@@ -62,6 +63,7 @@ func run() {
 	}
 }
 
+// checkExpressionValues compares saved result types and verifies each result retains its source expression.
 func checkExpressionValues(t *testing.T, values []shared.Value, original ast.Expr, expectedTypes []string) {
 	t.Helper()
 	if len(values) != len(expectedTypes) {

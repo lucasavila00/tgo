@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+// TestReadModuleReadsOnlyOwnedSource checks that discovery reads only source owned by the module.
 func TestReadModuleReadsOnlyOwnedSource(t *testing.T) {
 	root := t.TempDir()
 	files := map[string]string{
@@ -43,6 +44,7 @@ func TestReadModuleReadsOnlyOwnedSource(t *testing.T) {
 	}
 }
 
+// TestCompileWritesOnlyOwnedGeneratedFiles checks output replacement and preservation of source and assets.
 func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
@@ -70,6 +72,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	}
 }
 
+// TestCompileRemovesFailedStageAndAllowsRetry checks output removal on failure and compilation after correction.
 func TestCompileRemovesFailedStageAndAllowsRetry(t *testing.T) {
 	root := t.TempDir()
 	input := []byte("package p\nvar Value = missing\n")
@@ -99,6 +102,7 @@ func TestCompileRemovesFailedStageAndAllowsRetry(t *testing.T) {
 	}
 }
 
+// TestCompileKeepsModuleUpdates checks that module loading retains downloaded dependency checksums.
 func TestCompileKeepsModuleUpdates(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("GOFLAGS", "-mod=mod")
@@ -116,6 +120,7 @@ func TestCompileKeepsModuleUpdates(t *testing.T) {
 	}
 }
 
+// TestCompileKeepsDataAndNestedModuleFiles checks preservation of data folders and nested modules.
 func TestCompileKeepsDataAndNestedModuleFiles(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{

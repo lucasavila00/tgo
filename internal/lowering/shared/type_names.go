@@ -7,6 +7,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// temporaryTypeErrorPosition selects the nearest propagation operator for an inaccessible-type diagnostic.
 func (r *Context) temporaryTypeErrorPosition(original ast.Expr) token.Position {
 	position := r.input.Inventory.Checked.Fset.Position(original.Pos())
 	var selected token.Pos
@@ -37,6 +38,7 @@ type typeNameCheck struct {
 	parameterNames map[*types.TypeParam]string
 }
 
+// checkTypeNames checks whether a temporary's type can be named at this source position and records required aliases.
 func (r *Context) checkTypeNames(typ types.Type, position token.Pos) *typeNameCheck {
 	check := &typeNameCheck{
 		Context:        r,
@@ -47,6 +49,7 @@ func (r *Context) checkTypeNames(typ types.Type, position token.Pos) *typeNameCh
 	return check
 }
 
+// visit visits component types and records inaccessible names, type-parameter aliases, and unsafe-pointer use.
 func (c *typeNameCheck) visit(typ types.Type) {
 	switch typ := typ.(type) {
 	case *types.Basic:
@@ -96,6 +99,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 	}
 }
 
+// visitName checks imported type visibility or local type binding identity at the generated declaration position.
 func (c *typeNameCheck) visitName(object *types.TypeName) {
 	checked := c.Context.input.Inventory.Checked
 	if object.Pkg() != nil && object.Pkg() != checked.Types {
@@ -111,6 +115,7 @@ func (c *typeNameCheck) visitName(object *types.TypeName) {
 	}
 }
 
+// visitStruct checks field visibility and field types before reconstructing an unnamed struct type.
 func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 	for i := 0; i < typ.NumFields(); i++ {
 		field := typ.Field(i)
@@ -121,6 +126,7 @@ func (c *typeNameCheck) visitStruct(typ *types.Struct) {
 	}
 }
 
+// visitInterface checks method visibility and component types before reconstructing an unnamed interface type.
 func (c *typeNameCheck) visitInterface(typ *types.Interface) {
 	for i := 0; i < typ.NumExplicitMethods(); i++ {
 		method := typ.ExplicitMethod(i)

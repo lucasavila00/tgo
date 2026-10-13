@@ -55,6 +55,8 @@ func NewLoader(
 	return newLoader(root, roots, tgoFiles, used, sizes, token.NewFileSet())
 }
 
+// newLoader creates package and import caches and records dependency export files.
+// It uses the supplied position set and target sizes for all checks.
 func newLoader(root string, roots []*packages.Package, tgoFiles map[string]string,
 	used map[string]bool, sizes types.Sizes, fset *token.FileSet) *Loader {
 	loader := &Loader{root: root, tgoFiles: tgoFiles, used: used,
@@ -68,6 +70,7 @@ func newLoader(root string, roots []*packages.Package, tgoFiles map[string]strin
 	return loader
 }
 
+// newInfo allocates the type, binding, scope, and generic-instance maps filled by checking.
 func newInfo() *types.Info {
 	return &types.Info{
 		Types: make(map[ast.Expr]types.TypeAndValue), Defs: make(map[*ast.Ident]types.Object),
@@ -114,6 +117,8 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	return loader.check(metadata, pkg)
 }
 
+// check checks package syntax, records conditional nodes, and caches the successful package.
+// Its importer shares type objects with dependencies checked by the same loader.
 func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package, error) {
 	config := types.Config{
 		TGo:      pkg.Operations,
@@ -159,10 +164,13 @@ type packageImporter struct {
 	metadata *packages.Package
 }
 
+// Import resolves an import path through the loader without a source directory.
 func (importer packageImporter) Import(path string) (*types.Package, error) {
 	return importer.ImportFrom(path, "", 0)
 }
 
+// ImportFrom checks source dependencies and reads compiled export data for other imports.
+// The loader caches imported packages so their type identities stay consistent.
 func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode) (*types.Package, error) {
 	dependency := importer.metadata.Imports[path]
 	if dependency != nil && dependency.Module != nil &&

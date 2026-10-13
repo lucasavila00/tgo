@@ -10,6 +10,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestCompileFromSubdirectory checks module discovery, imports, and output from a nested starting directory.
 func TestCompileFromSubdirectory(t *testing.T) {
 	base := t.TempDir()
 	dependency := filepath.Join(base, "dependency")

@@ -43,6 +43,7 @@ type branchPaths struct {
 	entry, finalEntry, end *flowPoint
 }
 
+// build creates paths through the branch and records entries for its last statement and end.
 func (builder *branchBuilder) build(body *ast.BlockStmt) branchPaths {
 	list := body.List
 	for len(list) > 0 {
@@ -59,6 +60,7 @@ func (builder *branchBuilder) build(body *ast.BlockStmt) branchPaths {
 	return branchPaths{entry: entry, finalEntry: builder.finalEntry, end: end}
 }
 
+// reachablePoints follows graph edges and returns every reachable point without changing the graph.
 func reachablePoints(entry *flowPoint) map[*flowPoint]bool {
 	reachable := make(map[*flowPoint]bool)
 	pending := []*flowPoint{entry}
@@ -74,19 +76,26 @@ func reachablePoints(entry *flowPoint) map[*flowPoint]bool {
 	return reachable
 }
 
+// link creates a flow point with the supplied successor points.
 func link(continuation ...*flowPoint) *flowPoint { return &flowPoint{successors: continuation} }
+
+// label returns a shared flow point for a label, creating one for forward jumps when needed.
 func (builder *branchBuilder) label(name string) *flowPoint {
 	if builder.labels[name] == nil {
 		builder.labels[name] = &flowPoint{}
 	}
 	return builder.labels[name]
 }
+
+// statements builds paths in reverse statement order so each statement receives its following path.
 func (builder *branchBuilder) statements(list []ast.Stmt, continuation *flowPoint, targets jumpTargets) *flowPoint {
 	for i := len(list) - 1; i >= 0; i-- {
 		continuation = builder.statement(list[i], continuation, targets, "")
 	}
 	return continuation
 }
+
+// statement builds one statement path and records the entry when it is the branch final statement.
 func (builder *branchBuilder) statement(
 	statement ast.Stmt,
 	continuation *flowPoint,
@@ -104,6 +113,9 @@ func (builder *branchBuilder) statement(
 	}
 	return entry
 }
+
+// statementInner builds evaluation paths and jump targets for one statement.
+// A nil statement proceeds directly to the supplied continuation.
 func (builder *branchBuilder) statementInner(
 	statement ast.Stmt,
 	continuation *flowPoint,
@@ -160,6 +172,7 @@ func (builder *branchBuilder) statementInner(
 	return continuation
 }
 
+// declaration builds initializer paths for value declarations in declaration order.
 func (builder *branchBuilder) declaration(
 	statement *ast.DeclStmt,
 	continuation *flowPoint,
@@ -175,6 +188,8 @@ func (builder *branchBuilder) declaration(
 	return continuation
 }
 
+// branchStatement connects goto, break, continue, or fallthrough to its target.
+// A jump outside the branch has no following path inside it.
 func (builder *branchBuilder) branchStatement(
 	statement *ast.BranchStmt,
 	continuation *flowPoint,
@@ -199,6 +214,7 @@ func (builder *branchBuilder) branchStatement(
 	return continuation
 }
 
+// expression builds operand paths in evaluation order, including the skipped path of short-circuit operators.
 func (builder *branchBuilder) expression(expr ast.Expr, continuation *flowPoint, targets jumpTargets) *flowPoint {
 	if expr == nil {
 		return continuation
@@ -236,6 +252,9 @@ func (builder *branchBuilder) expression(expr ast.Expr, continuation *flowPoint,
 	}
 	return continuation
 }
+
+// callExpression includes source statements from added expressions and stops paths after terminating calls.
+// Unevaluated calls leave the supplied continuation unchanged.
 func (builder *branchBuilder) callExpression(
 	expression *ast.CallExpr,
 	continuation *flowPoint,
@@ -255,12 +274,15 @@ func (builder *branchBuilder) callExpression(
 	return builder.callOperands(expression, continuation, targets)
 }
 
+// expressions builds paths for operands in their evaluation order.
 func (builder *branchBuilder) expressions(exprs []ast.Expr, continuation *flowPoint, targets jumpTargets) *flowPoint {
 	for i := len(exprs) - 1; i >= 0; i-- {
 		continuation = builder.expression(exprs[i], continuation, targets)
 	}
 	return continuation
 }
+
+// callOperands builds paths for the call target followed by its arguments.
 func (builder *branchBuilder) callOperands(
 	call *ast.CallExpr,
 	continuation *flowPoint,
@@ -269,6 +291,8 @@ func (builder *branchBuilder) callOperands(
 	argumentsEntry := builder.expressions(call.Args, continuation, targets)
 	return builder.expression(call.Fun, argumentsEntry, targets)
 }
+
+// forStatement builds initializer, condition, body, and post paths with loop jump targets.
 func (builder *branchBuilder) forStatement(
 	statement *ast.ForStmt,
 	continuation *flowPoint,
@@ -293,6 +317,9 @@ func (builder *branchBuilder) forStatement(
 	cond.successors = []*flowPoint{builder.expression(statement.Cond, choice, bodyTargets)}
 	return builder.statement(statement.Init, cond, bodyTargets, "")
 }
+
+// rangeStatement builds collection and iteration paths with a possible empty range.
+// Comprehension collection expressions use the enclosing jump targets.
 func (builder *branchBuilder) rangeStatement(
 	statement *ast.RangeStmt,
 	continuation *flowPoint,
@@ -315,6 +342,8 @@ func (builder *branchBuilder) rangeStatement(
 	}
 	return builder.expression(statement.X, step, bodyTargets)
 }
+
+// switchStatement builds case selection and bodies with default, break, and fallthrough paths.
 func (builder *branchBuilder) switchStatement(
 	statement *ast.SwitchStmt,
 	continuation *flowPoint,
@@ -347,6 +376,8 @@ func (builder *branchBuilder) switchStatement(
 	}
 	return builder.statement(statement.Init, builder.expression(statement.Tag, choice, bodyTargets), bodyTargets, "")
 }
+
+// typeSwitch builds type-case paths and adds an unmatched path when there is no default.
 func (builder *branchBuilder) typeSwitch(
 	statement *ast.TypeSwitchStmt,
 	continuation *flowPoint,
@@ -370,6 +401,8 @@ func (builder *branchBuilder) typeSwitch(
 	}
 	return builder.statement(statement.Init, builder.statement(statement.Assign, choice, bodyTargets, ""), bodyTargets, "")
 }
+
+// selectStatement builds operand paths before case selection and receive assignments inside the selected case.
 func (builder *branchBuilder) selectStatement(
 	statement *ast.SelectStmt,
 	continuation *flowPoint,

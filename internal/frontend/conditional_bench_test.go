@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// BenchmarkConditionalParsing measures parsing time and allocations for independent and nested if values.
 func BenchmarkConditionalParsing(b *testing.B) {
 	for _, count := range []int{1, 32, 128, 512} {
 		for _, nested := range []bool{false, true} {
@@ -24,6 +25,7 @@ func BenchmarkConditionalParsing(b *testing.B) {
 	}
 }
 
+// conditionalBenchmarkSource builds a named benchmark input with the requested number of if values.
 func conditionalBenchmarkSource(count int, nested bool) (string, string) {
 	name := fmt.Sprintf("independent/%d", count)
 	var body strings.Builder

@@ -49,6 +49,7 @@ func New(checked *checker.Package, dir string) *Inventory {
 	return inventory
 }
 
+// inventory visits one checked file and adds its source-parent links and expression records to the inventory.
 func (s *Inventory) inventory(file *ast.File, dir string) {
 	var stack []ast.Node
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -99,10 +100,12 @@ func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool {
 	return constantLength
 }
 
+// contains reports whether the child's source position range lies inside the parent's range.
 func contains(parent, child ast.Node) bool {
 	return parent != nil && child != nil && parent.Pos() <= child.Pos() && child.End() <= parent.End()
 }
 
+// recordExpression records the expression location and whether an inserted statement or error return can run there.
 func (s *Inventory) recordExpression(expr ast.Expr, stack []ast.Node, dir string) {
 	// Use physical file names and offsets for expression sites.
 	start := s.Checked.Fset.PositionFor(expr.Pos(), false)
@@ -136,6 +139,7 @@ func (s *Inventory) recordExpression(expr ast.Expr, stack []ast.Node, dir string
 	s.Expressions[site] = expr
 }
 
+// expressionContext finds the enclosing source function and evaluation limits from the original ancestor chain.
 func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node) (ast.Node, string) {
 	var enclosingFunction ast.Node
 	var reason string
@@ -160,6 +164,7 @@ func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node) (ast.Node
 	return enclosingFunction, reason
 }
 
+// returnTarget reports whether the enclosing function returns exactly one error value for an inserted error return.
 func (s *Inventory) returnTarget(enclosingFunction ast.Node) (bool, string) {
 	if enclosingFunction == nil {
 		return false, "no enclosing function"
@@ -187,6 +192,7 @@ func (s *Inventory) returnTarget(enclosingFunction ast.Node) (bool, string) {
 	return false, "function does not return only error"
 }
 
+// evaluationReason describes source contexts where the expression is constant, skipped, or executed later.
 func (s *Inventory) evaluationReason(node ast.Node, expr ast.Expr) string {
 	switch parent := node.(type) {
 	case *ast.GenDecl:

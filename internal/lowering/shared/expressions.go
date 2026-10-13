@@ -97,6 +97,7 @@ func (r *Context) FinishExpression(expr ast.Expr, before []ast.Stmt, result ast.
 	return r.ResultOf(before, []ast.Expr{result})
 }
 
+// functionName reports whether syntax names a declared function, including a generic instantiation.
 func (r *Context) functionName(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.Ident:
@@ -116,15 +117,18 @@ func (r *Context) functionName(expr ast.Expr) bool {
 	return false
 }
 
+// addressableArray reports whether all possible source types are arrays whose storage can be addressed.
 func (r *Context) addressableArray(expr ast.Expr) bool {
 	array := storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(expr)) == arrayStorage
 	return array && r.input.Inventory.Checked.TypesInfo.Types[expr].Addressable()
 }
 
+// arrayBase prepares an array storage location without copying its contents.
 func (r *Context) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	return r.place(expr)
 }
 
+// untypedBoolean reports whether Boolean syntax must retain its untyped result after saving.
 func (r *Context) untypedBoolean(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.ParenExpr:

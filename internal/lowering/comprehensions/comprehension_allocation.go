@@ -56,6 +56,8 @@ func exactComprehension(r *shared.Context, call *ast.CallExpr, record *frontend.
 	return append(before, &ast.BlockStmt{List: r.RangeStatement(&output)})
 }
 
+// exactComprehensionLoop finds a single range that emits one item per visit and can use an exact allocation.
+// It returns nil when filters, jumps, or hidden builtins prevent this choice.
 func exactComprehensionLoop(r *shared.Context, record *frontend.Comprehension, key types.Type) *ast.RangeStmt {
 	if r.BuiltinHidden("make") || r.BuiltinHidden("len") || len(record.Body.List) != 1 {
 		return nil

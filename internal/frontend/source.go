@@ -21,6 +21,7 @@ type sourceEdit struct {
 	offsets    []int
 }
 
+// originalSource creates prepared text with an unchanged byte-position map to the input.
 func originalSource(input []byte) mappedSource {
 	source := mappedSource{input: string(input), text: string(input), offsets: make([]int, len(input)+1)}
 	for i := range source.offsets {
@@ -49,6 +50,7 @@ func (s *mappedSource) apply(edits ...sourceEdit) {
 	s.text, s.offsets = text.String(), offsets
 }
 
+// insertedOffsets maps all bytes of inserted text to one input position.
 func insertedOffsets(count, offset int) []int {
 	result := make([]int, count)
 	for i := range result {

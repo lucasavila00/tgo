@@ -6,6 +6,8 @@ import (
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
+// propagationExpr checks the call final error and the enclosing function error result.
+// It records only the success results as the postfix expression type.
 func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation TGoOperation) exprKind {
 	position := atPos(check.fset.File(call.Pos()).Pos(operation.Position.Offset))
 	if conditional, ok := ast.Unparen(call.Args[0]).(*ast.CallExpr); ok {

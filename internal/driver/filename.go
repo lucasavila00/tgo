@@ -37,10 +37,12 @@ func generatedName(source string) string {
 	return filepath.Join(directory, prefix+"_tgo_"+target+testSuffix+".go")
 }
 
+// targetSuffixKind reports whether a filename suffix identifies a Go operating system or architecture.
 func targetSuffixKind(word string) (bool, bool) {
 	return knownTargetOS(word), knownTargetArch(word)
 }
 
+// knownTargetOS reports whether a word is a recognized Go operating-system suffix.
 func knownTargetOS(word string) bool {
 	switch word {
 	case "aix", "android", "darwin", "dragonfly", "freebsd", "hurd",
@@ -52,6 +54,7 @@ func knownTargetOS(word string) bool {
 	}
 }
 
+// knownTargetArch reports whether a word is a recognized Go architecture suffix.
 func knownTargetArch(word string) bool {
 	switch word {
 	case "386", "amd64", "amd64p32", "arm", "armbe", "arm64", "arm64be", "loong64", "mips", "mips64",

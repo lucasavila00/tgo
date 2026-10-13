@@ -69,6 +69,8 @@ func (r *Context) contextLiteral(value, original ast.Expr) ast.Expr {
 	return access
 }
 
+// contextMapLiteral builds a one-entry map to retain an omitted key or value type outside its source literal.
+// It records the collection imports needed to extract the constructed key or value.
 func (r *Context) contextMapLiteral(value,
 	original ast.Expr,
 	container,
@@ -168,6 +170,7 @@ func (r *Context) materializeKey(value, original *ast.CompositeLit) Result {
 	return r.ResultOf(statements, []ast.Expr{key})
 }
 
+// zeroMapKey builds a zero key with the source map's key type without naming that type directly.
 func (r *Context) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr {
 	r.prepareCollectionImports()
 	empty := r.contextLiteral(&ast.CompositeLit{Type: container.Type}, container)
@@ -179,6 +182,7 @@ func (r *Context) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr
 	return r.sequenceZero(keys)
 }
 
+// prepareCollectionImports adds one fresh maps import to the current file and records its alias.
 func (r *Context) prepareCollectionImports() {
 	if r.file.mapAlias == nil {
 		r.file.mapAlias = r.NameFor("maps")

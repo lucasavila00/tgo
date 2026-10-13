@@ -7,6 +7,8 @@ import (
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
+// comprehensionExpr checks the collection type, generator bindings, and body in a comprehension scope.
+// It records output types and range statements for later checks.
 func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind {
 	operation, _ := check.tgoOperation(call)
 	if check.tgo.comprehensionRanges == nil {
@@ -48,6 +50,7 @@ func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind
 	return expression
 }
 
+// comprehensionOutput checks each output operand against the collection element or key and value types.
 func (check *Checker) comprehensionOutput(x *operand, call *ast.CallExpr) exprKind {
 	id := call.Fun.(*ast.Ident)
 	targets := check.tgo.comprehensionTypes[id.Name]
@@ -108,6 +111,7 @@ func ComprehensionTypes(typ Type) (Type, Type) {
 	return key, element
 }
 
+// isComprehension checks whether an expression is a configured comprehension marker call.
 func (check *Checker) isComprehension(expression ast.Expr) bool {
 	if call, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
 		op, found := check.tgoOperation(call)

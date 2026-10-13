@@ -21,6 +21,7 @@ type checkedModule struct {
 	activeFiles map[string]bool
 }
 
+// selectSources loads the module packages and dependencies selected by Go build rules.
 func selectSources(module *preparedModule) *selectedSources {
 	roots, err := packages.Load(&packages.Config{Dir: module.dir, Tests: true, Mode: packages.NeedName |
 		packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps |

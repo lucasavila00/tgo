@@ -44,7 +44,7 @@ func checkFunctionFiles(paths []string) error {
 		for _, declaration := range file.Decls {
 			function, ok := declaration.(*ast.FuncDecl)
 			if ok && !hasFunctionComment(function.Doc) {
-				position := positions.Position(function.Pos())
+				position := positions.PositionFor(function.Pos(), false)
 				failures = append(failures, fmt.Errorf("%s: function %s needs a comment", position, function.Name))
 			}
 		}
@@ -66,7 +66,8 @@ func hasFunctionComment(comment *ast.CommentGroup) bool {
 	}
 	for _, line := range strings.Split(comment.Text(), "\n") {
 		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "nolint") {
+		if line != "" && line != "nolint" && !strings.HasPrefix(line, "nolint:") &&
+			!strings.HasPrefix(line, "nolint ") {
 			return true
 		}
 	}

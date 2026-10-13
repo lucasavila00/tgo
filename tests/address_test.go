@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestInsertAddressPanic checks that taking an address can panic before the inserted return runs.
 func TestInsertAddressPanic(t *testing.T) {
 	for _, operation := range []string{"a[index()].M()", "_ = &a[index()]", "_ = &(a[index()])"} {
 		t.Run(operation, func(t *testing.T) {
@@ -28,6 +29,7 @@ func main(){defer func(){if recover()!=nil{fmt.Print("P")}}();fmt.Print(run(fail
 	}
 }
 
+// TestInsertArrayOperandPanicOrder checks array operand and index evaluation before an inserted return.
 func TestInsertArrayOperandPanicOrder(t *testing.T) {
 	for _, expression := range []string{"p.A[index()]", "a[bad()][index()]"} {
 		t.Run(expression, func(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestCompileStagesUseEmbeddedAssets checks that generated Go can read an embedded asset from the source module.
 func TestCompileStagesUseEmbeddedAssets(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
@@ -34,6 +35,7 @@ func TestCompileStagesUseEmbeddedAssets(t *testing.T) {
 	}
 }
 
+// assertInputFiles checks that compilation preserves every supplied input except the generated output.
 func assertInputFiles(t *testing.T, root string, files map[string][]byte) {
 	t.Helper()
 	for name, want := range files {
@@ -47,6 +49,7 @@ func assertInputFiles(t *testing.T, root string, files map[string][]byte) {
 	}
 }
 
+// TestCompileStagesUseCgoHeaders checks that generated Go can use a cgo dependency with a local header.
 func TestCompileStagesUseCgoHeaders(t *testing.T) {
 	command := exec.Command("go", "env", "CGO_ENABLED")
 	enabled, err := command.Output()
@@ -77,6 +80,7 @@ func TestCompileStagesUseCgoHeaders(t *testing.T) {
 	}
 }
 
+// TestCompileStagesUseVendorSelection checks that compilation uses vendored Go without changing dependency files.
 func TestCompileStagesUseVendorSelection(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
@@ -110,6 +114,7 @@ func TestCompileStagesUseVendorSelection(t *testing.T) {
 	}
 }
 
+// TestCompileStagesUseWorkspaceDependency checks that compilation and generated Go use a workspace dependency.
 func TestCompileStagesUseWorkspaceDependency(t *testing.T) {
 	base := t.TempDir()
 	writeFiles(t, base,

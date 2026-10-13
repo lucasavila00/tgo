@@ -67,6 +67,7 @@ var fuzzBodies = []string{
 
 var fuzzPropagation = regexp.MustCompile(`([PQ])\(([0-9]+)\)`)
 
+// FuzzPropagationBehavior compares propagation evaluation, errors, panics, and mutations with independent Go programs.
 func FuzzPropagationBehavior(f *testing.F) {
 	for body := range fuzzBodies {
 		// No error, an early error, and a later error for each context.
@@ -104,6 +105,7 @@ func checkFuzzBehavior(t *testing.T, moduleName, input, reference string) {
 	}
 }
 
+// fuzzPrograms builds paired propagation programs from a context template and fuzz bytes.
 func fuzzPrograms(t *testing.T, body string, data []byte, wrapped bool) (string, string) {
 	t.Helper()
 	values := []int{0, 1, 2, 3}
@@ -219,6 +221,7 @@ func run() (err error) {
 	return input, string(formatted)
 }
 
+// fuzzCompile compiles a fuzz input and reports a compiler panic with the source program.
 func fuzzCompile(t *testing.T, dir, input string) {
 	t.Helper()
 	defer func() {
@@ -229,6 +232,7 @@ func fuzzCompile(t *testing.T, dir, input string) {
 	transpiler.Compile(dir)
 }
 
+// fuzzRun runs a generated or reference program with a timeout and returns its output.
 func fuzzRun(t *testing.T, dir, input string) []byte {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -242,6 +246,7 @@ func fuzzRun(t *testing.T, dir, input string) []byte {
 	return output
 }
 
+// TestFuzzProgramGeneration checks that generated pairs use TGo propagation only in the source program.
 func TestFuzzProgramGeneration(t *testing.T) {
 	for i, body := range fuzzBodies {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {

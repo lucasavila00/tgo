@@ -13,6 +13,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// TestCheckConditionalModule checks an if value in a module with an imported dependency.
 func TestCheckConditionalModule(t *testing.T) {
 	dir := t.TempDir()
 	for name, source := range map[string]string{
@@ -50,6 +51,7 @@ func main() { fmt.Println(choose(true)) }
 	}
 }
 
+// TestLoaderCachesPackageIdentity checks distinct package and test identities and reuse after source removal.
 func TestLoaderCachesPackageIdentity(t *testing.T) {
 	dir := t.TempDir()
 	filename := filepath.Join(dir, "main_tgo.go")
@@ -98,6 +100,7 @@ func TestLoaderCachesPackageIdentity(t *testing.T) {
 	}
 }
 
+// TestCheckGoKeepsStockObjects checks that private checking retains syntax and leaves stock Go bindings unchanged.
 func TestCheckGoKeepsStockObjects(t *testing.T) {
 	dir := t.TempDir()
 	for name, source := range map[string]string{"go.mod": "module example.com/p\n\ngo 1.27.1\n",
@@ -143,6 +146,7 @@ func TestCheckGoKeepsStockObjects(t *testing.T) {
 	}
 }
 
+// TestOrdinaryGoCheckingMatchesStock compares accepted and rejected ordinary Go with the stock checker.
 func TestOrdinaryGoCheckingMatchesStock(t *testing.T) {
 	for _, source := range []string{
 		`func identity[T any](v T) T {return v}; var v=identity(3)`,
@@ -172,6 +176,7 @@ func TestOrdinaryGoCheckingMatchesStock(t *testing.T) {
 	}
 }
 
+// TestTargetSizesUseGoConfiguration checks that array sizes use the architecture selected by Go configuration.
 func TestTargetSizesUseGoConfiguration(t *testing.T) {
 	dir := t.TempDir()
 	environment := filepath.Join(dir, "goenv")

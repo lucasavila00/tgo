@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestSourceSizeBoundary checks the line limit, final-line counting, and generated-file exclusions.
 func TestSourceSizeBoundary(t *testing.T) {
 	for _, test := range []struct {
 		name    string

@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// TestCompileRestoresOutputsOnFailure checks that source and parse failures restore existing generated files.
 func TestCompileRestoresOutputsOnFailure(t *testing.T) {
 	for _, input := range []string{"package p\nvar Value = missing\n", "package p\nvar Value = (\n"} {
 		t.Run(input, func(t *testing.T) {
@@ -17,6 +18,7 @@ func TestCompileRestoresOutputsOnFailure(t *testing.T) {
 	}
 }
 
+// TestRestoreOutputsAfterWriteAndRemoval checks restoration of output contents and modes, and removal of new files.
 func TestRestoreOutputsAfterWriteAndRemoval(t *testing.T) {
 	root := t.TempDir()
 	original := []byte("old output\n")
@@ -49,6 +51,7 @@ func TestRestoreOutputsAfterWriteAndRemoval(t *testing.T) {
 	}
 }
 
+// TestRestoreOutputsContinuesAfterError checks that restoration continues after one file fails.
 func TestRestoreOutputsContinuesAfterError(t *testing.T) {
 	root := t.TempDir()
 	blocked := filepath.Join(root, "blocked_tgo.go")
@@ -70,6 +73,7 @@ func TestRestoreOutputsContinuesAfterError(t *testing.T) {
 	}
 }
 
+// checkCompileRollback compiles a failing input and checks that all prior files and modes remain intact.
 func checkCompileRollback(t *testing.T, input string) {
 	t.Helper()
 	root := t.TempDir()

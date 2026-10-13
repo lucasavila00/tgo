@@ -15,6 +15,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestTypedTemporaryRejected checks source diagnostics when a required temporary type cannot be named.
 func TestTypedTemporaryRejected(t *testing.T) {
 	entries, err := os.ReadDir("testdata/typed-temporaries-rejected")
 	if err != nil {
@@ -38,6 +39,7 @@ func TestTypedTemporaryRejected(t *testing.T) {
 	}
 }
 
+// TestTypedTemporaryDiagnosticStable checks that repeated compilation reports the same unnameable-type diagnostic.
 func TestTypedTemporaryDiagnosticStable(t *testing.T) {
 	fixture := copyFixture(t, "testdata/typed-temporaries-rejected/Imports--returned_function")
 	expected, err := os.ReadFile(filepath.Join(fixture, "diagnostic.txt"))
@@ -56,12 +58,14 @@ func TestTypedTemporaryDiagnosticStable(t *testing.T) {
 	}
 }
 
+// TestTypedTemporaryReference checks typed generated locals and their runtime behavior against Go references.
 func TestTypedTemporaryReference(t *testing.T) {
 	for _, name := range []string{"ContextualTypes", "VariadicGeneric", "TypeNameIdentity", "ReturnTypeScope"} {
 		t.Run(name, func(t *testing.T) { checkTypedTemporaryReference(t, name) })
 	}
 }
 
+// TestTypeNameIdentityOutputStable checks that repeated compilation uses the same type names as the snapshot.
 func TestTypeNameIdentityOutputStable(t *testing.T) {
 	fixture := "testdata/propagation/TypeNameIdentity"
 	want, err := os.ReadFile(filepath.Join(fixture, "main_tgo.go"))
@@ -81,6 +85,7 @@ func TestTypeNameIdentityOutputStable(t *testing.T) {
 	}
 }
 
+// checkTypedTemporaryReference checks generated temporary declarations and compares generated and reference output.
 func checkTypedTemporaryReference(t *testing.T, name string) {
 	t.Helper()
 	fixture := filepath.Join("testdata/propagation", name)
@@ -109,6 +114,7 @@ func checkTypedTemporaryReference(t *testing.T, name string) {
 	}
 }
 
+// checkTemporaryDeclarations walks generated Go and checks each declaration of a compiler temporary.
 func checkTemporaryDeclarations(t *testing.T, file *ast.File) {
 	t.Helper()
 	ast.Inspect(file, func(node ast.Node) bool {
@@ -117,6 +123,7 @@ func checkTemporaryDeclarations(t *testing.T, file *ast.File) {
 	})
 }
 
+// checkTemporaryDeclaration checks that compiler temporaries use explicit types and do not use short declarations.
 func checkTemporaryDeclaration(t *testing.T, node ast.Node) {
 	t.Helper()
 	switch n := node.(type) {

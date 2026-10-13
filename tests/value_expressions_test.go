@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestValueExpressions checks value-expression snapshots and runtime output against Go references.
 func TestValueExpressions(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/value-expressions")
 	if err != nil {

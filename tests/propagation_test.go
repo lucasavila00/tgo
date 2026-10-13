@@ -15,6 +15,7 @@ import (
 
 var updateSnapshots = flag.Bool("update-snapshots", false, "update generated Go snapshots")
 
+// TestPropagationFixtures checks every propagation input against its generated snapshot and expected output.
 func TestPropagationFixtures(t *testing.T) {
 	fixtures, err := os.ReadDir("testdata/propagation")
 	if err != nil {
@@ -33,6 +34,7 @@ func TestPropagationFixtures(t *testing.T) {
 	}
 }
 
+// checkPropagationSnapshots compares generated Go with saved snapshots, or updates snapshots when requested.
 func checkPropagationSnapshots(t *testing.T, input string, source, files map[string][]byte) {
 	t.Helper()
 	for name, content := range files {
@@ -53,6 +55,7 @@ func checkPropagationSnapshots(t *testing.T, input string, source, files map[str
 	}
 }
 
+// writeFiles creates directories and writes the supplied files below the destination directory.
 func writeFiles(t *testing.T, dir string, files map[string][]byte) {
 	t.Helper()
 	for name, content := range files {
@@ -66,6 +69,7 @@ func writeFiles(t *testing.T, dir string, files map[string][]byte) {
 	}
 }
 
+// readFiles reads every file below a directory into a map keyed by relative path.
 func readFiles(t *testing.T, dir string) map[string][]byte {
 	t.Helper()
 	files := make(map[string][]byte)
@@ -93,6 +97,7 @@ func readFiles(t *testing.T, dir string) map[string][]byte {
 	return files
 }
 
+// TestPropagationSnapshotDeterminism checks that repeated compilation produces the same file set and contents.
 func TestPropagationSnapshotDeterminism(t *testing.T) {
 	for _, name := range []string{"Contexts--short_circuit--direct", "Contexts--short_circuit--wrapped"} {
 		t.Run(name, func(t *testing.T) {
@@ -115,6 +120,7 @@ func TestPropagationSnapshotDeterminism(t *testing.T) {
 	}
 }
 
+// copyFixture copies a fixture into a temporary work directory and returns that directory.
 func copyFixture(t *testing.T, dir string) string {
 	t.Helper()
 	work := t.TempDir()
@@ -122,6 +128,7 @@ func copyFixture(t *testing.T, dir string) string {
 	return work
 }
 
+// checkPropagationFixture compiles a propagation fixture and checks snapshots, runtime output, and generated tests.
 func checkPropagationFixture(t *testing.T, name string) {
 	t.Helper()
 	dir := filepath.Join("testdata/propagation", name)
