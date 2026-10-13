@@ -8,3 +8,8 @@
 !/internal/checker/types/tgo_return_test.go
 /internal/checker/gcimporter/*.go
 /internal/checker/upstream/
+!/internal/checker/types/tgo_conditional.go
+!/internal/checker/types/tgo_propagation.go
+!/internal/checker/types/tgo_inference.go
+!/internal/checker/types/tgo_controlflow.go
+!/internal/checker/types/tgo_state.go

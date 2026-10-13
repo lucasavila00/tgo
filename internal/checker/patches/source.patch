@@ -221,17 +221,11 @@
  	decl          *declInfo              // package-level declaration whose init expression/function body is checked
  	scope         *Scope                 // top-most scope for lookups
  	version       goVersion              // current accepted language version; changes across files
-@@ -116,6 +118,14 @@
+@@ -116,6 +118,8 @@
  // A Checker maintains the state of the type checker.
  // It must be created with [NewChecker].
  type Checker struct {
-+	conditionalCases map[*ast.CaseClause]*conditionalCase
-+	conditionalValues  map[*ast.CallExpr][]*operand
-+	expressionTypes    map[ast.Expr]Type
-+	sliceSourceContext Type
-+	comprehensionRanges map[*ast.RangeStmt]bool
-+	comprehensionTypes map[string][]Type
-+	inferConditionals  map[*ast.CallExpr]bool
++	tgo tgoCheckState
 +
  	// package information
  	// (initialized by NewChecker, valid for the life-time of checker)
@@ -307,7 +301,7 @@
  		return
  
  	case *ast.CallExpr:
-+		if _, ok := check.conditionalValues[x]; ok && !isUntyped(typ) {
++		if _, ok := check.tgo.conditionalValues[x]; ok && !isUntyped(typ) {
 +			check.convertConditional(x, typ)
 +		}
  		// Resulting in an untyped constant (e.g., built-in complex).
@@ -346,8 +340,8 @@
  		}()
  	}
  
-+	if T == nil && check.expressionTypes[e] != nil {
-+		T = newTarget(check.expressionTypes[e], "expression")
++	if T == nil && check.tgo.expressionTypes[e] != nil {
++		T = newTarget(check.tgo.expressionTypes[e], "expression")
 +	}
 +	if T != nil {
 +		check.expressionType(e, T.typ)
@@ -549,7 +543,7 @@
  	// So we have to be careful not to evaluate the arg in the
  	// described situation.
  
-+	if !check.comprehensionRanges[rangeStmt] { check.rejectRangeCollectionContinue(rangeVar) }
++	if !check.tgo.comprehensionRanges[rangeStmt] { check.rejectRangeCollectionContinue(rangeVar) }
  	check.hasCallOrRecv = false
  	check.expr(nil, &x, rangeVar)
  
@@ -791,7 +785,7 @@
 @@ -629,7 +651,13 @@
  		check.openScope(s, "switch")
  		defer check.closeScope()
-+		if check.sig == nil && len(check.conditionalCases) > 0 {
++		if check.sig == nil && len(check.tgo.conditionalCases) > 0 {
 +			defer check.usage(check.scope)
 +		}
  
@@ -820,7 +814,7 @@
  				inner |= finalSwitchCase
  			}
 -			check.stmtList(inner, clause.Body)
-+			if branch := check.conditionalCases[clause]; branch != nil {
++			if branch := check.tgo.conditionalCases[clause]; branch != nil {
 +				branch.values = check.conditionalCase(clause, branch.context)
 +			} else {
 +				check.stmtList(inner, clause.Body)
@@ -831,7 +825,7 @@
 @@ -675,7 +712,13 @@
  		check.openScope(s, "type switch")
  		defer check.closeScope()
-+		if check.sig == nil && len(check.conditionalCases) > 0 {
++		if check.sig == nil && len(check.tgo.conditionalCases) > 0 {
 +			defer check.usage(check.scope)
 +		}
  
@@ -848,7 +842,7 @@
  				lhsVars = append(lhsVars, obj)
  			}
 -			check.stmtList(inner, clause.Body)
-+			if branch := check.conditionalCases[clause]; branch != nil {
++			if branch := check.tgo.conditionalCases[clause]; branch != nil {
 +				branch.values = check.conditionalCase(clause, branch.context)
 +			} else {
 +				check.stmtList(inner, clause.Body)
@@ -883,7 +877,7 @@
  
  	case *ast.RangeStmt:
  		inner |= breakOk | continueOk
-+		if !check.comprehensionRanges[s] { check.statementContext = inner }
++		if !check.tgo.comprehensionRanges[s] { check.statementContext = inner }
  		// s.TokPos is invalid when there are no range variables (for range x {});
  		// noNewVarPos is unused in that case, but inNode asserts a valid pos.
  		tokPos := s.TokPos

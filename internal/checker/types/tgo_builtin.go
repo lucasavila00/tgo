@@ -4,9 +4,9 @@ import "go/ast"
 
 // builtinArguments supplies declared parameter types to added expressions.
 func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*operand {
-	previous := check.sliceSourceContext
-	check.sliceSourceContext = nil
-	defer func() { check.sliceSourceContext = previous }()
+	previous := check.tgo.sliceSourceContext
+	check.tgo.sliceSourceContext = nil
+	defer func() { check.tgo.sliceSourceContext = previous }()
 	if id == _Min || id == _Max || id == _Complex {
 		return check.numericBuiltinArguments(call)
 	}
@@ -22,7 +22,8 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 		args[i] = new(operand)
 		check.expr(nil, args[i], expression)
 		if i == 0 && args[i].isValid() {
-			typ := check.collectionArgumentType(call, id, args[i])
+			typ, sliceSourceContext := collectionArgumentTypes(call, id, args[i])
+			check.tgo.sliceSourceContext = sliceSourceContext
 			for _, value := range call.Args[1:] {
 				check.expressionType(value, typ)
 			}
@@ -31,8 +32,9 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 	return args
 }
 
-func (check *Checker) collectionArgumentType(call *ast.CallExpr, id builtinId, argument *operand) Type {
-	var typ Type
+// collectionArgumentTypes returns the parameter type and the byte-slice context
+// that also permits a string. The caller owns the active argument context.
+func collectionArgumentTypes(call *ast.CallExpr, id builtinId, argument *operand) (typ, sliceSourceContext Type) {
 	switch {
 	case id == _Delete && !hasDots(call):
 		typ = deleteKeyType(argument.typ())
@@ -42,11 +44,11 @@ func (check *Checker) collectionArgumentType(call *ast.CallExpr, id builtinId, a
 		if elem, _ := sliceElem(argument); elem != nil {
 			typ = NewSlice(elem)
 			if Identical(elem, universeByte) {
-				check.sliceSourceContext = typ
+				sliceSourceContext = typ
 			}
 		}
 	}
-	return typ
+	return typ, sliceSourceContext
 }
 
 // numericBuiltinArguments lets another argument supply a terminating if's type.

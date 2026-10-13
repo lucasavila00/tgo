@@ -31,6 +31,9 @@ func originalSource(input []byte) mappedSource {
 
 // apply accepts edits in source order. It builds text and positions together.
 func (s *mappedSource) apply(edits ...sourceEdit) {
+	if len(edits) == 0 {
+		return
+	}
 	var text strings.Builder
 	offsets := make([]int, 0, len(s.offsets))
 	previous := 0

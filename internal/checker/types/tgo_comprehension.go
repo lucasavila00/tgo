@@ -9,11 +9,11 @@ import (
 
 func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind {
 	operation, _ := check.tgoOperation(call)
-	if check.comprehensionRanges == nil {
-		check.comprehensionRanges = make(map[*ast.RangeStmt]bool)
+	if check.tgo.comprehensionRanges == nil {
+		check.tgo.comprehensionRanges = make(map[*ast.RangeStmt]bool)
 	}
 	for _, loop := range operation.Ranges {
-		check.comprehensionRanges[loop] = true
+		check.tgo.comprehensionRanges[loop] = true
 		if loop.Key != nil && loop.Tok != token.DEFINE {
 			check.error(loop, InvalidSyntaxTree, "comprehension generators must declare bindings with :=")
 		}
@@ -25,12 +25,12 @@ func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind
 		check.error(call.Args[0], InvalidLit, "comprehension requires a slice or map type with one element type")
 		return expression
 	}
-	if check.comprehensionTypes == nil {
-		check.comprehensionTypes = make(map[string][]Type)
+	if check.tgo.comprehensionTypes == nil {
+		check.tgo.comprehensionTypes = make(map[string][]Type)
 	}
-	check.comprehensionTypes[operation.Output] = []Type{element}
+	check.tgo.comprehensionTypes[operation.Output] = []Type{element}
 	if key != nil {
-		check.comprehensionTypes[operation.Output] = []Type{key, element}
+		check.tgo.comprehensionTypes[operation.Output] = []Type{key, element}
 	}
 	previous := check.statementContext
 	check.statementContext &^= fallthroughOk | finalSwitchCase | inTypeSwitch
@@ -50,7 +50,7 @@ func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind
 
 func (check *Checker) comprehensionOutput(x *operand, call *ast.CallExpr) exprKind {
 	id := call.Fun.(*ast.Ident)
-	targets := check.comprehensionTypes[id.Name]
+	targets := check.tgo.comprehensionTypes[id.Name]
 	x.expr, x.mode_, x.typ_ = call, novalue, NewTuple()
 	if len(call.Args) != len(targets) {
 		check.error(call, WrongArgCount, "comprehension output must match the collection's element or key and value")

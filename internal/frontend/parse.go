@@ -40,7 +40,9 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 }
 
 func (preparation *sourcePreparation) parse() (preparedSyntax, error) {
-	conditionals := conditionalSyntax{filename: preparation.filename, original: preparation.original, used: preparation.used}
+	conditionals := conditionalSyntax{
+		filename: preparation.filename, original: preparation.original, used: preparation.used,
+	}
 	for {
 		if err := preparation.prepareExpressions(conditionals); err != nil {
 			return preparedSyntax{}, err

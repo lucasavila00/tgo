@@ -85,3 +85,14 @@ func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSe
 	}
 	return 1
 }
+
+func TestParseMalformedGo(t *testing.T) {
+	for _, input := range []string{"", "package", "func f() {}", "package p\nvar x = "} {
+		t.Run(input, func(t *testing.T) {
+			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+			if err == nil {
+				t.Fatalf("source diagnostic: %v", err)
+			}
+		})
+	}
+}
