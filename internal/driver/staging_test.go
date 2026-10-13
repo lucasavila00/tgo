@@ -36,12 +36,10 @@ func TestReadModuleReadsOnlyOwnedSource(t *testing.T) {
 		}
 	}
 	source := readModule(root)
-	want := map[string][]byte{"main.tgo": []byte(files["main.tgo"]), "ordinary.go": []byte(files["ordinary.go"])}
+	want := []sourceFile{{name: "main.tgo", content: []byte(files["main.tgo"])},
+		{name: "ordinary.go", content: []byte(files["ordinary.go"])}}
 	if !reflect.DeepEqual(source.files, want) {
 		t.Fatalf("source files: got %v, want %v", source.files, want)
-	}
-	if !reflect.DeepEqual(source.names, []string{"main.tgo", "ordinary.go"}) {
-		t.Fatalf("source order: %v", source.names)
 	}
 }
 

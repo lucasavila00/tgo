@@ -18,19 +18,27 @@ import (
 
 var updateManifest = flag.Bool("update-manifest", false, "update expression locations after a fixture change")
 
+type proofMode uint8
+
+const (
+	proofCompile proofMode = iota
+	proofNeutral
+	proofReturn
+)
+
 func TestProofCompile(t *testing.T) {
-	proofMatrix(t, false, false)
+	proofMatrix(t, proofCompile)
 }
 
 func TestProofNeutral(t *testing.T) {
-	proofMatrix(t, true, false)
+	proofMatrix(t, proofNeutral)
 }
 
 func TestProofReturn(t *testing.T) {
-	proofMatrix(t, false, true)
+	proofMatrix(t, proofReturn)
 }
 
-func proofMatrix(t *testing.T, neutral, returnCheck bool) {
+func proofMatrix(t *testing.T, mode proofMode) {
 	root, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +63,7 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 				continue
 			}
 			t.Run(fmt.Sprintf("%s:%d", filepath.Base(site.File), site.Start), func(t *testing.T) {
-				count = checkProofSite(t, source, site, dir, count, rejections, neutral, returnCheck)
+				count = checkProofSite(t, source, site, dir, count, rejections, mode)
 			})
 		}
 	}
@@ -84,8 +92,7 @@ func writeProofVariant(t *testing.T,
 	files map[string][]byte,
 	packageName string,
 	site lowering.Site,
-	neutral,
-	returnCheck bool) string {
+	mode proofMode) string {
 	t.Helper()
 	variant := filepath.Join(dir, fmt.Sprintf("v%d", count))
 	if err := os.Mkdir(variant, 0700); err != nil {
@@ -96,10 +103,10 @@ func writeProofVariant(t *testing.T,
 			t.Fatal(err)
 		}
 	}
-	if neutral {
+	if mode == proofNeutral {
 		writeNeutralChecks(t, variant, packageName, site)
 	}
-	if returnCheck {
+	if mode == proofReturn {
 		writeReturnChecks(t, variant, site)
 	}
 	return variant
@@ -117,30 +124,29 @@ func proofDirectory(t *testing.T) string {
 	return dir
 }
 
-func proofStatements(neutral, returning, returnCheck bool) func([]ast.Expr) []ast.Stmt {
-	after := func([]ast.Expr) []ast.Stmt {
-		return []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN,
-			Rhs: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "0"}}}}
+func proofStatements(mode proofMode, returning bool) func([]ast.Expr) []ast.Stmt {
+	if returning {
+		return func([]ast.Expr) []ast.Stmt {
+			exit := &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}}
+			if mode != proofReturn {
+				return []ast.Stmt{exit}
+			}
+			return []ast.Stmt{
+				&ast.IncDecStmt{X: ast.NewIdent("proofVisits"), Tok: token.INC},
+				&ast.IfStmt{Cond: &ast.BinaryExpr{X: ast.NewIdent("proofVisits"), Op: token.EQL,
+					Y: ast.NewIdent("proofExit")}, Body: &ast.BlockStmt{List: []ast.Stmt{exit}}},
+			}
+		}
 	}
-	if neutral {
-		after = func([]ast.Expr) []ast.Stmt {
+	if mode == proofNeutral {
+		return func([]ast.Expr) []ast.Stmt {
 			return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("proofMark")}}}
 		}
 	}
-	if returning {
-		after = func([]ast.Expr) []ast.Stmt {
-			exit := &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}}
-			if returnCheck {
-				return []ast.Stmt{
-					&ast.IncDecStmt{X: ast.NewIdent("proofVisits"), Tok: token.INC},
-					&ast.IfStmt{Cond: &ast.BinaryExpr{X: ast.NewIdent("proofVisits"), Op: token.EQL,
-						Y: ast.NewIdent("proofExit")}, Body: &ast.BlockStmt{List: []ast.Stmt{exit}}},
-				}
-			}
-			return []ast.Stmt{exit}
-		}
+	return func([]ast.Expr) []ast.Stmt {
+		return []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN,
+			Rhs: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "0"}}}}
 	}
-	return after
 }
 
 func checkProofVariants(t *testing.T, dir string) {
@@ -342,17 +348,17 @@ func checkProofSite(
 	dir string,
 	count int,
 	rejections map[string]string,
-	neutral, returnCheck bool,
+	mode proofMode,
 ) int {
 	t.Helper()
 	for _, returning := range []bool{false, true} {
-		if (neutral && returning) || (returnCheck && !returning) {
+		if (mode == proofNeutral && returning) || (mode == proofReturn && !returning) {
 			continue
 		}
 		if returning && !site.ErrorReturn {
 			continue
 		}
-		after := proofStatements(neutral, returning, returnCheck)
+		after := proofStatements(mode, returning)
 		files, err := source.InsertAfter(site, after)
 		expected := rejections[fmt.Sprintf("%s:%d:%d", site.File, site.Start, site.End)]
 		if expected != "" {
@@ -365,7 +371,7 @@ func checkProofSite(
 			t.Fatal(err)
 		}
 		count++
-		variant := writeProofVariant(t, dir, count, files, source.Package.Name, site, neutral, returnCheck)
+		variant := writeProofVariant(t, dir, count, files, source.Package.Name, site, mode)
 		t.Logf("%s: return=%t", variant, returning)
 	}
 	return count

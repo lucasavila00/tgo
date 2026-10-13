@@ -1,13 +1,9 @@
 package tests
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
 func TestReturnErrorShorthand(t *testing.T) {
@@ -37,20 +33,7 @@ func testShortReturnErrors(t *testing.T) {
 	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name(), func(t *testing.T) {
-			dir := filepath.Join("testdata/return-error-shorthand-rejected", fixture.Name())
-			expected, err := os.ReadFile(filepath.Join(dir, "diagnostic.txt"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			input := copyFixture(t, dir)
-			var failure any
-			func() { defer func() { failure = recover() }(); transpiler.Compile(input) }()
-			if failure == nil || !strings.Contains(fmt.Sprint(failure), strings.TrimSpace(string(expected))) {
-				t.Fatalf("got %v, want %s", failure, expected)
-			}
-			if !strings.Contains(fmt.Sprint(failure), "main.tgo:") {
-				t.Fatalf("missing source position: %v", failure)
-			}
+			checkSourceDiagnostic(t, filepath.Join("testdata/return-error-shorthand-rejected", fixture.Name()))
 		})
 	}
 }

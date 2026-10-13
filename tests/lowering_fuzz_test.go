@@ -83,19 +83,25 @@ func FuzzPropagationBehavior(f *testing.F) {
 		body := fuzzBodies[int(data[0])%len(fuzzBodies)]
 		wrapped := data[2]&1 != 0
 		input, reference := fuzzPrograms(t, body, data, wrapped)
-		referenceDir := t.TempDir()
-		module := "module example.com/fuzz\n\ngo " + strings.TrimPrefix(runtime.Version(), "go") + "\n"
-		writeFiles(t, referenceDir, map[string][]byte{"go.mod": []byte(module), "main.go": []byte(reference)})
-		want := fuzzRun(t, referenceDir, reference)
-		inputDir := t.TempDir()
-		writeFiles(t, inputDir, map[string][]byte{"go.mod": []byte(module), "main.tgo": []byte(input)})
-		fuzzCompile(t, inputDir, input)
-		got := fuzzRun(t, inputDir, input)
-		if !bytes.Equal(got, want) {
-			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input,
-				reference, want, got, readFiles(t, inputDir)["main_tgo.go"])
-		}
+		checkFuzzBehavior(t, "example.com/fuzz", input, reference)
 	})
+}
+
+// checkFuzzBehavior builds each program in its own module and compares its trace.
+func checkFuzzBehavior(t *testing.T, moduleName, input, reference string) {
+	t.Helper()
+	module := []byte("module " + moduleName + "\n\ngo " + strings.TrimPrefix(runtime.Version(), "go") + "\n")
+	referenceDir := t.TempDir()
+	writeFiles(t, referenceDir, map[string][]byte{"go.mod": module, "main.go": []byte(reference)})
+	want := fuzzRun(t, referenceDir, reference)
+	inputDir := t.TempDir()
+	writeFiles(t, inputDir, map[string][]byte{"go.mod": module, "main.tgo": []byte(input)})
+	fuzzCompile(t, inputDir, input)
+	got := fuzzRun(t, inputDir, input)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s", input,
+			reference, want, got, readFiles(t, inputDir)["main_tgo.go"])
+	}
 }
 
 func fuzzPrograms(t *testing.T, body string, data []byte, wrapped bool) (string, string) {
