@@ -18,6 +18,13 @@ type Marker struct {
 	Wrap     bool
 	CallName string
 	Position token.Position
+	// EndOffset is the byte offset just after the operator in the input.
+	EndOffset int
+}
+
+type postfixOperator struct {
+	start, end int
+	wrap       bool
 }
 
 type postfixReplacement struct {
@@ -43,28 +50,35 @@ func postfixReplacements(filename string, input []byte, used map[string]bool) []
 		}
 		offset := file.Offset(pos)
 		if tok == token.NOT && previous == token.RPAREN {
-			count := 1
-			if offset+1 < len(input) && input[offset+1] == '!' {
-				count = 2
-			}
+			operator := readPostfixOperator(&scan, input, offset)
 			name := freshMarkerName(used, "tgoPropagation")
 			text := "/*" + name + "*/"
 			replacements = append(replacements, postfixReplacement{
-				edit:   sourceEdit{offset, offset + count, text, insertedOffsets(len(text), offset)},
-				record: Marker{Name: name, Wrap: count == 2, Position: file.Position(pos)},
+				edit: sourceEdit{operator.start, operator.end, text, insertedOffsets(len(text), operator.start)},
+				record: Marker{Name: name, Wrap: operator.wrap, Position: file.Position(pos),
+					EndOffset: operator.end},
 			})
-			if count == 2 {
-				_, next, _ := scan.Scan()
-				if next != token.NOT {
-					panic("invalid propagation suffix")
-				}
-			}
 			previous = token.ILLEGAL
 			continue
 		}
 		previous = tok
 	}
 	return replacements
+}
+
+// readPostfixOperator records the operator's meaning and input span after its first !.
+// It consumes the second ! only when the two bytes are adjacent.
+func readPostfixOperator(scan *scanner.Scanner, input []byte, start int) postfixOperator {
+	operator := postfixOperator{start: start, end: start + 1}
+	if operator.end < len(input) && input[operator.end] == '!' {
+		_, next, _ := scan.Scan()
+		if next != token.NOT {
+			panic("invalid propagation suffix")
+		}
+		operator.end++
+		operator.wrap = true
+	}
+	return operator
 }
 
 // markerExpressions matches recorded comments to calls in the parsed file.
@@ -99,17 +113,13 @@ func markerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 
 // wrapMarker replaces the selected expression with a marker call for source checking.
 // It changes file in place and removes the comment for this operation.
-func wrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
+func wrapMarker(file *ast.File, original *token.File, expression ast.Expr, operation Marker) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {
-			width := token.Pos(1)
-			if operation.Wrap {
-				width++
-			}
 			cursor.Replace(&ast.CallExpr{
 				Fun:    &ast.Ident{Name: operation.Name, NamePos: expression.Pos()},
 				Lparen: expression.Pos(), Args: []ast.Expr{ast.Unparen(expression)},
-				Rparen: expression.End() + width - 1,
+				Rparen: original.Pos(operation.EndOffset - 1),
 			})
 			return false
 		}

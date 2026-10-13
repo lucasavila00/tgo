@@ -15,22 +15,8 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 	result.recordComprehensions(file)
 	for expression, operation := range markerExpressions(fset, file, result.Propagations) {
 		result.Propagations[operation.Name] = operation
-		wrapMarker(file, expression, operation)
+		wrapMarker(file, original, expression, operation)
 	}
-	ast.Inspect(file, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok {
-				if op, found := result.Propagations[id.Name]; found {
-					width := 1
-					if op.Wrap {
-						width++
-					}
-					call.Rparen = original.Pos(op.Position.Offset + width - 1)
-				}
-			}
-		}
-		return true
-	})
 	return result
 }
 
