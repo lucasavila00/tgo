@@ -19,35 +19,20 @@ func Expression(r *shared.Context, call *ast.CallExpr, statement ast.Stmt) share
 }
 
 func conditionalStatement(r *shared.Context, statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
-	output := *statement
-	output.Body = conditionalBlock(r, statement.Body, result)
-	switch alternative := statement.Else.(type) {
+	body := conditionalBlock(r, statement.Body, result)
+	var alternative ast.Stmt
+	switch sourceAlternative := statement.Else.(type) {
 	case *ast.BlockStmt:
-		output.Else = conditionalBlock(r, alternative, result)
+		alternative = conditionalBlock(r, sourceAlternative, result)
 	case *ast.IfStmt:
-		alternativeStatements := conditionalStatement(r, alternative, result)
-		if len(alternativeStatements) == 1 {
-			output.Else = alternativeStatements[0]
+		statements := conditionalStatement(r, sourceAlternative, result)
+		if len(statements) == 1 {
+			alternative = statements[0]
 		} else {
-			output.Else = &ast.BlockStmt{List: alternativeStatements}
+			alternative = &ast.BlockStmt{List: statements}
 		}
 	}
-	var initStatements []ast.Stmt
-	if statement.Init != nil {
-		initStatements = r.Header(statement.Init)
-	}
-	conditionEvaluation := r.Expression(statement.Cond)
-	conditionStatements, conditionValues := conditionEvaluation.Statements, conditionEvaluation.Expressions()
-	output.Cond = conditionValues[0]
-	if len(conditionStatements) == 0 && len(initStatements) <= 1 {
-		if len(initStatements) != 0 {
-			output.Init = initStatements[0]
-		}
-		return []ast.Stmt{&output}
-	}
-	output.Init = nil
-	statements := append(initStatements, conditionStatements...)
-	return []ast.Stmt{&ast.BlockStmt{List: append(statements, &output)}}
+	return r.IfStatement(statement, body, alternative)
 }
 
 func conditionalBlock(r *shared.Context, body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
