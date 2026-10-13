@@ -2,8 +2,8 @@ package frontend
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"sort"
 )

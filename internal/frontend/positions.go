@@ -7,30 +7,14 @@ import (
 )
 
 // finish maps syntax positions to the input and attaches parsed nodes to feature records.
-// It replaces postfix comment markers with calls that the checker can identify.
+// It replaces the parser's recorded postfix operands with calls that the checker can identify.
 func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File,
-	offsets []int) *Parsed {
+	offsets []int, postfix []parsedPostfix) *Parsed {
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
 	result.File = file
 	result.recordComprehensions(file)
-	for expression, operation := range markerExpressions(fset, file, result.Propagations) {
-		result.Propagations[operation.Name] = operation
-		wrapMarker(file, expression, operation)
-	}
-	ast.Inspect(file, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok {
-				if op, found := result.Propagations[id.Name]; found {
-					width := 1
-					if op.Wrap {
-						width++
-					}
-					call.Rparen = original.Pos(op.Position.Offset + width - 1)
-				}
-			}
-		}
-		return true
-	})
+	bindings := result.bindPostfixCalls(fset, prepared, original, offsets, postfix)
+	normalizePostfix(file, bindings)
 	return result
 }
 

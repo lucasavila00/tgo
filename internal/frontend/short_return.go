@@ -2,7 +2,7 @@ package frontend
 
 import (
 	"fmt"
-	"go/scanner"
+	"github.com/lucasavila00/tgo/internal/frontend/scanner"
 	"go/token"
 	"strings"
 )
@@ -114,7 +114,7 @@ func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, returnEnd i
 	positions := token.NewFileSet()
 	commentFile := positions.AddFile("", -1, returnEnd-operandEnd)
 	var commentScanner scanner.Scanner
-	commentScanner.Init(commentFile, []byte(s.text[operandEnd:returnEnd]), nil, scanner.ScanComments)
+	commentScanner.Init(commentFile, []byte(s.text[operandEnd:returnEnd]), nil, scanner.ScanComments|scanner.TGo)
 	for {
 		position, tokenKind, literal := commentScanner.Scan()
 		if tokenKind == token.COMMENT && strings.HasPrefix(literal, "//") {

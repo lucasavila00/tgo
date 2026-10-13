@@ -1,7 +1,6 @@
 package frontend
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -73,16 +72,12 @@ func TestPropagationSourcePositionsAndComments(t *testing.T) {
 func TestPropagationRequiresCall(t *testing.T) {
 	for _, operator := range []string{"!", "!!"} {
 		t.Run(operator, func(t *testing.T) {
-			defer func() {
-				err := recover()
-				if err == nil || !strings.Contains(fmt.Sprint(err), "propagation requires a call") {
-					t.Fatalf("diagnostic: %v", err)
-				}
-			}()
 			input := "package p\nfunc f(err error) error { value := (err)" + operator + "; return value }"
-			if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input),
-				make(map[string]bool)); err != nil {
-				t.Fatal(err)
+			parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input),
+				make(map[string]bool))
+			if parsed != nil || err == nil || !strings.Contains(err.Error(),
+				"main.tgo:2:41: propagation requires a call") {
+				t.Fatalf("parsed: %v; diagnostic: %v", parsed, err)
 			}
 		})
 	}

@@ -18,17 +18,7 @@ type sourcePreparation struct {
 type preparedSyntax struct {
 	file      *ast.File
 	positions *token.File
-}
-
-// preparePostfix replaces postfix operators in the prepared source and records their meaning.
-func (preparation *sourcePreparation) preparePostfix(sourceName string, input []byte) {
-	replacements := postfixReplacements(sourceName, input, preparation.used)
-	edits := make([]sourceEdit, len(replacements))
-	for index, replacement := range replacements {
-		edits[index] = replacement.edit
-		preparation.records.Propagations[replacement.record.Name] = replacement.record
-	}
-	preparation.source.apply(edits...)
+	postfix   []parsedPostfix
 }
 
 // prepareExpressions applies short-return, conditional, and comprehension edits until none remain.

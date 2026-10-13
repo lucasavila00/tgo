@@ -2,8 +2,8 @@ package frontend
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/frontend/scanner"
 	"go/ast"
-	"go/scanner"
 	"go/token"
 )
 
@@ -84,7 +84,7 @@ func expressionConditionalTokens(source string) map[int]bool {
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, len(source))
 	var scan scanner.Scanner
-	scan.Init(file, []byte(source), nil, 0)
+	scan.Init(file, []byte(source), nil, scanner.TGo)
 	result := make(map[int]bool)
 	previous := token.ILLEGAL
 	for {

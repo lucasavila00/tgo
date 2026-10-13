@@ -1,8 +1,8 @@
 package frontend
 
 import (
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
 	"go/ast"
-	"go/parser"
 	"go/scanner"
 	"go/token"
 )
@@ -31,12 +31,12 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 			Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker),
 			ShortReturns: make(map[string]ShortReturn)},
 	}
-	preparation.preparePostfix(sourceName, input)
 	syntax, err := preparation.parse()
 	if err != nil {
 		return nil, err
 	}
-	return preparation.records.finish(fset, syntax.file, syntax.positions, original, preparation.source.offsets), nil
+	return preparation.records.finish(fset, syntax.file, syntax.positions, original,
+		preparation.source.offsets, syntax.postfix), nil
 }
 
 // parse prepares added expressions and retries Go parsing after each recovered conditional.
@@ -50,10 +50,19 @@ func (preparation *sourcePreparation) parse() (preparedSyntax, error) {
 			return preparedSyntax{}, err
 		}
 		positions := token.NewFileSet()
-		file, err := parser.ParseFile(positions, preparation.filename, preparation.source.text,
-			parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
+		var postfix []parsedPostfix
+		recordPostfix := func(operand ast.Expr, start, end token.Pos, wrap bool) {
+			postfix = append(postfix, parsedPostfix{
+				operand: operand, start: start, end: end, marker: Marker{Wrap: wrap},
+			})
+		}
+		file, err := parser.ParseFileWithPostfix(positions, preparation.filename, preparation.source.text,
+			parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution, recordPostfix)
 		if err == nil {
-			return preparedSyntax{file, positions.File(file.Pos())}, nil
+			for index := range postfix {
+				postfix[index].marker.Name = freshMarkerName(preparation.used, "tgoPropagation")
+			}
+			return preparedSyntax{file, positions.File(file.Pos()), postfix}, nil
 		}
 		diagnostics, isSyntaxError := err.(scanner.ErrorList)
 		if !isSyntaxError {

@@ -9,7 +9,7 @@
 +	return ParseFileWithPostfix(fset, filename, src, mode, nil)
 +}
 +
-+// ParseFileWithPostfix parses a file and calls postfix for each call's postfix operator.
++// ParseFileWithPostfix parses a file and records each call's postfix operator through postfix.
 +func ParseFileWithPostfix(fset *token.FileSet, filename string, src any, mode Mode, postfix Postfix) (f *ast.File, err error) {
  	if fset == nil {
  		panic("parser.ParseFile: no token.FileSet provided (fset == nil)")

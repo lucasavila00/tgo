@@ -1,7 +1,7 @@
 package frontend
 
 import (
-	"go/scanner"
+	"github.com/lucasavila00/tgo/internal/frontend/scanner"
 	"go/token"
 	"strings"
 )
@@ -19,7 +19,7 @@ func sourceTokens(source string) []sourceToken {
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, len(source))
 	var scan scanner.Scanner
-	scan.Init(file, []byte(source), nil, 0)
+	scan.Init(file, []byte(source), nil, scanner.TGo)
 	var tokens []sourceToken
 	depth := 0
 	for {

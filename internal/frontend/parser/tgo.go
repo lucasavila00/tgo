@@ -5,11 +5,11 @@ import (
 	"go/token"
 )
 
-// Postfix constructs a checker call for an operand and its postfix operator.
+// Postfix records the exact operand and its postfix operator.
 // The operator span uses positions in the parsed file; end is exclusive.
-type Postfix func(operand ast.Expr, start, end token.Pos, wrap bool) ast.Expr
+type Postfix func(operand ast.Expr, start, end token.Pos, wrap bool)
 
-// parsePostfix consumes one operator on the current operand and creates its checker call.
+// parsePostfix consumes one operator and records its current call operand.
 func (p *parser) parsePostfix(operand ast.Expr) ast.Expr {
 	start, end, wrap := p.pos, p.end(), p.lit == "!!"
 	p.next()
@@ -18,10 +18,7 @@ func (p *parser) parsePostfix(operand ast.Expr) ast.Expr {
 		return &ast.BadExpr{From: operand.Pos(), To: end}
 	}
 	if p.postfix != nil {
-		return p.postfix(operand, start, end, wrap)
+		p.postfix(operand, start, end, wrap)
 	}
-	return &ast.CallExpr{
-		Fun: &ast.Ident{Name: "tgoPropagation", NamePos: operand.Pos()},
-		Lparen: operand.Pos(), Args: []ast.Expr{ast.Unparen(operand)}, Rparen: end - 1,
-	}
+	return operand
 }

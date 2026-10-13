@@ -1,9 +1,12 @@
 # Compiler preparation and source checks
 
 `prepare-checker.sh` builds private Go checker source from a pinned version and
-patch. `make prepare` calls it. See
+patch. `prepare-frontend.sh` builds the private parser and scanner with the same
+Go version. `make prepare` calls both scripts. See
 [checker preparation](../internal/checker/upstream.md) for inputs, generated
 files, and Go updates.
+See [frontend preparation](../internal/frontend/upstream.md) for the grammar
+patch and parser updates.
 
 `check-source-size.go` limits each tracked Go or TGo source file to 700 lines.
 It uses `git ls-files`, reads the listed files, and reports each path that exceeds
@@ -26,7 +29,7 @@ function and method, including private helpers, tests, benchmarks, `main`, and
 Anonymous functions have no declaration name and are outside this rule. Empty
 comments and tool directives alone do not satisfy it.
 
-`make lint` prepares the checker, runs the source-size, function-comment, and dead-code
+`make lint` prepares the compiler sources, runs the source-size, function-comment, and dead-code
 checks, runs Go linters,
 and checks Go formatting. The pull request workflow runs the same command.
 See [source checks](../docs/guide/lint.md) for tool versions and limits.

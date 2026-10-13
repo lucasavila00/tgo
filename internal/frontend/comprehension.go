@@ -2,9 +2,9 @@ package frontend
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
+	"github.com/lucasavila00/tgo/internal/frontend/scanner"
 	"go/ast"
-	"go/parser"
-	"go/scanner"
 	"go/token"
 	"strings"
 )
@@ -214,7 +214,7 @@ func (s *mappedSource) retainComprehensionComments(from, to int, retain func(int
 	set := token.NewFileSet()
 	file := set.AddFile("", -1, to-from)
 	var scan scanner.Scanner
-	scan.Init(file, []byte(s.text[from:to]), nil, scanner.ScanComments)
+	scan.Init(file, []byte(s.text[from:to]), nil, scanner.ScanComments|scanner.TGo)
 	for {
 		position, kind, literal := scan.Scan()
 		if kind == token.EOF {
