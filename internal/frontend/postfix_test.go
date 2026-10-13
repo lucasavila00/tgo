@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMarkPostfixOperatorMeaning(t *testing.T) {
+func TestPostfixOperatorMeaning(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		suffix string
@@ -15,22 +15,22 @@ func TestMarkPostfixOperatorMeaning(t *testing.T) {
 		{"context", "!!", true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			operations := make(map[string]Marker)
 			input := "package example\nfunc run() error { target()" + test.suffix + "; return nil }"
-			output := MarkPostfix("main.tgo", []byte(input), make(map[string]bool), operations)
-			if len(operations) != 1 {
-				t.Fatalf("operations: %d, want 1", len(operations))
+			replacements := postfixReplacements("main.tgo", []byte(input), make(map[string]bool))
+			if len(replacements) != 1 {
+				t.Fatalf("operations: %d, want 1", len(replacements))
 			}
-			for name, operation := range operations {
-				if operation.Wrap != test.wrap {
-					t.Fatalf("%s wraps: %t, want %t", test.suffix, operation.Wrap, test.wrap)
-				}
-				if operation.Position.Offset != strings.Index(input, test.suffix) {
-					t.Fatalf("operator position: %d", operation.Position.Offset)
-				}
-				if !strings.Contains(string(output), "target()/*"+name+"*/;") {
-					t.Fatalf("prepared source: %s", output)
-				}
+			operation := replacements[0].record
+			if operation.Wrap != test.wrap {
+				t.Fatalf("%s wraps: %t, want %t", test.suffix, operation.Wrap, test.wrap)
+			}
+			if operation.Position.Offset != strings.Index(input, test.suffix) {
+				t.Fatalf("operator position: %d", operation.Position.Offset)
+			}
+			source := originalSource([]byte(input))
+			source.apply(replacements[0].edit)
+			if !strings.Contains(source.text, "target()/*"+operation.Name+"*/;") {
+				t.Fatalf("prepared source: %s", source.text)
 			}
 		})
 	}

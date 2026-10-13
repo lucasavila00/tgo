@@ -4,48 +4,9 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/scanner"
 	"go/token"
 	"sort"
-	"strings"
 )
-
-type sourceToken struct {
-	offset int
-	end    int
-	kind   token.Token
-	depth  int
-}
-
-func sourceTokens(source string) []sourceToken {
-	set := token.NewFileSet()
-	file := set.AddFile("", -1, len(source))
-	var scan scanner.Scanner
-	scan.Init(file, []byte(source), nil, 0)
-	var tokens []sourceToken
-	depth := 0
-	for {
-		position, kind, literal := scan.Scan()
-		width := len(literal)
-		if width == 0 {
-			width = len(kind.String())
-		}
-		offset := file.Offset(position)
-		if kind == token.STRING && source[offset] == '`' {
-			width = strings.IndexByte(source[offset+1:], '`') + 2
-		}
-		tokens = append(tokens, sourceToken{offset: offset, end: offset + width, kind: kind, depth: depth})
-		switch kind {
-		case token.LPAREN, token.LBRACK, token.LBRACE:
-			depth++
-		case token.RPAREN, token.RBRACK, token.RBRACE:
-			depth--
-		}
-		if kind == token.EOF {
-			return tokens
-		}
-	}
-}
 
 // conditionalEnd asks Go's parser to confirm complete branch syntax.
 // Balanced delimiters limit each parse to one possible conditional span.
@@ -97,15 +58,24 @@ func conditionalEnd(filename, source string, start int, tokens []sourceToken) in
 	return -1
 }
 
-type conditionalEdit struct {
-	start, end int
-	name       string
+type conditionalReplacement struct {
+	edit     sourceEdit
+	name     string
+	position token.Position
+}
+
+// conditionalSyntax owns operand recognition for both preparation and parser recovery.
+// Both paths produce the same replacement and source record.
+type conditionalSyntax struct {
+	filename string
+	original *token.File
+	used     map[string]bool
 }
 
 // prepareConditionals wraps independent operands together. A nested operand
 // is prepared before its containing expression; ambiguous syntax uses AST recovery.
-func (s *mappedSource) prepareConditionals(filename string, original *token.File, used map[string]bool,
-	conditionals map[string]token.Position) bool {
+func (syntax conditionalSyntax) prepare(source mappedSource) []conditionalReplacement {
+	s := &source
 	var starts []int
 	for offset, operand := range expressionConditionalTokens(s.text) {
 		if operand {
@@ -113,11 +83,11 @@ func (s *mappedSource) prepareConditionals(filename string, original *token.File
 		}
 	}
 	if len(starts) == 0 {
-		return false
+		return nil
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(starts)))
 	tokens := sourceTokens(s.text)
-	var edits []conditionalEdit
+	var replacements []conditionalReplacement
 	nextName := 1
 	depth := -1
 	for _, start := range starts {
@@ -125,38 +95,36 @@ func (s *mappedSource) prepareConditionals(filename string, original *token.File
 		if tokens[index].depth < depth {
 			continue
 		}
-		end := conditionalEnd(filename, s.text, start, tokens)
-		if end < 0 || len(edits) > 0 && end > edits[len(edits)-1].start {
+		end := conditionalEnd(syntax.filename, s.text, start, tokens)
+		if end < 0 || len(replacements) > 0 && end > replacements[len(replacements)-1].edit.start {
 			continue
 		}
 		name := ""
 		for {
 			name = fmt.Sprintf("tgoConditional%d", nextName)
 			nextName++
-			if !used[name] {
-				used[name] = true
+			if !syntax.used[name] {
+				syntax.used[name] = true
 				break
 			}
 		}
-		conditionals[name] = original.Position(original.Pos(s.offsets[start]))
-		edits = append(edits, conditionalEdit{start, end, name})
+		replacements = append(replacements, syntax.replacement(source, start, end, name))
 		depth = tokens[index].depth
 	}
-	if len(edits) == 0 {
-		return false
+	// Plans were found from right to left; application uses source order.
+	for left, right := 0, len(replacements)-1; left < right; left, right = left+1, right-1 {
+		replacements[left], replacements[right] = replacements[right], replacements[left]
 	}
-	replacements := make([]sourceEdit, 0, len(edits))
-	for i := len(edits) - 1; i >= 0; i-- {
-		edit := edits[i]
-		before, after := edit.name+"(func(){", "})"
-		offsets := insertedOffsets(len(before), s.offsets[edit.start])
-		offsets = append(offsets, s.offsets[edit.start:edit.end]...)
-		offsets = append(offsets, insertedOffsets(len(after), s.offsets[edit.end-1])...)
-		replacements = append(replacements, sourceEdit{
-			start: edit.start, end: edit.end,
-			text: before + s.text[edit.start:edit.end] + after, offsets: offsets,
-		})
+	return replacements
+}
+
+func (syntax conditionalSyntax) replacement(source mappedSource, start, end int, name string) conditionalReplacement {
+	before, after := name+"(func(){", "})"
+	offsets := insertedOffsets(len(before), source.offsets[start])
+	offsets = append(offsets, source.offsets[start:end]...)
+	offsets = append(offsets, insertedOffsets(len(after), source.offsets[end-1])...)
+	return conditionalReplacement{
+		edit: sourceEdit{start, end, before + source.text[start:end] + after, offsets},
+		name: name, position: syntax.original.Position(syntax.original.Pos(source.offsets[start])),
 	}
-	s.apply(replacements...)
-	return true
 }

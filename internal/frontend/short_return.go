@@ -13,12 +13,17 @@ type ShortReturn struct {
 	Position    token.Position
 }
 
-// prepareShortReturn wraps one operand list without adding a source function.
-func (s *mappedSource) prepareShortReturn(
+type shortReturnReplacement struct {
+	edit   sourceEdit
+	name   string
+	record ShortReturn
+}
+
+// shortReturn plans one operand list without adding a source function.
+func (s mappedSource) shortReturn(
 	original *token.File,
 	used map[string]bool,
-	records map[string]ShortReturn,
-) (bool, error) {
+) (*shortReturnReplacement, error) {
 	tokens := sourceTokens(s.text)
 	for returnIndex := len(tokens) - 1; returnIndex >= 0; returnIndex-- {
 		if tokens[returnIndex].kind != token.RETURN {
@@ -26,7 +31,7 @@ func (s *mappedSource) prepareShortReturn(
 		}
 		operatorOffset, returnEnd, err := s.shortReturnSpan(tokens, returnIndex)
 		if err != nil {
-			return false, fmt.Errorf("%s: %w", original.Position(original.Pos(s.offsets[operatorOffset])), err)
+			return nil, fmt.Errorf("%s: %w", original.Position(original.Pos(s.offsets[operatorOffset])), err)
 		}
 		if operatorOffset < 0 {
 			continue
@@ -43,25 +48,19 @@ func (s *mappedSource) prepareShortReturn(
 		} else {
 			operandEnd = operatorOffset
 		}
-		markerName := ""
-		for markerNumber := 1; ; markerNumber++ {
-			markerName = fmt.Sprintf("tgoShortReturn%d", markerNumber)
-			if !used[markerName] {
-				used[markerName] = true
-				break
-			}
-		}
+		markerName := freshMarkerName(used, "tgoShortReturn")
 		position := original.Position(original.Pos(s.offsets[operatorOffset]))
-		records[markerName] = ShortReturn{ZeroSuccess: leadingOperator, Position: position}
 		markerPrefix, markerSuffix := markerName+"(", ");"
 		replacementText := markerPrefix + s.text[operandStart:operandEnd] + markerSuffix
 		replacementOffsets := insertedOffsets(len(markerPrefix), s.offsets[tokens[operandIndex].offset])
 		replacementOffsets = append(replacementOffsets, s.offsets[operandStart:operandEnd]...)
 		replacementOffsets = append(replacementOffsets, insertedOffsets(len(markerSuffix), s.offsets[returnEnd-1])...)
-		s.apply(sourceEdit{tokens[operandIndex].offset, returnEnd, replacementText, replacementOffsets})
-		return true, nil
+		return &shortReturnReplacement{
+			edit: sourceEdit{tokens[operandIndex].offset, returnEnd, replacementText, replacementOffsets},
+			name: markerName, record: ShortReturn{ZeroSuccess: leadingOperator, Position: position},
+		}, nil
 	}
-	return false, nil
+	return nil, nil
 }
 
 func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (int, int, error) {

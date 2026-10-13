@@ -20,16 +20,19 @@ type Marker struct {
 	Position token.Position
 }
 
-// MarkPostfix replaces postfix ! and !! with named comments that Go can parse.
-// It reserves fresh names in used and records each operator in operations.
-func MarkPostfix(filename string, input []byte, used map[string]bool, operations map[string]Marker) []byte {
+type postfixReplacement struct {
+	edit   sourceEdit
+	record Marker
+}
+
+// postfixReplacements records operators in scan order and plans their comments.
+func postfixReplacements(filename string, input []byte, used map[string]bool) []postfixReplacement {
 	fset := token.NewFileSet()
 	file := fset.AddFile(filename, -1, len(input))
 	var scan scanner.Scanner
 	scan.Init(file, input, nil, scanner.ScanComments)
-	var output bytes.Buffer
+	var replacements []postfixReplacement
 	previous := token.ILLEGAL
-	copied := 0
 	for {
 		pos, tok, _ := scan.Scan()
 		if tok == token.EOF {
@@ -44,11 +47,12 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 			if offset+1 < len(input) && input[offset+1] == '!' {
 				count = 2
 			}
-			name := freshPropagationName(used)
-			operations[name] = Marker{Name: name, Wrap: count == 2, Position: file.Position(pos)}
-			output.Write(input[copied:offset])
-			fmt.Fprintf(&output, "/*%s*/", name)
-			copied = offset + count
+			name := freshMarkerName(used, "tgoPropagation")
+			text := "/*" + name + "*/"
+			replacements = append(replacements, postfixReplacement{
+				edit:   sourceEdit{offset, offset + count, text, insertedOffsets(len(text), offset)},
+				record: Marker{Name: name, Wrap: count == 2, Position: file.Position(pos)},
+			})
 			if count == 2 {
 				_, next, _ := scan.Scan()
 				if next != token.NOT {
@@ -60,13 +64,12 @@ func MarkPostfix(filename string, input []byte, used map[string]bool, operations
 		}
 		previous = tok
 	}
-	output.Write(input[copied:])
-	return output.Bytes()
+	return replacements
 }
 
-// MarkerExpressions matches recorded comments to calls in the parsed file.
+// markerExpressions matches recorded comments to calls in the parsed file.
 // It records the source call name and panics if an operator does not follow a call.
-func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[string]Marker) map[ast.Expr]Marker {
+func markerExpressions(fset *token.FileSet, file *ast.File, operations map[string]Marker) map[ast.Expr]Marker {
 	result := make(map[ast.Expr]Marker)
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
@@ -94,9 +97,9 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 	return result
 }
 
-// WrapMarker replaces the selected expression with a marker call for source checking.
+// wrapMarker replaces the selected expression with a marker call for source checking.
 // It changes file in place and removes the comment for this operation.
-func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
+func wrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {
 			width := token.Pos(1)
@@ -126,16 +129,6 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 		}
 	}
 	file.Comments = comments
-}
-
-func freshPropagationName(used map[string]bool) string {
-	for n := 1; ; n++ {
-		name := fmt.Sprintf("tgoPropagation%d", n)
-		if !used[name] {
-			used[name] = true
-			return name
-		}
-	}
 }
 
 func precedingCall(file *ast.File, position token.Pos) ast.Expr {

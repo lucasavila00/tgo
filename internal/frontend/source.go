@@ -1,6 +1,9 @@
 package frontend
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // mappedSource owns prepared text and the position of each byte in the input.
 // Syntax preparation supplies edits; only apply changes text and positions.
@@ -49,4 +52,15 @@ func insertedOffsets(count, offset int) []int {
 		result[i] = offset
 	}
 	return result
+}
+
+// freshMarkerName reserves a name across all files in the compilation.
+func freshMarkerName(used map[string]bool, prefix string) string {
+	for number := 1; ; number++ {
+		name := fmt.Sprintf("%s%d", prefix, number)
+		if !used[name] {
+			used[name] = true
+			return name
+		}
+	}
 }
