@@ -6,6 +6,8 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// packageConditional reports whether an initializer needs value-expression or comprehension statements.
+// It excludes function bodies, which have their own execution and return state.
 func (r *Context) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
@@ -20,6 +22,7 @@ func (r *Context) packageConditional(expression ast.Expr) bool {
 	return found
 }
 
+// packageInitializer builds an immediately called function for initializer statements with fresh function state.
 func (r *Context) packageInitializer(expression ast.Expr) ast.Expr {
 	initializer := &Context{input: r.input, dispatch: r.dispatch, request: r.request,
 		file: r.file, functionState: &functionState{}}

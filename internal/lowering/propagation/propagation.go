@@ -42,6 +42,7 @@ func Expression(r *shared.Context, marker *ast.CallExpr, operation shared.Propag
 	return shared.Result{Statements: statements, Values: saved.Values[:len(saved.Values)-1]}
 }
 
+// propagatedError builds the failure value, adding the source call name only when context was requested.
 func propagatedError(r *shared.Context, callError ast.Expr, returnErrorType types.Type,
 	operation shared.Propagation, call ast.Expr) ast.Expr {
 	if !operation.Wrap {
@@ -97,6 +98,8 @@ func callFailure(r *shared.Context, result shared.Value, call ast.Expr) ([]ast.S
 	}
 }
 
+// reflectedFailure builds a runtime nil check for error types that cannot use a direct comparison.
+// It tests the saved result before conversion to the enclosing function's error type.
 func reflectedFailure(r *shared.Context, value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Expr) {
 	reflectPackage := r.ReflectPackage()
 	reflected := r.NameFor("reflected")

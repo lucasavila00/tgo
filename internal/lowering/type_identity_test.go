@@ -10,6 +10,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// TestLoadKeepsStockTypeObjects checks stock Go types stay separate from private lowering types.
 func TestLoadKeepsStockTypeObjects(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{

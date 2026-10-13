@@ -7,6 +7,8 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// forStatement moves added header work into a loop while retaining initializer, post, and condition timing.
+// It keeps continue targets and per-iteration bindings in the generated loop.
 func (r *Context) forStatement(s *ast.ForStmt) []ast.Stmt {
 	output := *s
 	output.Body = r.Block(s.Body)
@@ -108,6 +110,7 @@ func (r *Context) loopBindings(original ast.Stmt) ([]ast.Stmt, ast.Stmt) {
 	return before, header
 }
 
+// initializerJumps reports whether an initializer contains a source break or continue targeting this loop.
 func (r *Context) initializerJumps(loop *ast.ForStmt) bool {
 	if loop.Init == nil {
 		return false
@@ -163,6 +166,7 @@ func (r *Context) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 	return nil
 }
 
+// labeledBranchTarget resolves a source label to its control statement by checked binding identity.
 func (r *Context) labeledBranchTarget(node ast.Node, label *ast.Ident) ast.Stmt {
 	if statement, ok := node.(*ast.LabeledStmt); ok &&
 		r.input.Inventory.Checked.TypesInfo.Defs[statement.Label] ==

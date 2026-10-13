@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestConditionalPlanKeepsSourceUntilApplied checks that planning an if replacement does not change input text.
 func TestConditionalPlanKeepsSourceUntilApplied(t *testing.T) {
 	input := "package p; var x = if true { 1 } else { 2 }"
 	source := originalSource([]byte(input))
@@ -17,6 +18,7 @@ func TestConditionalPlanKeepsSourceUntilApplied(t *testing.T) {
 	checkPlannedEdit(t, source, replacements[0].edit, input)
 }
 
+// TestComprehensionPlanKeepsSourceUntilApplied checks that a collection plan leaves input text unchanged.
 func TestComprehensionPlanKeepsSourceUntilApplied(t *testing.T) {
 	input := "package p; var x = []int{n for _, n := range ns}"
 	source := originalSource([]byte(input))
@@ -28,6 +30,7 @@ func TestComprehensionPlanKeepsSourceUntilApplied(t *testing.T) {
 	checkPlannedEdit(t, source, replacement.edit, input)
 }
 
+// TestShortReturnPlanKeepsSourceUntilApplied checks that planning a return replacement does not change input text.
 func TestShortReturnPlanKeepsSourceUntilApplied(t *testing.T) {
 	input := "package p; func f() (int, error) { return .. err }"
 	source := originalSource([]byte(input))
@@ -39,6 +42,7 @@ func TestShortReturnPlanKeepsSourceUntilApplied(t *testing.T) {
 	checkPlannedEdit(t, source, replacement.edit, input)
 }
 
+// checkPlannedEdit checks unchanged input text and positions, then applies the edit and checks the position-map length.
 func checkPlannedEdit(t *testing.T, source mappedSource, edit sourceEdit, input string) {
 	t.Helper()
 	if source.text != input {

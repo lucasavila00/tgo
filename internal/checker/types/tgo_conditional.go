@@ -7,6 +7,8 @@ import (
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
+// conditionalExpr checks reachable branch values against a supplied type or finds their common type.
+// It records branch operands for later conversion and generic inference.
 func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
 	// Branch statements can change state even without a call or receive.
 	// Array len, cap, and range must therefore evaluate a conditional value.
@@ -56,6 +58,7 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	return expression
 }
 
+// conditionalContext keeps string branches as strings when copy or append permits a byte-slice or string source.
 func (check *Checker) conditionalContext(context Type, values []*operand) Type {
 	// A byte-slice source of copy or append can instead be a string.
 	// Keep its own string type when every value branch produces a string.
@@ -72,10 +75,12 @@ func (check *Checker) conditionalContext(context Type, values []*operand) Type {
 	return context
 }
 
+// convertConditional assigns a chosen type to the saved branch operands.
 func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
 	check.assignConditionalBranches(check.tgo.conditionalValues[call], typ)
 }
 
+// conditionalBranches checks the initializer, Boolean condition, and both branches in an if-expression scope.
 func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) []*operand {
 	previous := check.statementContext
 	check.statementContext &^= fallthroughOk | finalSwitchCase | inTypeSwitch
@@ -107,12 +112,15 @@ func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) [
 	return values
 }
 
+// conditionalBlock opens a branch scope and checks its statements and final value.
 func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*operand {
 	check.openScope(body, "conditional expression branch")
 	defer check.closeScope()
 	return check.conditionalBlockValues(body, context)
 }
 
+// conditionalBlockValues checks branch statements and the final value.
+// It records whether the branch can finish and excludes values on paths that cannot finish.
 func (check *Checker) conditionalBlockValues(body *ast.BlockStmt, context Type) []*operand {
 	list := trimTrailingEmptyStmts(body.List)
 	if len(list) == 0 {
@@ -138,6 +146,7 @@ func (check *Checker) conditionalBlockValues(body *ast.BlockStmt, context Type) 
 	return values
 }
 
+// conditionalTail checks a branch final statement as a value, nested conditional, or control-flow exit.
 func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable bool) []*operand {
 	last := original
 	for {
@@ -182,6 +191,8 @@ type conditionalCase struct {
 	values  []*operand
 }
 
+// conditionalStatement checks an if or switch value and collects its branch operands.
+// For switches, it requires a default and prevents break from targeting the value switch.
 func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*operand {
 	if statement, ok := statement.(*ast.IfStmt); ok {
 		return check.conditionalBranches(statement, context)
@@ -221,6 +232,7 @@ func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*
 	return branchValues
 }
 
+// conditionalCase checks one value-switch case with its supplied type and records whether it can finish.
 func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*operand {
 	enclosingContext := check.statementContext
 	check.statementContext &^= breakOk | fallthroughOk | finalSwitchCase
@@ -236,6 +248,8 @@ func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*o
 	return branchValues
 }
 
+// conditionalResultType finds a common branch type and checks assignments to it.
+// It requires an annotation when typed branches conflict or no result type is available.
 func (check *Checker) conditionalResultType(call *ast.CallExpr, values []*operand) Type {
 	var typ Type
 	for _, branch := range values {
@@ -266,6 +280,7 @@ func (check *Checker) conditionalResultType(call *ast.CallExpr, values []*operan
 	return typ
 }
 
+// assignConditionalBranches checks and converts each branch operand for assignment to the supplied type.
 func (check *Checker) assignConditionalBranches(values []*operand, typ Type) {
 	for _, branch := range values {
 		check.assignment(branch, typ, "conditional expression branch")

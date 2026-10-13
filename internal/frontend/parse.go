@@ -39,6 +39,8 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	return preparation.records.finish(fset, syntax.file, syntax.positions, original, preparation.source.offsets), nil
 }
 
+// parse prepares added expressions and retries Go parsing after each recovered conditional.
+// It returns parsed syntax or diagnostics at input positions.
 func (preparation *sourcePreparation) parse() (preparedSyntax, error) {
 	conditionals := conditionalSyntax{
 		filename: preparation.filename, original: preparation.original, used: preparation.used,
@@ -68,6 +70,7 @@ func (preparation *sourcePreparation) parse() (preparedSyntax, error) {
 	}
 }
 
+// inputDiagnostics changes parser error positions to positions in the original input.
 func (preparation *sourcePreparation) inputDiagnostics(diagnostics scanner.ErrorList) scanner.ErrorList {
 	original := preparation.original
 	for _, diagnostic := range diagnostics {
@@ -76,6 +79,8 @@ func (preparation *sourcePreparation) inputDiagnostics(diagnostics scanner.Error
 	return diagnostics
 }
 
+// reserveIdentifiers adds every input identifier to used.
+// Generated marker names must avoid those names.
 func reserveIdentifiers(original *token.File, input []byte, used map[string]bool) {
 	var scan scanner.Scanner
 	scan.Init(original, input, nil, scanner.ScanComments)
@@ -90,6 +95,7 @@ func reserveIdentifiers(original *token.File, input []byte, used map[string]bool
 	}
 }
 
+// recordComprehensions attaches parsed types, bodies, and range statements to comprehension records.
 func (result *Parsed) recordComprehensions(file *ast.File) {
 	ast.Inspect(file, func(node ast.Node) bool {
 		if call, ok := node.(*ast.CallExpr); ok {

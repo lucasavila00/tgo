@@ -14,6 +14,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// TestPackageFunctionInsertionKeepsSource checks insertion in package-initializer closures preserves the checked AST.
 func TestPackageFunctionInsertionKeepsSource(t *testing.T) {
 	dir := t.TempDir()
 	input := `package example
@@ -70,6 +71,7 @@ var functions = []func() int{func() int { return next() }}
 	}
 }
 
+// TestPropagationEmissionKeepsSource checks propagation in package-initializer closures preserves the checked AST.
 func TestPropagationEmissionKeepsSource(t *testing.T) {
 	dir := t.TempDir()
 	input := `package example

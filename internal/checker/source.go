@@ -16,6 +16,8 @@ type packageSource struct {
 	added *frontend.Parsed
 }
 
+// parseFile reads one source file and selects TGo or Go parsing from the loader file map.
+// TGo results include the feature records needed for checking.
 func (loader *Loader) parseFile(filename string) (packageSource, error) {
 	input, err := os.ReadFile(filename)
 	if err != nil {
@@ -77,6 +79,7 @@ func (pkg *Package) recordParsedFile(parsed *frontend.Parsed) {
 	})
 }
 
+// parsedShortReturn finds the record for a return containing one generated marker call.
 func parsedShortReturn(statement *ast.ReturnStmt,
 	records map[string]frontend.ShortReturn) (frontend.ShortReturn, bool) {
 	if len(statement.Results) != 1 {

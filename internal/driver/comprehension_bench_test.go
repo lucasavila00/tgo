@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// BenchmarkCompileComprehensions measures compilation as flat and nested comprehensions increase.
 func BenchmarkCompileComprehensions(b *testing.B) {
 	for _, count := range []int{1, 16, 64} {
 		for _, nested := range []bool{false, true} {
@@ -18,6 +19,7 @@ func BenchmarkCompileComprehensions(b *testing.B) {
 	}
 }
 
+// benchmarkComprehensionCase writes a comprehension input and measures repeated compilation.
 func benchmarkComprehensionCase(b *testing.B, count int, nested bool) {
 	root := b.TempDir()
 	var body strings.Builder

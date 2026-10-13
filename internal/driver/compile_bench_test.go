@@ -13,10 +13,12 @@ func BenchmarkCompilePropagations(b *testing.B) {
 	benchmarkPropagations(b, false)
 }
 
+// BenchmarkCompileNestedPropagations measures compilation as nested propagation calls increase.
 func BenchmarkCompileNestedPropagations(b *testing.B) {
 	benchmarkPropagations(b, true)
 }
 
+// benchmarkPropagations creates flat or nested propagation inputs and measures repeated compilation.
 func benchmarkPropagations(b *testing.B, nested bool) {
 	for _, count := range []int{1, 8, 32} {
 		b.Run(fmt.Sprint(count), func(b *testing.B) {
@@ -48,6 +50,7 @@ func benchmarkPropagations(b *testing.B, nested bool) {
 	}
 }
 
+// BenchmarkCompilePackagePropagations measures compilation with propagation in imports and TGo tests.
 func BenchmarkCompilePackagePropagations(b *testing.B) {
 	dir := b.TempDir()
 	files := map[string]string{"go.mod": "module example.com/bench\n\ngo 1.27.1\n"}

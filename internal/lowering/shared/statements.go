@@ -112,6 +112,7 @@ func (r *Context) StatementSyntax(statement ast.Stmt) []ast.Stmt {
 	return []ast.Stmt{statement}
 }
 
+// attachLabel replaces the last output statement with a labeled statement, descending through wrapper blocks.
 func attachLabel(statements []ast.Stmt, label *ast.Ident) {
 	last := len(statements) - 1
 	if block, ok := statements[last].(*ast.BlockStmt); ok {
@@ -121,6 +122,7 @@ func attachLabel(statements []ast.Stmt, label *ast.Ident) {
 	statements[last] = &ast.LabeledStmt{Label: label, Stmt: statements[last]}
 }
 
+// hasLabelBranch reports whether source syntax contains a labeled break or continue, excluding real nested functions.
 func (r *Context) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -139,6 +141,7 @@ func (r *Context) hasLabelBranch(node ast.Node, label string) bool {
 	return found
 }
 
+// hasMappedBranch reports whether syntax contains branches that need a recorded generated exit or label.
 func (r *Context) hasMappedBranch(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -166,6 +169,7 @@ func (r *Context) Header(statement ast.Stmt) []ast.Stmt {
 	return r.dispatch.Statement(r, statement)
 }
 
+// hasGoto reports whether a goto in the enclosing source function names this label.
 func (r *Context) hasGoto(label *ast.LabeledStmt) bool {
 	var node ast.Node = label
 	for {

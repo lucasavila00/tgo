@@ -28,6 +28,7 @@ func rewriteChildFields(original, output reflect.Value, visit func(ast.Node) ast
 	return changed
 }
 
+// rewriteChildSlice visits AST children and copies the destination slice only when a child changes.
 func rewriteChildSlice(original, output reflect.Value, visit func(ast.Node) ast.Node) bool {
 	changed := false
 	for i := 0; i < original.Len(); i++ {

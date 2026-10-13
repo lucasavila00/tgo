@@ -17,6 +17,7 @@ type compiledFixture struct {
 	generated map[string][]byte
 }
 
+// compileFixture compiles a temporary fixture copy and returns its saved and generated files.
 func compileFixture(t *testing.T, directory string) compiledFixture {
 	t.Helper()
 	original := readFiles(t, directory)

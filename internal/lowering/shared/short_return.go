@@ -32,6 +32,7 @@ func (r *Context) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 	return append(statements, &returnStatement)
 }
 
+// shortReturnNil supplies nil for the omitted error result, using typed zero storage when source hides nil.
 func (r *Context) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
 	scope := r.input.Inventory.Checked.Types.Scope().Innermost(statement.Pos())
 	_, nilBinding := scope.LookupParent("nil", statement.Pos())
@@ -46,6 +47,7 @@ func (r *Context) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Exp
 	return []ast.Stmt{nilDeclaration}, nilResult
 }
 
+// shortReturnResults reads the declared results of the function that owns the short return.
 func (r *Context) shortReturnResults() *types.Tuple {
 	return r.frameSignature().Results()
 }

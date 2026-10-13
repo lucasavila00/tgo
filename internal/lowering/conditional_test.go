@@ -11,6 +11,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// TestConditionalExecution checks branch effects, returns, defers, and loop bindings in generated Go.
 func TestConditionalExecution(t *testing.T) {
 	input := `package main
 import "fmt"

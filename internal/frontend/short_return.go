@@ -63,6 +63,8 @@ func (s mappedSource) shortReturn(
 	return nil, nil
 }
 
+// shortReturnSpan finds the .. operator and the end of one return operand list.
+// It reports missing operands and misplaced operators.
 func (s *mappedSource) shortReturnSpan(tokens []sourceToken, returnIndex int) (int, int, error) {
 	operatorOffset := -1
 	returnDepth := tokens[returnIndex].depth
@@ -124,6 +126,7 @@ func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, returnEnd i
 	}
 }
 
+// shortReturnEndsAfter checks whether the second dot is followed by a statement boundary or newline.
 func (s *mappedSource) shortReturnEndsAfter(tokens []sourceToken, secondDotIndex int) bool {
 	secondDot := tokens[secondDotIndex]
 	nextToken := tokens[secondDotIndex+1]
@@ -132,6 +135,7 @@ func (s *mappedSource) shortReturnEndsAfter(tokens []sourceToken, secondDotIndex
 	return atNextStatement || hasNewline
 }
 
+// returnStatementEnd checks for a semicolon or closing brace at the return statement depth.
 func returnStatementEnd(current sourceToken, depth int) bool {
 	return current.depth == depth && (current.kind == token.SEMICOLON || current.kind == token.RBRACE)
 }

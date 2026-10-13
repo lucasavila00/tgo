@@ -12,6 +12,7 @@ import (
 
 const maxSourceLines = 700
 
+// main checks tracked source files and exits with failure if a file exceeds the size limit.
 func main() {
 	files, err := exec.Command("git", "ls-files", "-z", "--", "*.go", "*.tgo").Output()
 	if err == nil {
@@ -23,6 +24,8 @@ func main() {
 	}
 }
 
+// checkSourceFiles counts source lines and returns each file that exceeds the limit.
+// It skips generated TGo output names.
 func checkSourceFiles(paths []string) error {
 	var failures []error
 	for _, path := range paths {

@@ -20,6 +20,7 @@ type TGoOperation struct {
 	Position      token.Position
 }
 
+// tgoOperation looks up a generated marker call in the configured TGo operation records.
 func (check *Checker) tgoOperation(call *ast.CallExpr) (TGoOperation, bool) {
 	id, ok := call.Fun.(*ast.Ident)
 	if !ok {

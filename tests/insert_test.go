@@ -161,6 +161,7 @@ var insertReturnCases = []struct{ name, code, target, want string }{
 		"interfaceValue()", "Itrue"},
 }
 
+// TestInsertReturn checks where inserted returns stop evaluation across Go expression contexts.
 func TestInsertReturn(t *testing.T) {
 
 	for _, tc := range insertReturnCases {
@@ -189,11 +190,14 @@ func next(i int) int { fmt.Print("T"); return i+1 }
 	}
 }
 
+// runInsertion inserts statements after a selected expression and returns the generated program output.
 func runInsertion(t *testing.T, input, target string, after lowering.After) string {
 	t.Helper()
 	return runInsertionFiles(t, input, target, after, nil)
 }
 
+// runInsertionFiles builds the input and dependencies, inserts statements, and runs the result.
+// It also checks that insertion preserves the original syntax tree.
 func runInsertionFiles(t *testing.T, input, target string, after lowering.After,
 	extra map[string]string) string {
 	t.Helper()
@@ -247,6 +251,7 @@ func runInsertionFiles(t *testing.T, input, target string, after lowering.After,
 	return string(output)
 }
 
+// writeInsertionDependencies writes the requested dependency files below the test module directory.
 func writeInsertionDependencies(t *testing.T, dir string, extra map[string]string) {
 	t.Helper()
 	for name, content := range extra {

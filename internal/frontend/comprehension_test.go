@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestParseComprehensions checks nested collections, filters, comments, and source records.
 func TestParseComprehensions(t *testing.T) {
 	for _, expression := range []string{
 		`[]int{x for _, x := range xs}`,
@@ -36,6 +37,7 @@ func TestParseComprehensions(t *testing.T) {
 	}
 }
 
+// TestComprehensionsKeepOrdinaryLoops checks that ordinary loops are not recorded as comprehensions.
 func TestComprehensionsKeepOrdinaryLoops(t *testing.T) {
 	input := []byte(`package p; func g(xs []int) []int { r := []int{}; for _,x := range xs { ` +
 		`r=append(r,x) }; return r }; func f() { for range 2 { print(1); for range ` +

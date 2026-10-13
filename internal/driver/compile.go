@@ -26,6 +26,7 @@ func Compile(dir string) {
 	complete = true
 }
 
+// must panics with a TGo diagnostic when an operation fails.
 func must(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("TGo: %v", err))

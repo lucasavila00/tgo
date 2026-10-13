@@ -81,6 +81,7 @@ func (check *Checker) numericBuiltinArguments(call *ast.CallExpr) []*operand {
 	return args
 }
 
+// deleteKeyType returns the common map key type, including a type parameter with compatible map types.
 func deleteKeyType(typ Type) Type {
 	var key Type
 	if !underIs(typ, func(underlying Type) bool {
@@ -96,6 +97,7 @@ func deleteKeyType(typ Type) Type {
 	return key
 }
 
+// hasConditionalArgument reports whether a direct call argument is a conditional marker.
 func (check *Checker) hasConditionalArgument(call *ast.CallExpr) bool {
 	conditional := false
 	for _, expression := range call.Args {

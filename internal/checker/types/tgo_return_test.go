@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestShortReturnTypes checks valid omitted results with generics, contextual types, and nested expressions.
 func TestShortReturnTypes(t *testing.T) {
 	for _, source := range []string{
 		`func f(e error) (int, string, error) {return .. e}`,
@@ -40,6 +41,7 @@ func TestShortReturnTypes(t *testing.T) {
 	}
 }
 
+// TestShortReturnTypeErrors checks result counts, types, named-result restrictions, and nil error requirements.
 func TestShortReturnTypeErrors(t *testing.T) {
 	cases := []struct{ source, diagnostic string }{
 		{`func f() (n int,e error) {return 1 ..}`, "requires unnamed results"},
@@ -71,6 +73,7 @@ func TestShortReturnTypeErrors(t *testing.T) {
 	}
 }
 
+// TestShortReturnDiagnosticPositions checks source locations for named-result and overflow errors.
 func TestShortReturnDiagnosticPositions(t *testing.T) {
 	cases := []struct{ source, position string }{
 		{"func f() (value int, err error) {\n\treturn 1 ..\n}", "main.tgo:3:2:"},

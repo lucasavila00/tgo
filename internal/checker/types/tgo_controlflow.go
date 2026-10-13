@@ -8,6 +8,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/controlflow"
 )
 
+// branchFlow checks reachable paths through source statements, panic calls, and evaluated operands.
 func (check *Checker) branchFlow(body *ast.BlockStmt) controlflow.Result {
 	return controlflow.Branch(body, controlflow.Syntax{
 		RangeSourceOutside: func(loop *ast.RangeStmt) bool { return check.tgo.comprehensionRanges[loop] },
@@ -87,6 +88,8 @@ type rangeContinueVisitor struct {
 	loops int
 }
 
+// Visit reports continue statements that cannot advance an enclosing range yet.
+// It tracks nested loops and visits added-expression bodies, but stops at real function literals.
 func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
 	switch node := node.(type) {
 	case nil:
@@ -114,6 +117,8 @@ type valueSwitchBreakVisitor struct {
 	nestedBreakTargets int
 }
 
+// Visit reports an unlabelled break that targets a value switch.
+// It tracks nested break targets and stops at real function literals.
 func (visitor valueSwitchBreakVisitor) Visit(node ast.Node) ast.Visitor {
 	switch node := node.(type) {
 	case nil, *ast.FuncLit:

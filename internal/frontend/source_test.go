@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestSourceEditsKeepInputPositions checks byte positions after multiple edits and a later edit to prepared text.
 func TestSourceEditsKeepInputPositions(t *testing.T) {
 	source := originalSource([]byte("abc def ghi"))
 	source.apply(

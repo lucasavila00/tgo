@@ -9,6 +9,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
+// TestSourceReturnTargets checks expression-site reasons and the function targeted by an inserted error return.
 func TestSourceReturnTargets(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
@@ -48,6 +49,7 @@ func run(err error) error {
 	}
 }
 
+// checkSourceReturnSite checks one expression-site classification and records each expected case in found.
 func checkSourceReturnSite(t *testing.T, text string, site lowering.Site, found map[string]bool) {
 	t.Helper()
 	expression := text[site.Start:site.End]
@@ -89,6 +91,7 @@ func checkSourceReturnSite(t *testing.T, text string, site lowering.Site, found 
 	}
 }
 
+// TestSourceLineDirectives checks that line directives do not replace the physical input and output filenames.
 func TestSourceLineDirectives(t *testing.T) {
 	dir := t.TempDir()
 	input := "//line virtual.go:20\npackage input\nfunc value() int { return 1 }\nfunc run() { _ = value() }\n"

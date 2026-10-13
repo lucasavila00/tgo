@@ -10,6 +10,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/frontend"
 )
 
+// checkTGo parses TGo, registers marker operations, and returns checked type information or a type error.
 func checkTGo(t *testing.T, source string) (*types.Info, error) {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -139,6 +140,7 @@ var conditionalTypeSources = []string{
 		`x:=if ok {next()!} else {next()!!}; return x,nil }`,
 }
 
+// TestConditionalTypes checks valid branches with supplied types, inference, bindings, and source exits.
 func TestConditionalTypes(t *testing.T) {
 	for _, source := range conditionalTypeSources {
 		t.Run(source, func(t *testing.T) {
@@ -149,6 +151,7 @@ func TestConditionalTypes(t *testing.T) {
 	}
 }
 
+// TestConditionalTypeErrors checks invalid branch types, scopes, jumps, and missing values.
 func TestConditionalTypeErrors(t *testing.T) {
 	for _, test := range []struct{ source, message string }{
 		{`func pick[T any](a,b T) T {return b}; func f(ok bool) {pick(if ok {128} else {0}, int8(1))}`, "overflows"},
@@ -228,6 +231,7 @@ func TestConditionalTypeErrors(t *testing.T) {
 	}
 }
 
+// TestRangeContinueDiagnostic checks exact source positions for continue before a range collection is computed.
 func TestRangeContinueDiagnostic(t *testing.T) {
 	for _, source := range []string{
 		"func f() {\n\tfor range if true {\n\t\tcontinue\n\t} else { []int{1} } {}\n}",
@@ -241,6 +245,7 @@ func TestRangeContinueDiagnostic(t *testing.T) {
 	}
 }
 
+// TestPropagationTypes checks postfix success result types and invalid call or function error results.
 func TestPropagationTypes(t *testing.T) {
 	for _, test := range []struct{ name, source, error string }{
 		{"nested", `func call(v int) (int,error) {return v,nil}; func f() error {_=call(call(1)!)!!;return nil}`, ""},
@@ -286,6 +291,7 @@ func TestPropagationTypes(t *testing.T) {
 	}
 }
 
+// TestSwitchExpressionTypes checks valid value switches with contextual types, inference, and branch exits.
 func TestSwitchExpressionTypes(t *testing.T) {
 	for _, source := range []string{
 		`func f(n int) string { return switch n { case 1: "one"; default: "other" } }`,
@@ -314,6 +320,7 @@ func TestSwitchExpressionTypes(t *testing.T) {
 	}
 }
 
+// TestSwitchExpressionErrors checks invalid switch values, case scopes, result types, and control-flow exits.
 func TestSwitchExpressionErrors(t *testing.T) {
 	for _, test := range []struct{ source, message string }{
 		{`func f(n int) { _=switch n {case 1: 2} }`, "requires default"},
@@ -351,6 +358,7 @@ func TestSwitchExpressionErrors(t *testing.T) {
 	}
 }
 
+// TestSwitchExpressionDiagnosticPosition checks source positions for a break in a switch value and a missing default.
 func TestSwitchExpressionDiagnosticPosition(t *testing.T) {
 	for _, test := range []struct{ source, position string }{
 		{"func f(n int) {\n _ = switch n {\n case 1:\n  break\n default:\n  2\n }\n}", "main.tgo:5:3:"},

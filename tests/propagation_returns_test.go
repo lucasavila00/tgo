@@ -10,6 +10,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestPropagationReturnTypes checks whether a propagated error fits the enclosing function result type.
 func TestPropagationReturnTypes(t *testing.T) {
 	module, err := os.ReadFile("../go.mod")
 	if err != nil {
@@ -73,6 +74,7 @@ func TestPropagationReturnTypes(t *testing.T) {
 	}
 }
 
+// checkPropagationReturnCase checks the expected error-type diagnostic or runs the accepted propagation program.
 func checkPropagationReturnCase(t *testing.T, test propagationReturnCase, module []byte) {
 	t.Helper()
 	main := "func main() {}"

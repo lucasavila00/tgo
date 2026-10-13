@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// BenchmarkCompileAssets measures compilation with and without a large unrelated asset file.
 func BenchmarkCompileAssets(b *testing.B) {
 	for _, size := range []int{0, 32 << 20} {
 		name := "none"

@@ -8,6 +8,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker"
 )
 
+// rejectUnsafePropagation checks each unsafe layout call and rejects propagation inside its operands.
 func rejectUnsafePropagation(pkg *checker.Package) {
 	for _, file := range pkg.Syntax {
 		ast.Inspect(file, func(node ast.Node) bool {
@@ -27,6 +28,7 @@ func rejectUnsafePropagation(pkg *checker.Package) {
 	}
 }
 
+// unsafeLayoutBuiltin returns the checked unsafe layout builtin called by this expression, or nil.
 func unsafeLayoutBuiltin(pkg *checker.Package, call *ast.CallExpr) *types.Builtin {
 	var id *ast.Ident
 	switch fun := ast.Unparen(call.Fun).(type) {
@@ -47,6 +49,7 @@ func unsafeLayoutBuiltin(pkg *checker.Package, call *ast.CallExpr) *types.Builti
 	return builtin
 }
 
+// rejectOperandPropagation panics with the source position if an operand contains error propagation.
 func rejectOperandPropagation(pkg *checker.Package, operand ast.Expr, builtinName string) {
 	ast.Inspect(operand, func(node ast.Node) bool {
 		marker, ok := node.(*ast.CallExpr)

@@ -18,6 +18,7 @@ func Expression(r *shared.Context, call *ast.CallExpr, statement ast.Stmt) share
 	return r.ResultOf(append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable})
 }
 
+// conditionalStatement lowers if branches so each reached value tail writes the shared result local.
 func conditionalStatement(r *shared.Context, statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
 	body := conditionalBlock(r, statement.Body, result)
 	var alternative ast.Stmt
@@ -35,6 +36,8 @@ func conditionalStatement(r *shared.Context, statement *ast.IfStmt, result *ast.
 	return r.IfStatement(statement, body, alternative)
 }
 
+// conditionalBlock lowers branch statements and uses the last nonempty statement to supply the result.
+// It omits result storage for branches that cannot complete normally.
 func conditionalBlock(r *shared.Context, body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
 	output := *body
 	output.List = nil
@@ -58,6 +61,7 @@ func conditionalBlock(r *shared.Context, body *ast.BlockStmt, result *ast.Ident)
 	return &output
 }
 
+// conditionalTail lowers a branch tail as a value assignment or a nested value-producing control statement.
 func conditionalTail(r *shared.Context, statement ast.Stmt, result *ast.Ident) []ast.Stmt {
 	switch statement := statement.(type) {
 	case *ast.LabeledStmt:
@@ -74,6 +78,7 @@ func conditionalTail(r *shared.Context, statement ast.Stmt, result *ast.Ident) [
 	return r.Statement(statement)
 }
 
+// valueStatement selects if, switch, or type-switch lowering with the supplied result destination.
 func valueStatement(r *shared.Context, statement ast.Stmt, result *ast.Ident) []ast.Stmt {
 	switch statement := statement.(type) {
 	case *ast.IfStmt:
@@ -86,6 +91,7 @@ func valueStatement(r *shared.Context, statement ast.Stmt, result *ast.Ident) []
 	return nil
 }
 
+// conditionalLabeledTail keeps source labels attached when a value-producing tail expands into multiple statements.
 func conditionalLabeledTail(r *shared.Context, statement *ast.LabeledStmt, result *ast.Ident) []ast.Stmt {
 	tail := statement.Stmt
 	for {
@@ -110,6 +116,7 @@ func conditionalLabeledTail(r *shared.Context, statement *ast.LabeledStmt, resul
 	return []ast.Stmt{&labeled}
 }
 
+// conditionalExpressionTail lowers the tail expression and stores or discards its value as the branch requires.
 func conditionalExpressionTail(r *shared.Context, statement *ast.ExprStmt, result *ast.Ident) []ast.Stmt {
 	if tv := r.Inventory().Checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 		evaluation := r.Expression(statement.X)

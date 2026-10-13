@@ -75,6 +75,7 @@ func (s mappedSource) comprehension(
 	return nil, nil
 }
 
+// clauseEnd returns the byte end of a clause without its final commas or semicolons.
 func clauseEnd(tokens []sourceToken, start, end int) int {
 	for end > start && (tokens[end-1].kind == token.SEMICOLON || tokens[end-1].kind == token.COMMA) {
 		end--
@@ -85,6 +86,8 @@ func clauseEnd(tokens []sourceToken, start, end int) int {
 	return tokens[end-1].end
 }
 
+// comprehensionEdit builds a marker call with nested range and filter statements.
+// Its position map preserves retained bytes and maps inserted syntax to the input.
 func (s mappedSource) comprehensionEdit(
 	tokens []sourceToken,
 	start, open, first, end int,
@@ -135,6 +138,7 @@ func (s mappedSource) comprehensionEdit(
 	return sourceEdit{start, tokens[end].offset + 1, text.String(), offsets}
 }
 
+// comprehensionRanges collects nested range statements through the prepared filter blocks.
 func comprehensionRanges(body *ast.BlockStmt) []*ast.RangeStmt {
 	var ranges []*ast.RangeStmt
 	for len(body.List) == 1 {
@@ -151,6 +155,8 @@ func comprehensionRanges(body *ast.BlockStmt) []*ast.RangeStmt {
 	return ranges
 }
 
+// comprehensionClauses finds range and filter clauses at one depth and checks their operands.
+// An invalid clause returns false instead of a replacement plan.
 func (s *mappedSource) comprehensionClauses(tokens []sourceToken, first, end int) ([]int, bool) {
 	var clauses []int
 	for i := first; i < end; i++ {
@@ -170,6 +176,7 @@ func (s *mappedSource) comprehensionClauses(tokens []sourceToken, first, end int
 	return clauses, true
 }
 
+// firstComprehensionClause finds the first range clause in the same collection literal.
 func firstComprehensionClause(tokens []sourceToken, open, first int) int {
 	// An earlier for at this depth is the first clause of the same literal.
 	for i := open + 1; i < first; i++ {
@@ -182,6 +189,8 @@ func firstComprehensionClause(tokens []sourceToken, open, first int) int {
 	return first
 }
 
+// comprehensionTypeStart finds the type before a collection brace, or returns -1.
+// It uses Go parsing to distinguish a collection type from nearby expressions.
 func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) int {
 	start := -1
 	for i := open - 1; i >= 0; i-- {
@@ -198,6 +207,8 @@ func (s *mappedSource) comprehensionTypeStart(tokens []sourceToken, open int) in
 	return start
 }
 
+// retainComprehensionComments copies comments from a replaced span through the supplied callbacks.
+// It inserts line breaks so line comments do not hide generated syntax.
 func (s *mappedSource) retainComprehensionComments(from, to int, retain func(int, int), insert func(string, int)) {
 
 	set := token.NewFileSet()
@@ -221,6 +232,7 @@ func (s *mappedSource) retainComprehensionComments(from, to int, retain func(int
 	}
 }
 
+// comprehensionOperandOffset returns the operand start after if or range.
 func comprehensionOperandOffset(tokens []sourceToken, clause, stop int) int {
 	expressionOffset := tokens[clause].end
 	if tokens[clause].kind == token.FOR {
@@ -234,6 +246,7 @@ func comprehensionOperandOffset(tokens []sourceToken, clause, stop int) int {
 	return expressionOffset
 }
 
+// validComprehensionClause checks that a range or filter clause has a parseable operand.
 func (s *mappedSource) validComprehensionClause(tokens []sourceToken, clause, stop int) bool {
 	expressionIndex := clause + 1
 	if tokens[clause].kind == token.FOR {
@@ -255,6 +268,8 @@ func (s *mappedSource) validComprehensionClause(tokens []sourceToken, clause, st
 	return true
 }
 
+// statementBlockOffsets records statement braces in a partial Go parse.
+// Comprehension recognition uses them to exclude ordinary loop bodies.
 func statementBlockOffsets(text string) map[int]bool {
 	blocks := make(map[int]bool)
 	set := token.NewFileSet()

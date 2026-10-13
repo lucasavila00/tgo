@@ -7,6 +7,8 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// recordOrigin records the source of a replacement expression and retains its checked type.
+// It keeps the stored type when the replacement already names a temporary.
 func (r *Context) recordOrigin(expression, original ast.Expr) {
 	value := r.ValueOf(expression)
 	value.Original = original
@@ -16,10 +18,12 @@ func (r *Context) recordOrigin(expression, original ast.Expr) {
 	r.recordValue(value)
 }
 
+// recordTemporary records the checked type and source of a generated value in the current function.
 func (r *Context) recordTemporary(expression ast.Expr, typ types.Type, original ast.Expr) {
 	r.recordValue(Value{Expression: expression, Type: typ, Original: original, Temporary: true})
 }
 
+// recordValue stores value metadata for later type and origin queries in the current function.
 func (r *Context) recordValue(value Value) {
 	if r.functionState.values == nil {
 		r.functionState.values = make(map[ast.Expr]Value)
@@ -80,6 +84,7 @@ func (r *Context) SaveResults(value Value, discardSuccess, errorResult bool) Res
 	return r.ResultOf(statements, refs)
 }
 
+// resultCount counts tuple results or the two results of a comma-ok expression in its source context.
 func (r *Context) resultCount(expr ast.Expr) int {
 	if tuple, ok := r.input.Inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
 		return tuple.Len()
@@ -123,6 +128,7 @@ func (r *Context) Operands(input []ast.Expr) Result {
 	return result
 }
 
+// savePreviousOperands saves earlier operands before later statements can change their values.
 func (r *Context) savePreviousOperands(values []Value) Result {
 	result := Result{Values: values}
 	for i, value := range values {
@@ -136,6 +142,8 @@ func (r *Context) savePreviousOperands(values []Value) Result {
 	return result
 }
 
+// operandNeedsSaving reports whether delaying this operand across added statements requires saved storage.
+// Function names, constants, and type syntax do not require storage.
 func (r *Context) operandNeedsSaving(value ast.Expr) bool {
 	if r.functionName(value) {
 		return false
@@ -151,6 +159,7 @@ func (r *Context) operandNeedsSaving(value ast.Expr) bool {
 	return true
 }
 
+// savedReferences allocates fresh result names, using blank names for discarded success results.
 func (r *Context) savedReferences(count int, discardSuccess, errorResult bool) []ast.Expr {
 	refs := make([]ast.Expr, count)
 	for i := range refs {
@@ -166,6 +175,7 @@ func (r *Context) savedReferences(count int, discardSuccess, errorResult bool) [
 	return refs
 }
 
+// implicitMapKey finds an omitted-type map key literal that needs field storage instead of early hashing.
 func (r *Context) implicitMapKey(value Value) *ast.CompositeLit {
 	original := value.Original
 	literal, ok := original.(*ast.CompositeLit)

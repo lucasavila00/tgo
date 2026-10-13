@@ -29,6 +29,8 @@ func (r *Context) TemporaryType(typ types.Type, original ast.Expr) ast.Expr {
 	return r.temporaryTypeAt(typ, original, original.Pos())
 }
 
+// temporaryTypeAt builds type syntax valid at the requested source position and records needed imports or aliases.
+// It records a diagnostic when the type cannot be named there.
 func (r *Context) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
 	nameCheck := r.checkTypeNames(typ, position)
 	if nameCheck.problem != "" {
@@ -91,6 +93,7 @@ func (r *Context) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	return result
 }
 
+// renameTypeBindings applies checked type-parameter names and the generated unsafe alias to parsed type syntax.
 func (r *Context) renameTypeBindings(
 	typ types.Type,
 	result ast.Expr,
@@ -157,6 +160,7 @@ func (names typeBindingNames) rename(typ types.Type, expr ast.Expr) {
 	}
 }
 
+// renameTupleFields applies binding replacements to parameter and result types, including variadic elements.
 func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(types.Type, ast.Expr)) {
 	if list == nil {
 		return
@@ -172,6 +176,7 @@ func renameTupleFields(tuple *types.Tuple, list *ast.FieldList, rename func(type
 	}
 }
 
+// renameTypeArguments applies binding replacements to each checked type argument in generated type syntax.
 func renameTypeArguments(typ types.Type, expr ast.Expr, rename func(types.Type, ast.Expr)) {
 	var args *types.TypeList
 	if named, ok := typ.(*types.Named); ok {

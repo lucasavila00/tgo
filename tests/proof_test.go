@@ -26,18 +26,22 @@ const (
 	proofReturn
 )
 
+// TestProofCompile checks that statement and return insertions compile at every eligible expression site.
 func TestProofCompile(t *testing.T) {
 	proofMatrix(t, proofCompile)
 }
 
+// TestProofNeutral checks that trace-marker insertions preserve runtime behavior and execute at the expected sites.
 func TestProofNeutral(t *testing.T) {
 	proofMatrix(t, proofNeutral)
 }
 
+// TestProofReturn checks early-return traces, panic timing, and error identity at eligible expression sites.
 func TestProofReturn(t *testing.T) {
 	proofMatrix(t, proofReturn)
 }
 
+// proofMatrix builds and tests insertion variants for each eligible expression in the proof fixtures.
 func proofMatrix(t *testing.T, mode proofMode) {
 	root, err := os.Getwd()
 	if err != nil {
@@ -73,6 +77,7 @@ func proofMatrix(t *testing.T, mode proofMode) {
 	checkProofVariants(t, dir)
 }
 
+// readProofRejections reads the expected insertion diagnostics keyed by expression location.
 func readProofRejections(t *testing.T) map[string]string {
 	t.Helper()
 	rejectionsData, err := os.ReadFile("testdata/proof/rejections.json")
@@ -86,6 +91,7 @@ func readProofRejections(t *testing.T) map[string]string {
 	return rejections
 }
 
+// writeProofVariant writes one transformed package and its runtime checks, and returns the variant directory.
 func writeProofVariant(t *testing.T,
 	dir string,
 	count int,
@@ -112,6 +118,7 @@ func writeProofVariant(t *testing.T,
 	return variant
 }
 
+// proofDirectory creates a work directory, using the requested artifact folder when set.
 func proofDirectory(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -124,6 +131,7 @@ func proofDirectory(t *testing.T) string {
 	return dir
 }
 
+// proofStatements builds the statements to insert for compile, trace-marker, or early-return checks.
 func proofStatements(mode proofMode, returning bool) func([]ast.Expr) []ast.Stmt {
 	if returning {
 		return func([]ast.Expr) []ast.Stmt {
@@ -149,6 +157,7 @@ func proofStatements(mode proofMode, returning bool) func([]ast.Expr) []ast.Stmt
 	}
 }
 
+// checkProofVariants runs Go tests for all generated variants and saves results when artifacts are requested.
 func checkProofVariants(t *testing.T, dir string) {
 	t.Helper()
 	cmd := exec.Command("go", "test", "-p", "4", "-json", "./...")
@@ -164,6 +173,7 @@ func checkProofVariants(t *testing.T, dir string) {
 	}
 }
 
+// writeNeutralChecks writes tests that compare execution traces and marker positions with the reference.
 func writeNeutralChecks(t *testing.T, dir, packageName string, site lowering.Site) {
 	t.Helper()
 	if packageName == "foreign" {
@@ -240,6 +250,7 @@ func TestNeutral(t *testing.T) {v:=Value(1);if int(v)!=1 {t.Fatal(v)};` +
 	}
 }
 
+// TestProofInventory checks the recorded expression locations and updates the manifest when requested.
 func TestProofInventory(t *testing.T) {
 	dir, err := filepath.Abs(".")
 	if err != nil {
@@ -279,6 +290,7 @@ type proofInput struct {
 	Panic   bool   `json:"panic"`
 }
 
+// TestProofReference checks that the original proof fixtures match their independent execution traces.
 func TestProofReference(t *testing.T) {
 	data, err := os.ReadFile("testdata/proof/expect.json")
 	if err != nil {
@@ -341,6 +353,8 @@ func TestProofReference(t *testing.T) {
 	}
 }
 
+// checkProofSite checks an expression against expected rejections and writes its accepted insertion variants.
+// It returns the updated variant count.
 func checkProofSite(
 	t *testing.T,
 	source *lowering.Source,

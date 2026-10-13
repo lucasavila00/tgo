@@ -51,6 +51,7 @@ func (r *Context) withBreakExit(source, target ast.Stmt, output []ast.Stmt, exit
 		Stmt: &ast.EmptyStmt{Implicit: true}}}}}
 }
 
+// labelUsed reports whether a branch uses the label, excluding nested function bodies.
 func labelUsed(statements []ast.Stmt, label string) bool {
 	found := false
 	for _, statement := range statements {
@@ -67,6 +68,7 @@ func labelUsed(statements []ast.Stmt, label string) bool {
 	return found
 }
 
+// attachControlLabel finds the copied control statement and replaces it with a labeled statement in the output slice.
 func attachControlLabel(statements []ast.Stmt, target ast.Stmt, label *ast.Ident) {
 	for i, statement := range statements {
 		if statement == target {

@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestGeneratedGoErrors checks errors in ordinary Go source, test variants, and dependencies.
 func TestGeneratedGoErrors(t *testing.T) {
 	for _, test := range []struct{ name, file, source string }{
 		{"ordinary source", "main.go", "package p\nvar Value int = \"wrong\"\n"},

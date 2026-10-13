@@ -17,6 +17,7 @@ func writeOutputs(output generatedModule) {
 	}
 }
 
+// checkGenerated checks the generated Go packages and panics on the first package error.
 func checkGenerated(dir string) {
 	for _, pkg := range loadProject(dir) {
 		if len(pkg.Errors) != 0 {
@@ -25,6 +26,7 @@ func checkGenerated(dir string) {
 	}
 }
 
+// loadProject loads Go types for the module packages, test variants, and dependencies.
 func loadProject(dir string) []*packages.Package {
 	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName |
 		packages.NeedTypes | packages.NeedImports | packages.NeedDeps}, "./...")

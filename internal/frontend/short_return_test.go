@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestParseShortReturns checks return markers with tuples, comments, propagation, and nested expressions.
 func TestParseShortReturns(t *testing.T) {
 	for _, body := range []string{
 		"return .. err",
@@ -31,6 +32,7 @@ func TestParseShortReturns(t *testing.T) {
 	}
 }
 
+// TestRejectShortReturnSyntax checks that invalid .. forms return diagnostics with input positions.
 func TestRejectShortReturnSyntax(t *testing.T) {
 	for _, body := range []string{"return ..", "return .. err ..", "return x .. y", "return x .., y", "return .., err"} {
 		t.Run(body, func(t *testing.T) {
@@ -48,6 +50,7 @@ func TestRejectShortReturnSyntax(t *testing.T) {
 	}
 }
 
+// TestShortReturnLeavesOrdinaryGo checks that dots in strings, comments, numbers, and variadic calls stay unchanged.
 func TestShortReturnLeavesOrdinaryGo(t *testing.T) {
 	input := "package p\nfunc f(xs ...float64) float64 { _ = `..`; /* .. */ return g(xs...) + 1.5 }"
 	parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
@@ -56,6 +59,7 @@ func TestShortReturnLeavesOrdinaryGo(t *testing.T) {
 	}
 }
 
+// checkShortReturnPositions parses a return body and requires one source-position check per return record.
 func checkShortReturnPositions(t *testing.T, body string) {
 	t.Helper()
 	input := "package p\nfunc f() (int, error) { " + body + "\n}"
@@ -77,6 +81,8 @@ func checkShortReturnPositions(t *testing.T, body string) {
 	}
 }
 
+// checkShortReturnPosition checks the .. source span and operand bounds of one return marker.
+// It returns one for a checked marker and zero for other nodes.
 func checkShortReturnPosition(t *testing.T, input string, parsed *Parsed, node ast.Node) int {
 	t.Helper()
 	statement, ok := node.(*ast.ReturnStmt)

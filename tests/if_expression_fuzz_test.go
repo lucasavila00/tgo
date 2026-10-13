@@ -19,12 +19,14 @@ type ifFuzzInput struct {
 	offset, calls int
 }
 
+// next returns the next cyclic fuzz byte and advances the input offset.
 func (input *ifFuzzInput) next() byte {
 	value := input.data[input.offset%len(input.data)]
 	input.offset++
 	return value
 }
 
+// expression builds paired TGo and Go expressions and records their trace-call identifiers.
 func (input *ifFuzzInput) expression(depth int) ifFuzzExpression {
 	if depth == 0 {
 		id := input.calls
@@ -151,6 +153,7 @@ var ifFuzzBodies = []struct{ source, reference string }{
 			`number,ok:=value.(int); ok {return number}; return 0`},
 }
 
+// ifFuzzPrograms builds paired programs with value expressions, source control flow, and error propagation.
 func ifFuzzPrograms(t *testing.T, data []byte) (string, string) {
 	t.Helper()
 	input := &ifFuzzInput{data: data, offset: 4}
@@ -245,6 +248,7 @@ func ifFuzzReturns(body string) string {
 	return body
 }
 
+// FuzzIfExpressionBehavior compares TGo value-expression behavior with independent Go programs.
 func FuzzIfExpressionBehavior(f *testing.F) {
 	for i := range ifFuzzBodies {
 		for _, flags := range []byte{0, 1, 2, 3} {

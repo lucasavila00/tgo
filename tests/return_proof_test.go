@@ -11,6 +11,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/lowering"
 )
 
+// writeReturnChecks writes tests for return insertion traces, panic timing, and sentinel error identity.
 func writeReturnChecks(t *testing.T, dir string, site lowering.Site) {
 	t.Helper()
 	reference, err := os.ReadFile("testdata/proof/reference.go")

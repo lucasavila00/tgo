@@ -12,6 +12,7 @@ import (
 	"testing"
 )
 
+// TestExpressionCallOrder checks an inserted action runs after its target call and before the enclosing call.
 func TestExpressionCallOrder(t *testing.T) {
 	dir := t.TempDir()
 	input := `package main

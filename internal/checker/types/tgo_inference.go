@@ -19,6 +19,7 @@ func (check *Checker) prepareConditionalArgument(expr ast.Expr) {
 	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0])
 }
 
+// prepareConditionalTails marks final conditional values for generic inference through nested branches and labels.
 func (check *Checker) prepareConditionalTails(statement ast.Stmt) {
 	switch statement := statement.(type) {
 	case *ast.IfStmt:

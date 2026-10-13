@@ -7,6 +7,8 @@ import (
 	"go/token"
 )
 
+// conditionalStart returns the last conditional operand start, or -1 when none is found.
+// It checks tokens first, then the incomplete syntax tree.
 func conditionalStart(file *ast.File, temporary *token.FileSet, source string) int {
 	candidates := expressionConditionalTokens(source)
 	start := -1
@@ -23,6 +25,8 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 	return recoveredConditionalStart(file, temporary, source, candidates)
 }
 
+// recoveredConditionalStart finds an if or switch operand in a parser error node.
+// It returns the last matching byte offset, or -1.
 func recoveredConditionalStart(file *ast.File, temporary *token.FileSet, source string, candidates map[int]bool) int {
 	start := -1
 	var parents []ast.Node

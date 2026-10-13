@@ -7,6 +7,7 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
+// unsafeOperand identifies Sizeof, Alignof, and Offsetof by their checked unsafe builtin binding.
 func (r *Context) unsafeOperand(call *ast.CallExpr) bool {
 	var id *ast.Ident
 	switch function := ast.Unparen(call.Fun).(type) {

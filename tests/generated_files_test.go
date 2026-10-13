@@ -11,6 +11,7 @@ import (
 	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
+// TestGeneratedFilesIgnoreSnapshots checks that stale output does not affect compilation or Go build selection.
 func TestGeneratedFilesIgnoreSnapshots(t *testing.T) {
 	dir := t.TempDir()
 	target := "selected_" + runtime.GOOS + "_" + runtime.GOARCH
