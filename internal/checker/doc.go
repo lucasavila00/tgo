@@ -1,54 +1,26 @@
-// Package checker checks TGo types, name scope, and jumps before code generation.
+// Package checker decides whether TGo source is valid before code generation.
 //
-// It checks the syntax from the [frontend] and supplies types and declarations
-// to [lowering]. A successful check means that the source follows TGo's rules.
-// The [driver] also checks the generated output with Go's unmodified checker.
+// It checks types, names, and jumps in the source program. For example, fetch()!
+// must have a final error result, and the source function must accept that error.
+// An if expression checks each completing branch against the required type.
+// A branch that returns from the function does not supply a value.
 //
-// # Check TGo expressions in their source context
+// # Keep the source function's rules
 //
-// For a function fetch that returns (Value, error), fetch()! provides a Value
-// to the surrounding expression. The checker verifies the error result and the
-// enclosing function's return type. It also checks nested uses, such as
-// outer(inner()!)!, within the same source package check.
+// Frontend markers represent added syntax. The checker
+// checks their statements in the enclosing source scope.
+// Returns, defers, and jumps keep their source targets. The shared control-flow
+// analysis tells checking and lowering which paths can produce a value.
 //
-// If and switch expressions get their type from their use or branch values.
-// For example, this assignment requires both branch values to fit int:
+// TGo checking uses a patched Go checker. The pinned version and patch make its
+// source reproducible; see [checker maintenance]. Its type objects stay separate
+// from stock go/types objects. The driver checks generated Go with stock Go.
 //
-//	var count int = if ready { 1 } else { 0 }
+// A loader owns imported types and completed checks for each package and test
+// variant. Its constructor receives the target architecture's type sizes. Each package supplies syntax
+// and TGo records together; checking registers the records before type analysis.
+// Each checker owns its TGo state. Go's environment
+// owns the current function, scope, and statement context.
 //
-// Switch cases keep Go scopes, including the types of type-switch bindings.
-// A branch that returns from the function does not supply a value. The shared
-// [control flow analysis] determines whether a branch can reach its end. Returns,
-// defers, and jumps inside added expressions belong to the source function,
-// even when the frontend uses temporary function syntax to represent them.
-//
-// A comprehension declares the slice or map type that it builds. The checker
-// uses that type to check each output value. Names from a range clause are
-// available to later clauses and the output, but not outside the comprehension.
-//
-// Short returns use the source function's declared result types. Both forms
-// require unnamed results and a final type that implements error. A trailing
-// form also requires that final type to accept nil. Supplied operands follow
-// the same assignment rules as ordinary returns.
-//
-// # Use one compatible set of type information
-//
-// The standard Go checker does not know TGo's expression rules. This package
-// uses a patched copy of it and a matching reader for compiled dependency types.
-// Both come from the same pinned Go version. Run make prepare to generate them;
-// see [checker maintenance] before changing that version or its patch.
-//
-// Types from this copy are separate from go/types objects. Keep them separate
-// when checking ordinary Go for the public Load API. That API exposes the
-// original Go package and its go/types objects to callers.
-//
-// A loader shares dependency types and completed checks between packages. It
-// keeps each test variant separate and uses the target architecture's type
-// sizes. Thus, all source checks use the same types and build settings.
-//
-// [frontend]: https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md
-// [lowering]: https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md
-// [driver]: https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md
-// [control flow analysis]: https://github.com/lucasavila00/tgo/blob/main/internal/controlflow/readme.md
 // [checker maintenance]: https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md
 package checker

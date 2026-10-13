@@ -6,13 +6,13 @@
 import "github.com/lucasavila00/tgo/internal/lowering/shared"
 ```
 
-Package shared supplies the operations used by TGo lowering rules.
+Package shared preserves Go evaluation and storage for TGo lowering rules.
 
-An expression can need statements before its value is available. Result keeps those statements with typed values until their caller places them in Go syntax. Value retains the checked type and source identity, including tuple results. Operand evaluation saves earlier values before adding later statements. Assignments evaluate destinations without reading them, then store in source order. These operations give all rules the same execution and type behavior.
+All rules must agree on when operands run, what values they produce, and where assignments store them. Result keeps required statements with typed values. The caller places those statements before it uses the values. For assignment destinations, shared operations save the address operands without reading the destination. This distinction preserves stores and panic order.
 
-Context holds state for the current function. New function and initializer contexts share request names and file imports, but have separate returns, labels, jumps, and temporary values. Source inventory stays unchanged. Expression and statement callbacks receive the active context explicitly. They return to the lowering dispatcher when an operand contains another rule; this package has no dependency on rule packages.
+Context separates ownership. Input contains checked source facts and selected operations, fixed before rewriting starts. Request state owns generated names and completion records. File state owns imports and binding changes, including names used by closures. Function state owns return values, labels, jumps, and saved values. An address operation keeps its insertion delay in a local context until its address checks finish.
 
-Ordinary and value switches share case selection and jump handling. A value switch supplies a ValueBlock callback as a local parameter to transform its branch results. The switch passes its current context to that callback. Ordinary switches do not supply a transformer. This parameter keeps the value\-expression rule separate without duplicating switch control flow.
+Shared operations call the rule dispatcher with the current context when an operand contains TGo syntax. A source closure gets new function state. A value switch passes its branch transformation explicitly. These boundaries keep nested operations in their source function and keep dependencies one\-way.
 
 ## func BlankDestinations
 
@@ -73,8 +73,6 @@ Context owns one function rewrite and shares file and request state.
 
 ```go
 type Context struct {
-    Input   *Input
-    Request *Request
     // contains filtered or unexported fields
 }
 ```
@@ -82,10 +80,10 @@ type Context struct {
 ### func New
 
 ```go
-func New(inventory *source.Inventory, dispatch Dispatch) *Context
+func New(input Input, dispatch Dispatch) *Context
 ```
 
-New starts a rewrite with checked source facts and current\-context dispatch.
+New starts a rewrite from complete source facts and selected operations. The caller must keep input maps and syntax unchanged while the rewrite runs.
 
 ### func \(\*Context\) BindingReference
 
@@ -117,7 +115,7 @@ BuiltinHidden checks source declarations before emitting a builtin name.
 func (r *Context) Capture(expr ast.Expr) ([]ast.Stmt, ast.Expr)
 ```
 
-Capture saves addressable operands without reading the destination.
+Capture evaluates a nonconstant operand once and returns its saved value.
 
 ### func \(\*Context\) CheckLoweredOperations
 
@@ -151,6 +149,14 @@ func (r *Context) CompletePropagation(expression ast.Expr)
 
 CompletePropagation records a completed error propagation and its insertion.
 
+### func \(\*Context\) ComprehensionAt
+
+```go
+func (r *Context) ComprehensionAt(call *ast.CallExpr) *frontend.Comprehension
+```
+
+ComprehensionAt returns the checked collection expression at a marker call.
+
 ### func \(\*Context\) ComprehensionBindings
 
 ```go
@@ -158,6 +164,14 @@ func (r *Context) ComprehensionBindings(body *ast.BlockStmt)
 ```
 
 ComprehensionBindings gives generator variables fresh names. Checked object identity keeps their output uses and closures separate from outer bindings.
+
+### func \(\*Context\) ConditionalAt
+
+```go
+func (r *Context) ConditionalAt(call *ast.CallExpr) ast.Stmt
+```
+
+ConditionalAt returns the checked value\-producing statement at a marker call.
 
 ### func \(\*Context\) Contains
 
@@ -170,7 +184,7 @@ Contains reports whether a node contains selected lowering work.
 ### func \(\*Context\) Emit
 
 ```go
-func (r *Context) Emit() (map[string][]byte, error)
+func (r *Context) Emit() (Output, error)
 ```
 
 Emit returns formatted files without changing the checked input.
@@ -199,14 +213,6 @@ func (r *Context) ExpressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr)
 
 ExpressionSyntax lowers ordinary Go expression syntax and its operands.
 
-### func \(\*Context\) FailureResults
-
-```go
-func (r *Context) FailureResults() []ast.Expr
-```
-
-FailureResults prepares zero values once in the function that owns the return.
-
 ### func \(\*Context\) FinishExpression
 
 ```go
@@ -230,6 +236,14 @@ func (r *Context) Header(statement ast.Stmt) []ast.Stmt
 ```
 
 Header lowers a header before its enclosing control operation.
+
+### func \(\*Context\) IfStatement
+
+```go
+func (r *Context) IfStatement(statement *ast.IfStmt, body *ast.BlockStmt, alternative ast.Stmt) []ast.Stmt
+```
+
+IfStatement combines rewritten branches with the source initializer and condition.
 
 ### func \(\*Context\) Inventory
 
@@ -262,6 +276,14 @@ func (r *Context) Operands(input []ast.Expr) Result
 ```
 
 Operands saves earlier values before a later operand adds statements.
+
+### func \(\*Context\) PrepareFailureResults
+
+```go
+func (r *Context) PrepareFailureResults() []ast.Expr
+```
+
+PrepareFailureResults prepares zero values once in the function that owns the return.
 
 ### func \(\*Context\) PrepareSliceImport
 
@@ -425,13 +447,23 @@ Input holds source facts and the selected operations. Build it before emission.
 ```go
 type Input struct {
     Inventory      *source.Inventory
-    Dispatch       Dispatch
     Target         ast.Expr
     After          After
     Propagations   map[ast.Expr]Propagation
     Comprehensions map[*ast.CallExpr]*frontend.Comprehension
     Conditionals   map[*ast.CallExpr]ast.Stmt
     ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+}
+```
+
+## type Output
+
+Output contains the generated files and the selected insertion's completion.
+
+```go
+type Output struct {
+    Files    map[string][]byte
+    Inserted bool
 }
 ```
 
@@ -444,20 +476,6 @@ type Propagation struct {
     Position token.Position
     Wrap     bool
     CallName string
-}
-```
-
-## type Request
-
-Request owns progress and fresh names for the complete output request.
-
-```go
-type Request struct {
-    Inserted       bool
-    Lowered        map[ast.Expr]bool
-    LoweredReturns map[*ast.ReturnStmt]bool
-    Err            error
-    // contains filtered or unexported fields
 }
 ```
 

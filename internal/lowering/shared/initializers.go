@@ -10,7 +10,7 @@ func (r *Context) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
 		if call, ok := node.(*ast.CallExpr); ok &&
-			(r.Input.Conditionals[call] != nil || r.Input.Comprehensions[call] != nil) {
+			(r.input.Conditionals[call] != nil || r.input.Comprehensions[call] != nil) {
 			found = true
 			return false
 		}
@@ -21,7 +21,8 @@ func (r *Context) packageConditional(expression ast.Expr) bool {
 }
 
 func (r *Context) packageInitializer(expression ast.Expr) ast.Expr {
-	initializer := &Context{Input: r.Input, Request: r.Request, file: r.file, functionState: &functionState{}}
+	initializer := &Context{input: r.input, dispatch: r.dispatch, request: r.request,
+		file: r.file, functionState: &functionState{}}
 	typ := initializer.TypeOf(expression)
 	results := &ast.FieldList{}
 	if tuple, ok := typ.(*types.Tuple); ok {

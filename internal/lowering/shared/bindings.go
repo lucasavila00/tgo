@@ -14,9 +14,9 @@ func (r *Context) renameBindings(node ast.Node) ast.Node {
 		return node
 	}
 	if id, ok := node.(*ast.Ident); ok {
-		object := r.Input.Inventory.Checked.TypesInfo.Uses[id]
+		object := r.input.Inventory.Checked.TypesInfo.Uses[id]
 		if object == nil {
-			object = r.Input.Inventory.Checked.TypesInfo.Defs[id]
+			object = r.input.Inventory.Checked.TypesInfo.Defs[id]
 		}
 		if name := r.file.bindings[object]; name != "" {
 			renamed := *id
@@ -37,7 +37,7 @@ func (r *Context) renameBindings(node ast.Node) ast.Node {
 
 // freshBinding reserves one name per checked object, including closure uses.
 func (r *Context) freshBinding(identifier *ast.Ident) {
-	object := r.Input.Inventory.Checked.TypesInfo.Defs[identifier]
+	object := r.input.Inventory.Checked.TypesInfo.Defs[identifier]
 	if object == nil {
 		return
 	}

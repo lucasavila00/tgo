@@ -45,11 +45,11 @@ func (r *Context) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 		r.file.aliasStatements = make(map[ast.Node][]ast.Stmt)
 	}
 	var owner ast.Node
-	for id, object := range r.Input.Inventory.Checked.TypesInfo.Defs {
+	for id, object := range r.input.Inventory.Checked.TypesInfo.Defs {
 		if object != parameter.Obj() {
 			continue
 		}
-		for node := r.Input.Inventory.Parents[id]; node != nil; node = r.Input.Inventory.Parents[node] {
+		for node := r.input.Inventory.Parents[id]; node != nil; node = r.input.Inventory.Parents[node] {
 			if _, ok := node.(*ast.FuncDecl); ok {
 				owner = node
 				break
@@ -79,7 +79,7 @@ func (r *Context) ReflectPackage() *ast.Ident {
 
 // genericBase keeps array storage and saves slice or map headers.
 func (r *Context) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	parameter := types.Unalias(r.Input.Inventory.Checked.TypesInfo.TypeOf(expr)).(*types.TypeParam)
+	parameter := types.Unalias(r.input.Inventory.Checked.TypesInfo.TypeOf(expr)).(*types.TypeParam)
 	typeAlias := r.parameterAlias(parameter)
 	reflectPackage := r.ReflectPackage()
 	before, place := r.place(expr)

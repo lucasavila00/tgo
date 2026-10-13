@@ -13,28 +13,28 @@ import (
 
 // CheckLoweredOperations reports any selected operation that was not emitted.
 func (r *Context) CheckLoweredOperations() error {
-	s := r.Input.Inventory
+	s := r.input.Inventory
 	for _, site := range s.Sites {
 		expression := s.Expressions[source.Site(site)]
-		if _, expected := r.Input.Propagations[expression]; expected && !r.Request.Lowered[expression] {
+		if _, expected := r.input.Propagations[expression]; expected && !r.request.lowered[expression] {
 			return fmt.Errorf("%s: propagation was not lowered", s.Checked.Fset.Position(expression.Pos()))
 		}
 	}
 	if err := r.checkLoweredElements(); err != nil {
 		return err
 	}
-	for call := range r.Input.Comprehensions {
-		if !r.Request.Lowered[call] {
+	for call := range r.input.Comprehensions {
+		if !r.request.lowered[call] {
 			return fmt.Errorf("%s: comprehension was not lowered", s.Checked.Fset.Position(call.Pos()))
 		}
 	}
-	for statement := range r.Input.ShortReturns {
-		if !r.Request.LoweredReturns[statement] {
+	for statement := range r.input.ShortReturns {
+		if !r.request.loweredReturns[statement] {
 			return fmt.Errorf("%s: short return was not lowered", s.Checked.Fset.Position(statement.Pos()))
 		}
 	}
-	for call := range r.Input.Conditionals {
-		if !r.Request.Lowered[call] {
+	for call := range r.input.Conditionals {
+		if !r.request.lowered[call] {
 			return fmt.Errorf("%s: conditional expression was not lowered", s.Checked.Fset.Position(call.Pos()))
 		}
 	}
@@ -43,21 +43,21 @@ func (r *Context) CheckLoweredOperations() error {
 
 // Contains reports whether a node contains selected lowering work.
 func (r *Context) Contains(node ast.Node) bool {
-	if r.functionState.suppressed || node == nil {
+	if node == nil {
 		return false
 	}
-	if contains(node, r.Input.Target) {
+	if contains(node, r.input.Target) {
 		return true
 	}
 	if r.containsShortReturn(node) {
 		return true
 	}
-	for expression := range r.Input.Propagations {
+	for expression := range r.input.Propagations {
 		if contains(node, expression) {
 			return true
 		}
 	}
-	for expression := range r.Input.Comprehensions {
+	for expression := range r.input.Comprehensions {
 		if contains(node, expression) {
 			return true
 		}
@@ -65,7 +65,7 @@ func (r *Context) Contains(node ast.Node) bool {
 	if r.containsElement(node) {
 		return true
 	}
-	for expression := range r.Input.Conditionals {
+	for expression := range r.input.Conditionals {
 		if contains(node, expression) {
 			return true
 		}
@@ -74,26 +74,24 @@ func (r *Context) Contains(node ast.Node) bool {
 }
 
 func (r *Context) isTarget(expression ast.Expr) bool {
-	if r.functionState.suppressed {
-		return false
-	}
-	if expression == r.Input.Target && expression != nil {
+	if expression == r.input.Target && expression != nil {
 		return true
 	}
-	_, ok := r.Input.Propagations[expression]
+	_, ok := r.input.Propagations[expression]
 	call, _ := expression.(*ast.CallExpr)
-	return ok || r.Input.Conditionals[call] != nil || r.Input.Comprehensions[call] != nil
+	return ok || r.input.Conditionals[call] != nil || r.input.Comprehensions[call] != nil
 }
 
 // Emit returns formatted files without changing the checked input.
-func (r *Context) Emit() (map[string][]byte, error) {
-	r.Request.names.ReserveSyntax(r.Input.Inventory.Checked.Syntax)
+func (r *Context) Emit() (Output, error) {
+	r.request.names.ReserveSyntax(r.input.Inventory.Checked.Syntax)
 	output := make(map[string][]byte)
-	for _, file := range r.Input.Inventory.Checked.Syntax {
-		fileRewrite := &Context{Input: r.Input, Request: r.Request, file: &fileState{}, functionState: &functionState{}}
+	for _, file := range r.input.Inventory.Checked.Syntax {
+		fileRewrite := &Context{input: r.input, dispatch: r.dispatch, request: r.request,
+			file: &fileState{}, functionState: &functionState{}}
 		outputFile := fileRewrite.functionBodies(file).(*ast.File)
-		if r.Request.Err != nil {
-			return nil, r.Request.Err
+		if r.request.err != nil {
+			return Output{}, r.request.err
 		}
 
 		outputFile.Decls = append(outputFile.Decls, fileRewrite.file.extraDeclarations...)
@@ -103,13 +101,13 @@ func (r *Context) Emit() (map[string][]byte, error) {
 		}
 		var buf bytes.Buffer
 		if err := format.Node(
-			&buf, r.Input.Inventory.Checked.Fset, fileRewrite.renameBindings(outputFile),
+			&buf, r.input.Inventory.Checked.Fset, fileRewrite.renameBindings(outputFile),
 		); err != nil {
-			return nil, err
+			return Output{}, err
 		}
-		output[r.Input.Inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
+		output[r.input.Inventory.Checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
-	return output, nil
+	return Output{Files: output, Inserted: r.request.inserted}, nil
 }
 
 // functionBodies visits the same typed syntax tree as the expression inventory.
@@ -132,11 +130,11 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 		return &valueSpec
 	case *ast.FuncDecl:
 		function := *fn
-		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
+		function.Body = r.functionBody(fn, fn.Type, fn.Body)
 		return &function
 	case *ast.FuncLit:
 		function := *fn
-		function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
+		function.Body = r.functionBody(fn, fn.Type, fn.Body)
 		return &function
 	}
 	original := reflect.ValueOf(node).Elem()
@@ -147,13 +145,13 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 }
 
 func (r *Context) checkLoweredElements() error {
-	s := r.Input.Inventory
+	s := r.input.Inventory
 	for _, file := range s.Checked.Syntax {
 		var missing error
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
 				if id, ok := call.Fun.(*ast.Ident); ok && s.Checked.Operations[id.Name].Element &&
-					!r.Request.Lowered[call] {
+					!r.request.lowered[call] {
 					missing = fmt.Errorf("%s: comprehension output was not lowered", s.Checked.Fset.Position(call.Pos()))
 				}
 			}
@@ -170,7 +168,7 @@ func (r *Context) containsElement(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(child ast.Node) bool {
 		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.Input.Inventory.Checked.Operations[id.Name].Element {
+			if id, ok := call.Fun.(*ast.Ident); ok && r.input.Inventory.Checked.Operations[id.Name].Element {
 				found = true
 			}
 		}
@@ -180,7 +178,7 @@ func (r *Context) containsElement(node ast.Node) bool {
 }
 
 func (r *Context) containsShortReturn(node ast.Node) bool {
-	for statement := range r.Input.ShortReturns {
+	for statement := range r.input.ShortReturns {
 		if contains(node, statement) {
 			return true
 		}

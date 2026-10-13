@@ -56,27 +56,22 @@ func recoveredConditionalStart(file *ast.File, temporary *token.FileSet, source 
 	return start
 }
 
-func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool,
-	conditionals map[string]token.Position) error {
-	end := conditionalEnd(filename, s.text, start, sourceTokens(s.text))
+// recover plans the next conditional found in an incomplete Go syntax tree.
+// An empty result leaves the Go parser's diagnostics unchanged.
+func (syntax conditionalSyntax) recover(source mappedSource, file *ast.File,
+	positions *token.FileSet) (*conditionalReplacement, error) {
+	start := conditionalStart(file, positions, source.text)
+	if start < 0 {
+		return nil, nil
+	}
+	end := conditionalEnd(syntax.filename, source.text, start, sourceTokens(source.text))
 	if end < 0 {
-		return fmt.Errorf("%s: invalid conditional expression", original.Position(original.Pos(s.offsets[start])))
+		position := syntax.original.Position(syntax.original.Pos(source.offsets[start]))
+		return nil, fmt.Errorf("%s: invalid conditional expression", position)
 	}
-	name := ""
-	for n := 1; ; n++ {
-		name = fmt.Sprintf("tgoConditional%d", n)
-		if !used[name] {
-			used[name] = true
-			break
-		}
-	}
-	conditionals[name] = original.Position(original.Pos(s.offsets[start]))
-	before, after := name+"(func(){", "})"
-	offsets := insertedOffsets(len(before), s.offsets[start])
-	offsets = append(offsets, s.offsets[start:end]...)
-	offsets = append(offsets, insertedOffsets(len(after), s.offsets[end-1])...)
-	s.replace(start, end, before+s.text[start:end]+after, offsets)
-	return nil
+	name := freshMarkerName(syntax.used, "tgoConditional")
+	replacement := syntax.replacement(source, start, end, name)
+	return &replacement, nil
 }
 
 // expressionConditionalTokens distinguishes operand tokens from conditional statements.

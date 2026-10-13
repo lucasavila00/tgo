@@ -1,10 +1,6 @@
 package driver
 
-import (
-	"fmt"
-
-	"golang.org/x/tools/go/packages"
-)
+import "fmt"
 
 // Compile translates the module's TGo files into Go files in the same module.
 // On failure, it restores previous generated files and panics.
@@ -24,7 +20,8 @@ func Compile(dir string) {
 	prepared := prepareModule(source)
 	selected := selectSources(prepared)
 	checked := checkSources(selected)
-	lowerModule(checked)
+	generated := lowerModule(checked)
+	writeOutputs(generated)
 	checkGenerated(prepared.dir)
 	complete = true
 }
@@ -33,13 +30,4 @@ func must(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("TGo: %v", err))
 	}
-}
-
-func loadProject(dir string) []*packages.Package {
-	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName |
-		packages.NeedTypes | packages.NeedImports | packages.NeedDeps}, "./...")
-	must(err)
-	var result []*packages.Package
-	packages.Visit(roots, nil, func(pkg *packages.Package) { result = append(result, pkg) })
-	return result
 }

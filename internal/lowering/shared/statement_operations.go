@@ -12,7 +12,7 @@ func (r *Context) expressionStatement(s *ast.ExprStmt) []ast.Stmt {
 	if len(values) == 0 {
 		if call, ok := s.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
-				if object := r.Input.Inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
+				if object := r.input.Inventory.Checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
 					// Keep the terminating statement after unreachable inserted code.
 					return append(statements, s)
 				}
@@ -68,7 +68,7 @@ func (r *Context) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 	if deferred {
 		var savedValues []ast.Expr
 		for _, value := range values {
-			if tv := r.Input.Inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+			if tv := r.input.Inventory.Checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
 				savedValues = append(savedValues, value)
 				continue
 			}
@@ -102,22 +102,30 @@ func (r *Context) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 	return output
 }
 
-func (r *Context) ifStatement(s *ast.IfStmt) []ast.Stmt {
-	output := *s
-	output.Body = r.Block(s.Body)
-	if s.Else != nil {
-		statements := r.Statement(s.Else)
+func (r *Context) ifStatement(statement *ast.IfStmt) []ast.Stmt {
+	body := r.Block(statement.Body)
+	alternative := statement.Else
+	if alternative != nil {
+		statements := r.Statement(alternative)
 		if len(statements) == 1 {
-			output.Else = statements[0]
+			alternative = statements[0]
 		} else {
-			output.Else = &ast.BlockStmt{List: statements}
+			alternative = &ast.BlockStmt{List: statements}
 		}
 	}
+	return r.IfStatement(statement, body, alternative)
+}
+
+// IfStatement combines rewritten branches with the source initializer and condition.
+func (r *Context) IfStatement(statement *ast.IfStmt, body *ast.BlockStmt, alternative ast.Stmt) []ast.Stmt {
+	output := *statement
+	output.Body = body
+	output.Else = alternative
 	var initStatements []ast.Stmt
-	if s.Init != nil {
-		initStatements = r.Header(s.Init)
+	if statement.Init != nil {
+		initStatements = r.Header(statement.Init)
 	}
-	conditionEvaluation := r.Expression(s.Cond)
+	conditionEvaluation := r.Expression(statement.Cond)
 	conditionStatements, conditionValues := conditionEvaluation.Statements, conditionEvaluation.Expressions()
 	output.Cond = conditionValues[0]
 	if len(conditionStatements) == 0 && len(initStatements) <= 1 {

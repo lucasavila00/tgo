@@ -20,7 +20,7 @@ func (r *Context) returnBlock(typ *ast.FuncType, body *ast.BlockStmt) *ast.Block
 		for i := 0; i < count; i++ {
 			name := r.Name()
 			prefix = append(prefix, Variable(name,
-				r.temporaryTypeAt(r.Input.Inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
+				r.temporaryTypeAt(r.input.Inventory.Checked.TypesInfo.TypeOf(field.Type), field.Type,
 					typ.End()), nil))
 			values = append(values, name)
 			value := ast.Expr(name)

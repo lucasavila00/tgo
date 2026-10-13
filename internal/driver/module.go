@@ -9,11 +9,15 @@ import (
 	"strings"
 )
 
-// moduleFiles contains owned Go and TGo source, keyed by module-relative path.
+// moduleFiles owns source contents in module-relative path order.
 type moduleFiles struct {
 	root  string
-	files map[string][]byte
-	names []string
+	files []sourceFile
+}
+
+type sourceFile struct {
+	name    string
+	content []byte
 }
 
 // preparedModule records generated paths staged in the source module.
@@ -64,40 +68,38 @@ func readModule(root string) *moduleFiles {
 			delete(paths, generatedName(name))
 		}
 	}
-	files := make(map[string][]byte)
-	var names []string
+	var files []sourceFile
 	for name := range paths {
 		if !ownsModuleFile(paths, name) || !(strings.HasSuffix(name, ".go") || strings.HasSuffix(name, ".tgo")) {
 			continue
 		}
 		content, err := os.ReadFile(filepath.Join(root, name))
 		must(err)
-		files[name] = content
-		names = append(names, name)
+		files = append(files, sourceFile{name: name, content: content})
 	}
-	slices.Sort(names)
-	return &moduleFiles{root: root, files: files, names: names}
+	slices.SortFunc(files, func(left, right sourceFile) int { return strings.Compare(left.name, right.name) })
+	return &moduleFiles{root: root, files: files}
 }
 
 // prepareModule writes original TGo at generated Go paths for package selection.
 func prepareModule(source *moduleFiles) *preparedModule {
 	used := make(map[string]bool)
 	// Reserve source identifiers before the compiler adds names.
-	for _, content := range source.files {
-		for _, word := range strings.FieldsFunc(string(content), func(r rune) bool {
+	for _, file := range source.files {
+		for _, word := range strings.FieldsFunc(string(file.content), func(r rune) bool {
 			return !(r == '_' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
 		}) {
 			used[word] = true
 		}
 	}
 	tgoFiles := make(map[string]string)
-	for _, name := range source.names {
-		if !strings.HasSuffix(name, ".tgo") {
+	for _, file := range source.files {
+		if !strings.HasSuffix(file.name, ".tgo") {
 			continue
 		}
-		goName := generatedName(name)
-		tgoFiles[goName] = name
-		must(os.WriteFile(filepath.Join(source.root, goName), source.files[name], 0644))
+		goName := generatedName(file.name)
+		tgoFiles[goName] = file.name
+		must(os.WriteFile(filepath.Join(source.root, goName), file.content, 0644))
 	}
 	return &preparedModule{dir: source.root, tgoFiles: tgoFiles, used: used}
 }

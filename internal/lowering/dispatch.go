@@ -12,8 +12,9 @@ import (
 // After receives references to the evaluated expression results.
 type After func(results []ast.Expr) []ast.Stmt
 
-func newRewrite(source *Source) *shared.Context {
-	return shared.New(&source.inventory, shared.Dispatch{Expression: expression, Statement: statement})
+func newRewrite(source *Source, input shared.Input) *shared.Context {
+	input.Inventory = &source.inventory
+	return shared.New(input, shared.Dispatch{Expression: expression, Statement: statement})
 }
 
 func statement(r *shared.Context, stmt ast.Stmt) []ast.Stmt {
@@ -62,7 +63,7 @@ func specialExpression(r *shared.Context, expr ast.Expr) (shared.Result, bool) {
 	if !ok {
 		return shared.Result{}, false
 	}
-	if record := r.Input.Comprehensions[call]; record != nil {
+	if record := r.ComprehensionAt(call); record != nil {
 		return comprehensions.Expression(r, call, record), true
 	}
 	if identifier, ok := call.Fun.(*ast.Ident); ok {
@@ -70,7 +71,7 @@ func specialExpression(r *shared.Context, expr ast.Expr) (shared.Result, bool) {
 			return comprehensions.Output(r, call, destination), true
 		}
 	}
-	if statement := r.Input.Conditionals[call]; statement != nil {
+	if statement := r.ConditionalAt(call); statement != nil {
 		return valueexpr.Expression(r, call, statement), true
 	}
 	return shared.Result{}, false

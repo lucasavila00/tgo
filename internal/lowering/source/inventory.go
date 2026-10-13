@@ -1,5 +1,14 @@
-// Package source records evaluation sites and parent links in checked syntax.
-// It keeps source facts separate from the state used to emit Go statements.
+// Package source records checked facts that lowering needs before statements move.
+//
+// Go syntax does not always evaluate an expression. An array length is constant;
+// some range operands do not run; a deferred call runs when its function returns.
+// The inventory records these limits with each expression's physical file and
+// byte offsets. It also records the source function that owns a return.
+//
+// Parent links describe the original syntax. Lowering uses them to find source
+// jump targets and contextual types after it constructs replacement statements.
+// This input stays unchanged during emission. Each rewrite owns separate output
+// state, so the same checked source can produce independent outputs.
 package source
 
 import (
@@ -115,17 +124,21 @@ func (s *Inventory) recordExpression(expr ast.Expr, stack []ast.Node, dir string
 	if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
 		site.Reason = "type switch assertion syntax"
 	}
-	enclosingFunction := s.expressionContext(expr, stack, &site)
+	enclosingFunction, reason := s.expressionContext(expr, stack)
+	if reason != "" {
+		site.Reason = reason
+	}
 	if enclosingFunction == nil && site.Reason == "" {
 		site.Reason = "package scope"
 	}
-	s.recordReturnTarget(enclosingFunction, &site)
+	site.ErrorReturn, site.ReturnReason = s.returnTarget(enclosingFunction)
 	s.Sites = append(s.Sites, site)
 	s.Expressions[site] = expr
 }
 
-func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node, site *Site) ast.Node {
+func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node) (ast.Node, string) {
 	var enclosingFunction ast.Node
+	var reason string
 	for i := len(stack) - 1; i >= 0; i-- {
 		switch parent := stack[i].(type) {
 		case *ast.FuncDecl:
@@ -136,65 +149,66 @@ func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node, site *Sit
 				enclosingFunction = parent
 			}
 		default:
-			s.recordEvaluationContext(stack[i], expr, site)
+			if currentReason := s.evaluationReason(stack[i], expr); currentReason != "" {
+				reason = currentReason
+			}
 		}
 		if enclosingFunction != nil {
-			return enclosingFunction
+			return enclosingFunction, reason
 		}
 	}
-	return enclosingFunction
+	return enclosingFunction, reason
 }
 
-func (s *Inventory) recordReturnTarget(enclosingFunction ast.Node, site *Site) {
-	if enclosingFunction != nil {
-		var functionType *ast.FuncType
+func (s *Inventory) returnTarget(enclosingFunction ast.Node) (bool, string) {
+	if enclosingFunction == nil {
+		return false, "no enclosing function"
+	}
+	var functionType *ast.FuncType
+	switch function := enclosingFunction.(type) {
+	case *ast.FuncDecl:
+		functionType = function.Type
+	case *ast.FuncLit:
+		functionType = function.Type
+	}
+	signature, _ := s.Checked.TypesInfo.TypeOf(functionType).(*types.Signature)
+	if signature == nil {
 		switch function := enclosingFunction.(type) {
 		case *ast.FuncDecl:
-			functionType = function.Type
+			signature, _ = s.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
 		case *ast.FuncLit:
-			functionType = function.Type
+			signature, _ = s.Checked.TypesInfo.TypeOf(function).(*types.Signature)
 		}
-		signature, _ := s.Checked.TypesInfo.TypeOf(functionType).(*types.Signature)
-		if signature == nil {
-			if function, ok := enclosingFunction.(*ast.FuncDecl); ok {
-				signature, _ = s.Checked.TypesInfo.Defs[function.Name].Type().(*types.Signature)
-			}
-			if function, ok := enclosingFunction.(*ast.FuncLit); ok {
-				signature, _ = s.Checked.TypesInfo.TypeOf(function).(*types.Signature)
-			}
-		}
-		if signature != nil && signature.Results().Len() == 1 {
-			site.ErrorReturn = types.Identical(signature.Results().At(0).Type(), types.Universe.Lookup("error").Type())
-		}
-		if !site.ErrorReturn {
-			site.ReturnReason = "function does not return only error"
-		}
-	} else {
-		site.ReturnReason = "no enclosing function"
 	}
+	if signature != nil && signature.Results().Len() == 1 &&
+		types.Identical(signature.Results().At(0).Type(), types.Universe.Lookup("error").Type()) {
+		return true, ""
+	}
+	return false, "function does not return only error"
 }
 
-func (s *Inventory) recordEvaluationContext(node ast.Node, expr ast.Expr, site *Site) {
+func (s *Inventory) evaluationReason(node ast.Node, expr ast.Expr) string {
 	switch parent := node.(type) {
 	case *ast.GenDecl:
 		if parent.Tok == token.CONST {
-			site.Reason = "constant declaration"
+			return "constant declaration"
 		}
 	case *ast.ArrayType:
 		if contains(parent.Len, expr) {
-			site.Reason = "array length"
+			return "array length"
 		}
 	case *ast.RangeStmt:
 		if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
-			site.Reason = "range expression is not evaluated"
+			return "range expression is not evaluated"
 		}
 	case *ast.GoStmt:
 		if parent.Call == expr {
-			site.Reason = "call executes in another goroutine"
+			return "call executes in another goroutine"
 		}
 	case *ast.DeferStmt:
 		if parent.Call == expr {
-			site.Reason = "call executes when the function returns"
+			return "call executes when the function returns"
 		}
 	}
+	return ""
 }

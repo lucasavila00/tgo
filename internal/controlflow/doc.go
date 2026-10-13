@@ -11,17 +11,20 @@
 //	}
 //
 // The first branch supplies "ready" only when stopped is false. The checker
-// must check that value's type. Code generation must assign it to the result
-// only on paths that reach it. Both compiler steps use this package so they
-// agree on which paths need a value.
+// checks that value's type. Lowering assigns it to the result on those paths. The checker records which branches need a
+// value. Lowering uses those checked facts.
 //
 // Branch reports two facts. Tail says that execution can reach the last
 // statement. End says that execution can continue past the branch's end. These
 // facts differ for a branch whose last statement is return: that statement can
 // be reached, but execution cannot continue past it.
 //
-// The analysis follows possible paths through loops, switches, and labeled
-// jumps. It does not enter a separate function body. The caller supplies the
+// Each analysis builds branch paths, then checks reachability. The builder
+// owns mutable label entries because a goto can refer to a later label. Once
+// construction is complete, reachability only reads the links.
+//
+// Paths include loops, switches, and labels. Each analysis stays in its source
+// function. The caller supplies the
 // rules that syntax alone cannot show, such as which calls terminate execution
 // and which expressions contain TGo branch statements.
 package controlflow

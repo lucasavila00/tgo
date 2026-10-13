@@ -41,7 +41,7 @@ for package in types gcimporter upstream/errors upstream/goversion upstream/pkgb
 	mkdir -p "$destination"
 	for source in "$destination/"*.go; do
 		case "$source" in
-			*/tgo.go|*/tgo_builtin.go|*/tgo_test.go|*/tgo_comprehension.go|*/tgo_conditional_type.go|*/tgo_return.go|*/tgo_return_test.go) continue ;;
+			*/tgo.go|*/tgo_conditional.go|*/tgo_propagation.go|*/tgo_inference.go|*/tgo_controlflow.go|*/tgo_state.go|*/tgo_builtin.go|*/tgo_test.go|*/tgo_comprehension.go|*/tgo_conditional_type.go|*/tgo_return.go|*/tgo_return_test.go) continue ;;
 		esac
 		rm -f "$source"
 	done

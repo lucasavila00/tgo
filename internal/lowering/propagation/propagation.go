@@ -26,7 +26,7 @@ func Expression(r *shared.Context, marker *ast.CallExpr, operation shared.Propag
 		types.Universe.Lookup("error").Type()) {
 		panic("propagation requires a final error interface return")
 	}
-	zeroResults := r.FailureResults()
+	zeroResults := r.PrepareFailureResults()
 
 	callError := saved.Values[len(saved.Values)-1]
 	failureStatements, failed := callFailure(r, callError, call)

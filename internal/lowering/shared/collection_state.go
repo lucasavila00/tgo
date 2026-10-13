@@ -34,12 +34,12 @@ type CollectionDestination struct {
 
 // BuiltinHidden checks source declarations before emitting a builtin name.
 func (r *Context) BuiltinHidden(name string) bool {
-	for _, object := range r.Input.Inventory.Checked.TypesInfo.Defs {
+	for _, object := range r.input.Inventory.Checked.TypesInfo.Defs {
 		if object != nil && object.Name() == name {
 			return true
 		}
 	}
-	for _, object := range r.Input.Inventory.Checked.TypesInfo.Implicits {
+	for _, object := range r.input.Inventory.Checked.TypesInfo.Implicits {
 		if object != nil && object.Name() == name {
 			return true
 		}

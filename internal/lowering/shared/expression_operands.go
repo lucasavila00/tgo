@@ -49,12 +49,12 @@ func (r *Context) logicalExpression(expression *ast.BinaryExpr) ([]ast.Stmt, ast
 
 func (r *Context) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
-	if selection := r.Input.Inventory.Checked.TypesInfo.Selections[e]; selection != nil &&
+	if selection := r.input.Inventory.Checked.TypesInfo.Selections[e]; selection != nil &&
 		selection.Kind() == types.MethodVal {
 		signature := selection.Obj().Type().(*types.Signature)
 		_, pointerReceiver := signature.Recv().Type().Underlying().(*types.Pointer)
-		_, pointerValue := r.Input.Inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
-		if pointerReceiver && !pointerValue && r.Input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
+		_, pointerValue := r.input.Inventory.Checked.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
+		if pointerReceiver && !pointerValue && r.input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 			statements, receiver := r.address(e.X)
 			output.X = receiver
 			return statements, &output
@@ -68,8 +68,8 @@ func (r *Context) selectorExpression(e *ast.SelectorExpr) ([]ast.Stmt, ast.Expr)
 
 func (r *Context) indexExpression(e *ast.IndexExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
-	if storageKinds(r.Input.Inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage &&
-		r.Input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
+	if storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|otherStorage &&
+		r.input.Inventory.Checked.TypesInfo.Types[e.X].Addressable() {
 		statements, base := r.genericBase(e.X)
 		indexStatements, index := r.Capture(e.Index)
 		statements = append(statements, indexStatements...)
@@ -98,8 +98,8 @@ func (r *Context) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 	output := *e
 	input := []ast.Expr{e.X}
 	array := r.addressableArray(e.X)
-	mixed := storageKinds(r.Input.Inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|
-		otherStorage && r.Input.Inventory.Checked.TypesInfo.Types[e.X].Addressable()
+	mixed := storageKinds(r.input.Inventory.Checked.TypesInfo.TypeOf(e.X)) == arrayStorage|
+		otherStorage && r.input.Inventory.Checked.TypesInfo.Types[e.X].Addressable()
 	if mixed {
 		statements, output.X = r.genericBase(e.X)
 		input = nil
@@ -144,7 +144,7 @@ func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 	var input []ast.Expr
 	for _, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			if tv := r.Input.Inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
+			if tv := r.input.Inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
 				input = append(input, pair.Key)
 			}
 			input = append(input, pair.Value)
@@ -159,7 +159,7 @@ func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 	for elementIndex, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
 			keyValue := *pair
-			if tv := r.Input.Inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
+			if tv := r.input.Inventory.Checked.TypesInfo.Types[pair.Key]; tv.IsValue() {
 				keyValue.Key = values[operandIndex]
 				operandIndex++
 			}

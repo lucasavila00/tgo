@@ -2,14 +2,11 @@ package tests
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/lucasavila00/tgo/pkg/transpiler"
 )
 
 func TestCollectionComprehensions(t *testing.T) {
@@ -34,31 +31,15 @@ func TestComprehensionErrors(t *testing.T) {
 	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name(), func(t *testing.T) {
-			dir := filepath.Join("testdata/comprehensions-rejected", fixture.Name())
-			expected, err := os.ReadFile(filepath.Join(dir, "diagnostic.txt"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			input := copyFixture(t, dir)
-			var failure any
-			func() { defer func() { failure = recover() }(); transpiler.Compile(input) }()
-			if failure == nil || !strings.Contains(fmt.Sprint(failure), strings.TrimSpace(string(expected))) {
-				t.Fatalf("got %v, want %s", failure, expected)
-			}
-			if !strings.Contains(fmt.Sprint(failure), "main.tgo:") {
-				t.Fatalf("missing source position: %v", failure)
-			}
+			checkSourceDiagnostic(t, filepath.Join("testdata/comprehensions-rejected", fixture.Name()))
 		})
 	}
 }
 
 func checkFeatureFixture(t *testing.T, dir string) {
 	t.Helper()
-	saved := readFiles(t, dir)
-	work := t.TempDir()
-	writeFiles(t, work, saved)
-	transpiler.Compile(work)
-	files := readFiles(t, work)
+	compiled := compileFixture(t, dir)
+	saved, files := compiled.original, compiled.generated
 	for name, content := range files {
 		if !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "reference/") {
 			continue
@@ -73,7 +54,7 @@ func checkFeatureFixture(t *testing.T, dir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{work, filepath.Join(work, "reference")} {
+	for _, path := range []string{compiled.directory, filepath.Join(compiled.directory, "reference")} {
 		command := exec.Command("go", "run", ".")
 		command.Dir = path
 		actual, err := command.CombinedOutput()

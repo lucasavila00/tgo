@@ -11,7 +11,7 @@ func (r *Context) recordOrigin(expression, original ast.Expr) {
 	value := r.ValueOf(expression)
 	value.Original = original
 	if !value.Temporary {
-		value.Type = r.Input.Inventory.Checked.TypesInfo.TypeOf(original)
+		value.Type = r.input.Inventory.Checked.TypesInfo.TypeOf(original)
 	}
 	r.recordValue(value)
 }
@@ -81,19 +81,19 @@ func (r *Context) SaveResults(value Value, discardSuccess, errorResult bool) Res
 }
 
 func (r *Context) resultCount(expr ast.Expr) int {
-	if tuple, ok := r.Input.Inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
+	if tuple, ok := r.input.Inventory.Checked.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
 		return tuple.Len()
 	}
-	if r.Input.Inventory.Checked.TypesInfo.Types[expr].HasOk() {
+	if r.input.Inventory.Checked.TypesInfo.Types[expr].HasOk() {
 		var node ast.Node = expr
 		for {
-			if parenthesized, ok := r.Input.Inventory.Parents[node].(*ast.ParenExpr); ok {
+			if parenthesized, ok := r.input.Inventory.Parents[node].(*ast.ParenExpr); ok {
 				node = parenthesized
 			} else {
 				break
 			}
 		}
-		switch parent := r.Input.Inventory.Parents[node].(type) {
+		switch parent := r.input.Inventory.Parents[node].(type) {
 		case *ast.AssignStmt:
 			if len(parent.Rhs) == 1 && len(parent.Lhs) == 2 {
 				return 2
@@ -140,12 +140,12 @@ func (r *Context) operandNeedsSaving(value ast.Expr) bool {
 	if r.functionName(value) {
 		return false
 	}
-	if typeAndValue, ok := r.Input.Inventory.Checked.TypesInfo.Types[value]; ok {
+	if typeAndValue, ok := r.input.Inventory.Checked.TypesInfo.Types[value]; ok {
 		if typeAndValue.Value != nil || typeAndValue.IsType() || typeAndValue.IsBuiltin() || typeAndValue.IsNil() {
 			return false
 		}
 	}
-	if _, identifier := value.(*ast.Ident); identifier && r.Input.Inventory.Checked.TypesInfo.TypeOf(value) == nil {
+	if _, identifier := value.(*ast.Ident); identifier && r.input.Inventory.Checked.TypesInfo.TypeOf(value) == nil {
 		return false
 	}
 	return true
@@ -172,11 +172,11 @@ func (r *Context) implicitMapKey(value Value) *ast.CompositeLit {
 	if !ok || literal.Type != nil || value.Temporary {
 		return nil
 	}
-	pair, ok := r.Input.Inventory.Parents[original].(*ast.KeyValueExpr)
+	pair, ok := r.input.Inventory.Parents[original].(*ast.KeyValueExpr)
 	if !ok || pair.Key != original {
 		return nil
 	}
-	if _, pointer := r.Input.Inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); pointer {
+	if _, pointer := r.input.Inventory.Checked.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); pointer {
 		return nil
 	}
 	return literal

@@ -18,11 +18,11 @@ type savedOutput struct {
 // saveOutputs reads owned generated files before compilation changes them.
 func saveOutputs(source *moduleFiles) []savedOutput {
 	var outputs []savedOutput
-	for _, name := range source.names {
-		if !strings.HasSuffix(name, ".tgo") {
+	for _, file := range source.files {
+		if !strings.HasSuffix(file.name, ".tgo") {
 			continue
 		}
-		output := savedOutput{path: filepath.Join(source.root, generatedName(name))}
+		output := savedOutput{path: filepath.Join(source.root, generatedName(file.name))}
 		content, err := os.ReadFile(output.path)
 		if errors.Is(err, os.ErrNotExist) {
 			outputs = append(outputs, output)

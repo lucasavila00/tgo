@@ -24,7 +24,7 @@ func TestRestoreOutputsAfterWriteAndRemoval(t *testing.T) {
 	if err := os.WriteFile(path, original, 0640); err != nil {
 		t.Fatal(err)
 	}
-	source := &moduleFiles{root: root, names: []string{"main.tgo", "new.tgo"}}
+	source := &moduleFiles{root: root, files: []sourceFile{{name: "main.tgo"}, {name: "new.tgo"}}}
 	outputs := saveOutputs(source)
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)

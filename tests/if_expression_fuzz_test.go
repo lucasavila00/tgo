@@ -3,12 +3,10 @@
 package tests
 
 import (
-	"bytes"
 	"fmt"
 	"go/format"
 	"go/scanner"
 	"go/token"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -258,17 +256,6 @@ func FuzzIfExpressionBehavior(f *testing.F) {
 			return
 		}
 		source, reference := ifFuzzPrograms(t, data)
-		module := []byte("module example.com/iffuzz\n\ngo " + strings.TrimPrefix(runtime.Version(), "go") + "\n")
-		referenceDir := t.TempDir()
-		writeFiles(t, referenceDir, map[string][]byte{"go.mod": module, "main.go": []byte(reference)})
-		want := fuzzRun(t, referenceDir, reference)
-		sourceDir := t.TempDir()
-		writeFiles(t, sourceDir, map[string][]byte{"go.mod": module, "main.tgo": []byte(source)})
-		fuzzCompile(t, sourceDir, source)
-		got := fuzzRun(t, sourceDir, source)
-		if !bytes.Equal(got, want) {
-			t.Fatalf("behavior differs\nINPUT:\n%s\nREFERENCE:\n%s\nWANT:\n%s\nGOT:\n%s\nGENERATED:\n%s",
-				source, reference, want, got, readFiles(t, sourceDir)["main_tgo.go"])
-		}
+		checkFuzzBehavior(t, "example.com/iffuzz", source, reference)
 	})
 }

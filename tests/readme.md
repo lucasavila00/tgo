@@ -7,8 +7,8 @@ reference is needed to check its behavior independently.
 ## Unit tests and integration tests
 
 Tests beside `internal/` code check parsing, type rules, control flow, lowering,
-and the driver. Tests in `pkg/transpiler` check the public API. Tests in `tests/`
-use that API to compile complete modules and run the results.
+and the driver. Tests in `tests/` use the public API to compile complete modules
+and run the results. Expression insertion tests use the internal lowerer.
 
 The driver tests also check original disk paths: embedded assets, cgo headers,
 vendor files, workspace dependencies, relative replacements, excluded files,

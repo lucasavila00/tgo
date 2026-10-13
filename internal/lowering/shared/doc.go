@@ -1,22 +1,20 @@
-// Package shared supplies the operations used by TGo lowering rules.
+// Package shared preserves Go evaluation and storage for TGo lowering rules.
 //
-// An expression can need statements before its value is available. Result keeps
-// those statements with typed values until their caller places them in Go syntax.
-// Value retains the checked type and source identity, including tuple results.
-// Operand evaluation saves earlier values before adding later statements.
-// Assignments evaluate destinations without reading them, then store in source
-// order. These operations give all rules the same execution and type behavior.
+// All rules must agree on when operands run, what values they produce, and
+// where assignments store them. Result keeps required statements with typed
+// values. The caller places those statements before it uses the values. For
+// assignment destinations, shared operations save the address operands without
+// reading the destination. This distinction preserves stores and panic order.
 //
-// Context holds state for the current function. New function and initializer
-// contexts share request names and file imports, but have separate returns,
-// labels, jumps, and temporary values. Source inventory stays unchanged.
-// Expression and statement callbacks receive the active context explicitly.
-// They return to the lowering dispatcher when an operand contains another rule;
-// this package has no dependency on rule packages.
+// Context separates ownership. Input contains checked source facts and selected
+// operations, fixed before rewriting starts. Request state owns generated names
+// and completion records. File state owns imports and binding changes, including
+// names used by closures. Function state owns return values, labels, jumps, and
+// saved values. An address operation keeps its insertion delay in a local
+// context until its address checks finish.
 //
-// Ordinary and value switches share case selection and jump handling. A value
-// switch supplies a ValueBlock callback as a local parameter to transform its
-// branch results. The switch passes its current context to that callback.
-// Ordinary switches do not supply a transformer. This parameter keeps the
-// value-expression rule separate without duplicating switch control flow.
+// Shared operations call the rule dispatcher with the current context when an
+// operand contains TGo syntax. A source closure gets new function state. A value
+// switch passes its branch transformation explicitly. These boundaries keep
+// nested operations in their source function and keep dependencies one-way.
 package shared

@@ -2,6 +2,7 @@ package lowering
 
 import (
 	"bytes"
+	"github.com/lucasavila00/tgo/internal/lowering/shared"
 	"go/ast"
 	"go/format"
 	"go/token"
@@ -39,12 +40,11 @@ func main() { use(left(), right()) }
 	if target == nil {
 		t.Fatal("missing expression")
 	}
-	r := newRewrite(source)
-	r.Input.Target = target
-	r.Input.After = func([]ast.Expr) []ast.Stmt {
+	after := func([]ast.Expr) []ast.Stmt {
 		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"),
 			Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
 	}
+	r := newRewrite(source, shared.Input{Target: target, After: after})
 	file := *source.Package.Syntax[0]
 	file.Decls = append([]ast.Decl(nil), file.Decls...)
 	for i, decl := range file.Decls {

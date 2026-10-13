@@ -14,11 +14,7 @@ func (r *Context) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 	statementsEvaluation := r.Operands(returnMarker.Args)
 	statements, returnValues := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	if record.ZeroSuccess {
-		if !r.functionState.frame.prepared {
-			r.functionState.frame.prefix = r.prepareReturns(r.functionState.frame.typ)
-			r.functionState.frame.prepared = true
-		}
-		zeroValues := append([]ast.Expr(nil), r.functionState.frame.values...)
+		zeroValues := r.PrepareFailureResults()
 		returnValues = append(zeroValues, returnValues...)
 	} else {
 		if len(returnValues) == 1 && r.resultCount(returnMarker.Args[0]) > 1 {
@@ -32,12 +28,12 @@ func (r *Context) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 	}
 	returnStatement := *statement
 	returnStatement.Results = returnValues
-	r.Request.LoweredReturns[statement] = true
+	r.request.loweredReturns[statement] = true
 	return append(statements, &returnStatement)
 }
 
 func (r *Context) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
-	scope := r.Input.Inventory.Checked.Types.Scope().Innermost(statement.Pos())
+	scope := r.input.Inventory.Checked.Types.Scope().Innermost(statement.Pos())
 	_, nilBinding := scope.LookupParent("nil", statement.Pos())
 	if nilBinding == types.Universe.Lookup("nil") {
 		return nil, ast.NewIdent("nil")

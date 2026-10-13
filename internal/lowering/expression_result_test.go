@@ -54,7 +54,7 @@ func run() {
 			if expression == nil {
 				t.Fatal("expression not found")
 			}
-			rewrite := newRewrite(source)
+			rewrite := newRewrite(source, shared.Input{})
 			evaluated := rewrite.Expression(expression)
 			saved := rewrite.Save(evaluated.Values[0])
 			checkExpressionValues(t, saved.Values, expression, test.types)

@@ -129,11 +129,8 @@ func checkPropagationFixture(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	source := readFiles(t, input)
-	work := t.TempDir()
-	writeFiles(t, work, source)
-	transpiler.Compile(work)
-	files := readFiles(t, work)
+	compiled := compileFixture(t, input)
+	source, files := compiled.original, compiled.generated
 	inputs := 0
 	for name := range source {
 		if strings.HasSuffix(name, ".tgo") {
@@ -145,7 +142,7 @@ func checkPropagationFixture(t *testing.T, name string) {
 	}
 	checkPropagationSnapshots(t, input, source, files)
 	command := exec.Command("go", "run", ".")
-	command.Dir = work
+	command.Dir = compiled.directory
 	actual, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("run generated source: %v\n%s", err, actual)
@@ -160,7 +157,7 @@ func checkPropagationFixture(t *testing.T, name string) {
 	for name := range files {
 		if strings.HasSuffix(name, "_test.go") {
 			command := exec.Command("go", "test", "./...")
-			command.Dir = work
+			command.Dir = compiled.directory
 			actual, err := command.CombinedOutput()
 			if err != nil {
 				t.Fatalf("generated tests: %v\n%s", err, actual)

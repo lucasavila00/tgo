@@ -36,8 +36,15 @@ func (r *Context) forStatement(s *ast.ForStmt) []ast.Stmt {
 	var outerStatements []ast.Stmt
 	if jumpingInit {
 		var loopInit ast.Stmt
-		outerStatements, loopInit = r.loopBindings(s.Init, initStatements)
+		outerStatements, loopInit = r.loopBindings(s.Init)
 		output.Init = loopInit
+		if loopInit != nil {
+			last := len(initStatements) - 1
+			assignment := *initStatements[last].(*ast.AssignStmt)
+			assignment.Tok = token.ASSIGN
+			initStatements = append([]ast.Stmt(nil), initStatements...)
+			initStatements[last] = &assignment
+		}
 	} else if len(initStatements) != 0 {
 		outerStatements = append(outerStatements, initStatements[:len(initStatements)-1]...)
 		output.Init = initStatements[len(initStatements)-1]
@@ -75,7 +82,7 @@ func (r *Context) forStatement(s *ast.ForStmt) []ast.Stmt {
 
 // loopBindings keeps new variables in the Go loop header for per-iteration copies.
 // The source initializer still runs once, inside the loop, before its condition.
-func (r *Context) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, ast.Stmt) {
+func (r *Context) loopBindings(original ast.Stmt) ([]ast.Stmt, ast.Stmt) {
 	assignment, ok := original.(*ast.AssignStmt)
 	if !ok || assignment.Tok != token.DEFINE {
 		return nil, nil
@@ -90,7 +97,7 @@ func (r *Context) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 		if id.Name == "_" {
 			continue
 		}
-		object := r.Input.Inventory.Checked.TypesInfo.Defs[id]
+		object := r.input.Inventory.Checked.TypesInfo.Defs[id]
 		bindingName := r.NameFor(id.Name)
 		zeroValue := r.Name()
 		r.file.bindings[object] = bindingName.Name
@@ -98,8 +105,6 @@ func (r *Context) loopBindings(original ast.Stmt, init []ast.Stmt) ([]ast.Stmt, 
 		header.Lhs = append(header.Lhs, bindingName)
 		header.Rhs = append(header.Rhs, zeroValue)
 	}
-	// The bindings now exist in the loop header; the source initializer stores them.
-	init[len(init)-1].(*ast.AssignStmt).Tok = token.ASSIGN
 	return before, header
 }
 
@@ -122,8 +127,8 @@ func (r *Context) initializerJumps(loop *ast.ForStmt) bool {
 
 // RealFunction distinguishes a source closure from generated comprehension syntax.
 func (r *Context) RealFunction(function *ast.FuncLit) bool {
-	call, _ := r.Input.Inventory.Parents[function].(*ast.CallExpr)
-	return r.Input.Conditionals[call] == nil && r.Input.Comprehensions[call] == nil
+	call, _ := r.input.Inventory.Parents[function].(*ast.CallExpr)
+	return r.input.Conditionals[call] == nil && r.input.Comprehensions[call] == nil
 }
 
 // branchTarget uses source parents and checked labels, before statements move.
@@ -131,7 +136,7 @@ func (r *Context) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
 		return nil
 	}
-	for node := r.Input.Inventory.Parents[branch]; node != nil; node = r.Input.Inventory.Parents[node] {
+	for node := r.input.Inventory.Parents[branch]; node != nil; node = r.input.Inventory.Parents[node] {
 		if function, ok := node.(*ast.FuncLit); ok && r.RealFunction(function) {
 			return nil
 		}
@@ -160,8 +165,8 @@ func (r *Context) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 
 func (r *Context) labeledBranchTarget(node ast.Node, label *ast.Ident) ast.Stmt {
 	if statement, ok := node.(*ast.LabeledStmt); ok &&
-		r.Input.Inventory.Checked.TypesInfo.Defs[statement.Label] ==
-			r.Input.Inventory.Checked.TypesInfo.Uses[label] {
+		r.input.Inventory.Checked.TypesInfo.Defs[statement.Label] ==
+			r.input.Inventory.Checked.TypesInfo.Uses[label] {
 		return statement.Stmt
 	}
 	return nil

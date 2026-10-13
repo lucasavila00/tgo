@@ -19,13 +19,18 @@ type Comprehension struct {
 	Ranges   []*ast.RangeStmt
 }
 
-// prepareComprehension replaces the innermost comprehension with a marker.
+type comprehensionReplacement struct {
+	edit   sourceEdit
+	name   string
+	record *Comprehension
+}
+
+// comprehension plans the innermost comprehension as a marker.
 // Every retained source byte keeps its original position.
-func (s *mappedSource) prepareComprehension(
+func (s mappedSource) comprehension(
 	original *token.File,
 	used map[string]bool,
-	records map[string]*Comprehension,
-) (bool, error) {
+) (*comprehensionReplacement, error) {
 	tokens := sourceTokens(s.text)
 	blocks := statementBlockOffsets(s.text)
 	for first := len(tokens) - 1; first >= 0; first-- {
@@ -50,7 +55,7 @@ func (s *mappedSource) prepareComprehension(
 			end++
 		}
 		if end == len(tokens) {
-			return false, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"%s: comprehension requires a closing brace",
 				original.Position(original.Pos(s.offsets[start])),
 			)
@@ -59,13 +64,15 @@ func (s *mappedSource) prepareComprehension(
 		if !valid {
 			continue
 		}
-		name := freshComprehensionName(used)
-		output := freshComprehensionName(used)
-		records[name] = &Comprehension{Position: original.Position(original.Pos(s.offsets[start])), Output: output}
-		s.wrapComprehension(tokens, start, open, first, end, name, output, clauses)
-		return true, nil
+		name := freshMarkerName(used, "tgoComprehension")
+		output := freshMarkerName(used, "tgoComprehension")
+		return &comprehensionReplacement{
+			edit:   s.comprehensionEdit(tokens, start, open, first, end, name, output, clauses),
+			name:   name,
+			record: &Comprehension{Position: original.Position(original.Pos(s.offsets[start])), Output: output},
+		}, nil
 	}
-	return false, nil
+	return nil, nil
 }
 
 func clauseEnd(tokens []sourceToken, start, end int) int {
@@ -78,22 +85,12 @@ func clauseEnd(tokens []sourceToken, start, end int) int {
 	return tokens[end-1].end
 }
 
-func freshComprehensionName(used map[string]bool) string {
-	for n := 1; ; n++ {
-		name := fmt.Sprintf("tgoComprehension%d", n)
-		if !used[name] {
-			used[name] = true
-			return name
-		}
-	}
-}
-
-func (s *mappedSource) wrapComprehension(
+func (s mappedSource) comprehensionEdit(
 	tokens []sourceToken,
 	start, open, first, end int,
 	name, output string,
 	clauses []int,
-) {
+) sourceEdit {
 	var text strings.Builder
 	var offsets []int
 	insert := func(value string, at int) {
@@ -135,7 +132,7 @@ func (s *mappedSource) wrapComprehension(
 	insert(");", to)
 	comments(to, tokens[first].offset)
 	insert(strings.Repeat("}", len(clauses))+"})", tokens[end].offset)
-	s.replace(start, tokens[end].offset+1, text.String(), offsets)
+	return sourceEdit{start, tokens[end].offset + 1, text.String(), offsets}
 }
 
 func comprehensionRanges(body *ast.BlockStmt) []*ast.RangeStmt {

@@ -36,10 +36,11 @@ func main() { fmt.Println(choose(true)) }
 	if len(roots) != 1 {
 		t.Fatalf("packages: %d", len(roots))
 	}
-	loader, err := NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	sizes, err := TargetSizes(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	loader := NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool), sizes)
 	pkg, err := loader.Check(roots[0])
 	if err != nil {
 		t.Fatal(err)
@@ -59,11 +60,12 @@ func TestLoaderCachesPackageIdentity(t *testing.T) {
 	}
 	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p",
 		GoFiles: []string{filename}, CompiledGoFiles: []string{filename}}
-	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
-		make(map[string]bool))
+	sizes, err := TargetSizes(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	loader := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
+		make(map[string]bool), sizes)
 	first, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
@@ -189,11 +191,12 @@ func run() error {next()!;return nil}
 		t.Fatal(err)
 	}
 	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p", GoFiles: []string{filename}}
-	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
-		make(map[string]bool))
+	sizes, err := TargetSizes(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	loader := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
+		make(map[string]bool), sizes)
 	checked, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
