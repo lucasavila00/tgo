@@ -1,0 +1,131 @@
+--- a/parser/interface.go
++++ b/parser/interface.go
+@@ -81,7 +81,12 @@
+ // errors were found, the result is a partial AST (with [ast.Bad]* nodes
+ // representing the fragments of erroneous source code). Multiple errors
+ // are returned via a scanner.ErrorList which is sorted by source position.
+-func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast.File, err error) {
++func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (*ast.File, error) {
++	return ParseFileWithPostfix(fset, filename, src, mode, nil)
++}
++
++// ParseFileWithPostfix parses a file and calls postfix for each call's postfix operator.
++func ParseFileWithPostfix(fset *token.FileSet, filename string, src any, mode Mode, postfix Postfix) (f *ast.File, err error) {
+ 	if fset == nil {
+ 		panic("parser.ParseFile: no token.FileSet provided (fset == nil)")
+ 	}
+@@ -95,6 +100,7 @@
+ 	file := fset.AddFile(filename, -1, len(text))
+ 
+ 	var p parser
++	p.postfix = postfix
+ 	defer func() {
+ 		if e := recover(); e != nil {
+ 			// resume same panic if it's not a bailout
+--- a/parser/parser.go
++++ b/parser/parser.go
+@@ -28,7 +28,7 @@
+ 	"fmt"
+ 	"go/ast"
+ 	"go/build/constraint"
+-	"go/scanner"
++	"github.com/lucasavila00/tgo/internal/frontend/scanner"
+ 	"go/token"
+ 	"strings"
+ )
+@@ -38,6 +38,7 @@
+ 	file    *token.File
+ 	errors  scanner.ErrorList
+ 	scanner scanner.Scanner
++	postfix Postfix
+ 
+ 	// Tracing/debugging
+ 	mode   Mode // parsing mode
+@@ -77,7 +78,7 @@
+ func (p *parser) init(file *token.File, src []byte, mode Mode) {
+ 	p.file = file
+ 	eh := func(pos token.Position, msg string) { p.errors.Add(pos, msg) }
+-	p.scanner.Init(p.file, src, eh, scanner.ScanComments)
++	p.scanner.Init(p.file, src, eh, scanner.ScanComments | scanner.TGo)
+ 
+ 	p.top = true
+ 	p.mode = mode
+@@ -1727,6 +1728,11 @@
+ 	for n = 1; ; n++ {
+ 		incNestLev(p)
+ 		switch p.tok {
++		case token.NOT:
++			if p.lit == "" {
++				return x
++			}
++			x = p.parsePostfix(x)
+ 		case token.PERIOD:
+ 			p.next()
+ 			switch p.tok {
+--- a/scanner/scanner.go
++++ b/scanner/scanner.go
+@@ -41,6 +41,7 @@
+ 	lineOffset int       // current line offset
+ 	insertSemi bool      // insert a semicolon before next newline
+ 	nlPos      token.Pos // position of newline in preceding comment
++	previous token.Token // previous non-comment token
+ 
+ 	endPosValid bool
+ 	endPos      token.Pos // overrides the offset as the default end position
+@@ -116,6 +117,7 @@
+ 
+ const (
+ 	ScanComments    Mode = 1 << iota // return comments as COMMENT tokens
++	TGo // recognize postfix operators and their statement endings
+ 	dontInsertSemis                  // do not automatically insert semicolons - for testing only
+ )
+ 
+@@ -829,6 +831,7 @@
+ 		s.endPos = pos + 1
+ 		s.endPosValid = true
+ 		s.nlPos = token.NoPos
++		s.previous = token.SEMICOLON
+ 		return
+ 	}
+ 
+@@ -862,6 +865,7 @@
+ 		case eof:
+ 			if s.insertSemi {
+ 				s.insertSemi = false // EOF consumed
++				s.previous = token.SEMICOLON
+ 				return pos, token.SEMICOLON, "\n"
+ 			}
+ 			tok = token.EOF
+@@ -870,6 +874,7 @@
+ 			// set in the first place and exited early
+ 			// from s.skipWhitespace()
+ 			s.insertSemi = false // newline consumed
++			s.previous = token.SEMICOLON
+ 			return pos, token.SEMICOLON, "\n"
+ 		case '"':
+ 			insertSemi = true
+@@ -964,6 +969,14 @@
+ 			tok = s.switch2(token.ASSIGN, token.EQL)
+ 		case '!':
+ 			tok = s.switch2(token.NOT, token.NEQ)
++			if tok == token.NOT && s.mode&TGo != 0 && s.previous == token.RPAREN {
++				lit = "!"
++				if s.ch == '!' {
++					s.next()
++					lit = "!!"
++				}
++				insertSemi = true
++			}
+ 		case '&':
+ 			if s.ch == '^' {
+ 				s.next()
+@@ -995,5 +1008,9 @@
+ 		s.insertSemi = insertSemi
+ 	}
+ 
++	if tok != token.COMMENT {
++		s.previous = tok
++	}
++
+ 	return
+ }
