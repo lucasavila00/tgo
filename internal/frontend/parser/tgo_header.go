@@ -11,8 +11,7 @@ import (
 func (p *parser) startsHeaderComprehension() bool {
 	braces, parentheses, brackets := 1, 0, 0
 	index := 0
-	output, generator := false, false
-	lastOutput := scanner.Lexeme{}
+	generator := false
 	for braces > 0 {
 		current, next := p.peekHeaderToken(index)
 		index = next
@@ -21,9 +20,6 @@ func (p *parser) startsHeaderComprehension() bool {
 		}
 		atCollection := braces == 1 && parentheses == 0 && brackets == 0
 		if atCollection && !generator && current.Token == token.FOR {
-			if !output || !headerOutputEnds(lastOutput) {
-				return false
-			}
 			generator = true
 		}
 		switch current.Token {
@@ -39,10 +35,6 @@ func (p *parser) startsHeaderComprehension() bool {
 			brackets++
 		case token.RBRACK:
 			brackets--
-		}
-		if !generator && current.Token != token.SEMICOLON {
-			output = true
-			lastOutput = current
 		}
 	}
 	if !generator {
@@ -72,16 +64,4 @@ func (p *parser) peekHeaderToken(index int) (scanner.Lexeme, int) {
 			return current, index
 		}
 	}
-}
-
-// headerOutputEnds checks tokens that can finish a collection output expression.
-func headerOutputEnds(current scanner.Lexeme) bool {
-	switch current.Token {
-	case token.IDENT, token.INT, token.FLOAT, token.IMAG, token.CHAR, token.STRING,
-		token.RPAREN, token.RBRACK, token.RBRACE:
-		return true
-	case token.NOT:
-		return current.Literal == "!" || current.Literal == "!!"
-	}
-	return false
 }

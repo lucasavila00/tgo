@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-// parseTGoLiteralValue reads ordinary literal elements or one output followed by clauses.
+// parseTGoLiteralValue reads ordinary literal elements or output operands followed by clauses.
 // Clause statements retain source positions and share the enclosing source function.
 func (p *parser) parseTGoLiteralValue(typ ast.Expr) ast.Expr {
 	lbrace := p.expect(token.LBRACE)
@@ -20,28 +20,29 @@ func (p *parser) parseTGoLiteralValue(typ ast.Expr) ast.Expr {
 		p.error(lbrace, "comprehension requires a collection type")
 		return &ast.BadExpr{From: lbrace, To: rbrace + 1}
 	}
-	return p.comprehensionCall(typ, lbrace, rbrace, elements[0], clauses)
+	return p.comprehensionCall(typ, lbrace, rbrace, elements, clauses)
 }
 
-// parseTGoElements distinguishes a comprehension after its first output.
+// parseTGoElements records all output operands before comprehension clauses.
 // Ordinary literals keep Go's comma rules and diagnostics.
 func (p *parser) parseTGoElements() ([]ast.Expr, []ast.Stmt) {
 	var elements []ast.Expr
 	for p.tok != token.RBRACE && p.tok != token.EOF {
+		if p.tok == token.FOR {
+			return elements, p.parseComprehensionClauses()
+		}
 		elements = append(elements, p.parseElement())
-		if len(elements) == 1 {
+		if p.tok == token.FOR {
+			return elements, p.parseComprehensionClauses()
+		}
+		if p.tok == token.SEMICOLON && p.lit == "\n" {
+			newline := p.pos
+			p.next()
 			if p.tok == token.FOR {
 				return elements, p.parseComprehensionClauses()
 			}
-			if p.tok == token.SEMICOLON && p.lit == "\n" {
-				newline := p.pos
-				p.next()
-				if p.tok == token.FOR {
-					return elements, p.parseComprehensionClauses()
-				}
-				p.error(newline, "missing ',' before newline in composite literal")
-				continue
-			}
+			p.error(newline, "missing ',' before newline in composite literal")
+			continue
 		}
 		if !p.atComma("composite literal", token.RBRACE) {
 			break
@@ -59,7 +60,7 @@ func (p *parser) parseComprehensionClauses() []ast.Stmt {
 			clauses = append(clauses, p.parseComprehensionRange())
 		} else {
 			position := p.expect(token.IF)
-			clauses = append(clauses, &ast.IfStmt{If: position, Cond: p.parseRhs()})
+			clauses = append(clauses, &ast.IfStmt{If: position, Cond: p.clauseOperand(p.parseRhs())})
 		}
 		for p.tok == token.SEMICOLON {
 			p.next()
@@ -76,7 +77,7 @@ func (p *parser) parseComprehensionRange() ast.Stmt {
 	position := p.expect(token.FOR)
 	if p.tok == token.RANGE {
 		rangePosition := p.expect(token.RANGE)
-		return &ast.RangeStmt{For: position, Range: rangePosition, X: p.parseRhs()}
+		return &ast.RangeStmt{For: position, Range: rangePosition, X: p.clauseOperand(p.parseRhs())}
 	}
 	statement, isRange := p.parseSimpleStmt(rangeOk)
 	if !isRange {
@@ -91,7 +92,7 @@ func (p *parser) parseComprehensionRange() ast.Stmt {
 	rangeExpression := assignment.Rhs[0].(*ast.UnaryExpr)
 	result := &ast.RangeStmt{
 		For: position, TokPos: assignment.TokPos, Tok: assignment.Tok,
-		Range: rangeExpression.OpPos, X: rangeExpression.X,
+		Range: rangeExpression.OpPos, X: p.clauseOperand(rangeExpression.X),
 	}
 	if len(assignment.Lhs) > 0 {
 		result.Key = assignment.Lhs[0]
@@ -104,12 +105,21 @@ func (p *parser) parseComprehensionRange() ast.Stmt {
 
 // comprehensionCall nests clauses around the output and records their exact nodes.
 func (p *parser) comprehensionCall(typ ast.Expr, lbrace, rbrace token.Pos,
-	element ast.Expr, clauses []ast.Stmt) *ast.CallExpr {
-	arguments := []ast.Expr{element}
-	if entry, ok := element.(*ast.KeyValueExpr); ok {
-		arguments = []ast.Expr{entry.Key, entry.Value}
+	elements []ast.Expr, clauses []ast.Stmt) *ast.CallExpr {
+	var arguments []ast.Expr
+	for _, element := range elements {
+		if entry, ok := element.(*ast.KeyValueExpr); ok {
+			arguments = append(arguments, entry.Key, entry.Value)
+		} else {
+			arguments = append(arguments, element)
+		}
 	}
-	output := syntaxCall(element.Pos(), p.sourceExpressionEnd(element)-1, arguments)
+	position, closing := lbrace, lbrace
+	if len(elements) != 0 {
+		position = elements[0].Pos()
+		closing = p.sourceExpressionEnd(elements[len(elements)-1]) - 1
+	}
+	output := syntaxCall(position, closing, arguments)
 	statements := []ast.Stmt{&ast.ExprStmt{X: output}}
 	var ranges []*ast.RangeStmt
 	for index := len(clauses) - 1; index >= 0; index-- {
@@ -134,4 +144,9 @@ func (p *parser) comprehensionCall(typ ast.Expr, lbrace, rbrace token.Pos,
 			Comprehension{Call: call, Output: output, Position: typ.Pos(), Ranges: ranges})
 	}
 	return call
+}
+
+// clauseOperand keeps the syntax wrapper used to capture comprehension range and filter values.
+func (p *parser) clauseOperand(expression ast.Expr) ast.Expr {
+	return &ast.ParenExpr{Lparen: expression.Pos(), X: expression, Rparen: p.sourceExpressionEnd(expression) - 1}
 }

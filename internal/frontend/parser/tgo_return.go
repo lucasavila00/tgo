@@ -10,6 +10,9 @@ import (
 // parseTGoReturnStmt reads ordinary results or results shortened with .. .
 // The scanner ends a trailing form at a newline, comment newline, or EOF.
 func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
+	previousLevel := p.returnOperandLevel
+	p.returnOperandLevel = p.exprLev
+	defer func() { p.returnOperandLevel = previousLevel }()
 	position := p.expect(token.RETURN)
 	statement := &ast.ReturnStmt{Return: position}
 	operator := token.NoPos
@@ -37,6 +40,9 @@ func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 		}
 		operator = p.pos
 		p.next()
+		if p.tok != token.SEMICOLON && p.tok != token.RBRACE && p.tok != token.EOF {
+			p.error(operator, "short return permits .. only before or after its operands")
+		}
 	}
 	if operator.IsValid() {
 		p.recordShortReturn(statement, operator, zeroSuccess, ellipsis, ellipsisEnd)
@@ -67,4 +73,23 @@ func (p *parser) recordShortReturn(statement *ast.ReturnStmt, operator token.Pos
 		p.forms.ShortReturns = append(p.forms.ShortReturns,
 			ShortReturn{Statement: statement, Call: call, Position: operator, ZeroSuccess: zeroSuccess})
 	}
+}
+
+// parseNonReturnDots keeps Go's selector diagnostic outside a return operand list.
+func (p *parser) parseNonReturnDots(expression ast.Expr) ast.Expr {
+	position := p.pos + 1
+	p.error(position, "expected selector or type assertion, found '.'")
+	p.next()
+	if p.tok == token.SEMICOLON && p.lit == "\n" {
+		p.next()
+	}
+	return &ast.SelectorExpr{X: expression, Sel: &ast.Ident{NamePos: position, Name: "_"}}
+}
+
+// parseUnexpectedDots keeps Go's operand diagnostic when .. starts an ordinary expression.
+func (p *parser) parseUnexpectedDots() ast.Expr {
+	position := p.pos
+	p.error(position, "expected operand, found '.'")
+	p.advance(stmtStart)
+	return &ast.BadExpr{From: position, To: p.pos}
 }

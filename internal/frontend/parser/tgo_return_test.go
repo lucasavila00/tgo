@@ -5,6 +5,7 @@ import (
 	stock "go/parser"
 	"go/token"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -113,5 +114,36 @@ func TestOrdinaryReturnEllipsisMatchesGo(t *testing.T) {
 					gotError, wantError)
 			}
 		})
+	}
+}
+
+// TestOrdinaryDotPairsMatchGo checks dot errors and recovery in each expression position.
+func TestOrdinaryDotPairsMatchGo(t *testing.T) {
+	for _, body := range []string{
+		"call(..)", "_ = xs[..]", "_ = (..x)", "return (..x)",
+		"call(x..)", "_ = xs[x..]", "_ = (x..)", "_ = x ..",
+		"call(x..\n)", "_ = xs[x..\n]", "call(x../*\n*/)", "_ = x ..; next()",
+		"return call(x..)",
+	} {
+		t.Run(body, func(t *testing.T) {
+			input := "package p; func f() { " + body + " }"
+			mode := ParseComments | AllErrors | SkipObjectResolution
+			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
+			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
+			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+					gotError, wantError)
+			}
+		})
+	}
+}
+
+// TestShortReturnContextStopsAtFunction checks that a nested function owns its return grammar.
+func TestShortReturnContextStopsAtFunction(t *testing.T) {
+	input := "package p; func f() (int, error) { return func() int { _ = x ..; return 1 }() .. }"
+	_, _, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
+		AllErrors|SkipObjectResolution)
+	if err == nil || !strings.Contains(err.Error(), "expected selector or type assertion") {
+		t.Fatalf("nested function diagnostic: %v", err)
 	}
 }

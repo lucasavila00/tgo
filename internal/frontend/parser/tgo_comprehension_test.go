@@ -95,7 +95,6 @@ func checkComprehensionContainer(t *testing.T, positions *token.FileSet, form Co
 // TestComprehensionGrammarRejectsMalformedClauses checks syntax errors before checking types.
 func TestComprehensionGrammarRejectsMalformedClauses(t *testing.T) {
 	for _, expression := range []string{
-		`[]int{x, y for _, x := range xs}`,
 		`[]int{x for i := 0; i < 3; i++}`,
 		`[]int{x for a, b, c := range xs}`,
 		`[]int{x for _, x := range xs if}`,
@@ -118,6 +117,11 @@ func TestNamedComprehensionHeaders(t *testing.T) {
 		`for range Numbers{x for x := range 3} { use(1) }`,
 		`for range Numbers[int]{x for x := range 3} { use(1) }`,
 		`for range Table[int, string]{x: "value" for x := range 3} { use(1) }`,
+		`for range Table[int, int]{x, x*2 for x := range 3} { use(1) }`,
+		`for range Numbers{x, for x := range 3} { use(1) }`,
+		`for range Numbers{for range 3} { use(1) }`,
+		`if xs := Table[int, int]{x, x*2, for x := range 3}; len(xs)>0 { use(1) }`,
+		`if xs := Numbers{for range 3}; len(xs)>0 { use(1) }`,
 		`if Flags{true for range 1}[0] { use(1) }`,
 		`if xs := Numbers{x for x := range 3}; len(xs)>0 { use(1) }`,
 		`if xs := Numbers{x for x := range Other{1, 2}}; len(xs)>0 { use(1) }`,
@@ -164,5 +168,56 @@ func TestNamedHeaderKeepsOrdinaryBlocks(t *testing.T) {
 				t.Fatalf("ordinary statement tree or diagnostic changed: %v, want %v", err, wantError)
 			}
 		})
+	}
+}
+
+// TestComprehensionOutputFacts keeps output count decisions in the checker.
+func TestComprehensionOutputFacts(t *testing.T) {
+	for _, test := range []struct {
+		expression string
+		count      int
+	}{
+		{"[]int{for range 3}", 0},
+		{"[]int{x for x := range 3}", 1},
+		{"[]int{x, for x := range 3}", 1},
+		{"[]int{1,x for x := range 3}", 2},
+		{"[]int{1,x,2 for x := range 3}", 3},
+		{"map[int]int{x, x*2 for x := range 3}", 2},
+		{"map[int]int{x: x*2 for x := range 3}", 2},
+		{"map[int]int{x:x*2, 1:2 for x := range 3}", 4},
+	} {
+		t.Run(test.expression, func(t *testing.T) {
+			_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
+				"package p; var values="+test.expression, AllErrors|SkipObjectResolution)
+			if err != nil || len(forms.Comprehensions) != 1 {
+				t.Fatalf("records: %+v; error: %v", forms.Comprehensions, err)
+			}
+			if got := len(forms.Comprehensions[0].Output.Args); got != test.count {
+				t.Fatalf("output count: %d; want %d", got, test.count)
+			}
+		})
+	}
+}
+
+// TestClauseOperandShape checks the shared parenthesized form and original postfix-inclusive spans.
+func TestClauseOperandShape(t *testing.T) {
+	input := "package p; var result=[]int{x for x := range source()!! if keep(x)!}"
+	positions := token.NewFileSet()
+	_, forms, err := ParseTGoFile(positions, "main.tgo", "main.tgo", input, AllErrors|SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := forms.Comprehensions[0].Call.Args[1].(*ast.FuncLit).Body
+	rangeClause := body.List[0].(*ast.RangeStmt)
+	filter := rangeClause.Body.List[0].(*ast.IfStmt)
+	for _, expression := range []ast.Expr{rangeClause.X, filter.Cond} {
+		operand, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			t.Fatalf("clause operand: %T", expression)
+		}
+		end := positions.Position(operand.End()).Offset
+		if input[end-1] != '!' {
+			t.Fatalf("operand span excludes suffix: %v", operand)
+		}
 	}
 }
