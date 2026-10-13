@@ -81,6 +81,14 @@ Calls to [Scanner.Scan](<#Scanner.Scan>) will invoke the error handler err if th
 
 Note that Init may call err if there is an error in the first character of the file.
 
+### func \(\*Scanner\) InitSource
+
+```go
+func (s *Scanner) InitSource(file *token.File, sourceName string, input []byte, handler ErrorHandler, mode Mode)
+```
+
+InitSource keeps file's physical identity and resolves line directives from sourceName. The caller sets the file's initial logical position before scanning.
+
 ### func \(\*Scanner\) Scan
 
 ```go

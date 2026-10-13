@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"github.com/lucasavila00/tgo/internal/frontend/parser"
+	tgoScanner "github.com/lucasavila00/tgo/internal/frontend/scanner"
 	"go/ast"
 	"go/scanner"
 	"go/token"
@@ -24,7 +25,7 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
 	}
-	reserveIdentifiers(original, input, used)
+	reserveIdentifiers(original, sourceName, input, used)
 	preparation := sourcePreparation{
 		source: originalSource(input), filename: filename, original: original, used: used,
 		records: &Parsed{Comprehensions: make(map[string]*Comprehension),
@@ -89,10 +90,10 @@ func (preparation *sourcePreparation) inputDiagnostics(diagnostics scanner.Error
 }
 
 // reserveIdentifiers adds every input identifier to used.
-// Generated marker names must avoid those names.
-func reserveIdentifiers(original *token.File, input []byte, used map[string]bool) {
-	var scan scanner.Scanner
-	scan.Init(original, input, nil, scanner.ScanComments)
+// It records input lines and resolves line directives from the logical source name.
+func reserveIdentifiers(original *token.File, sourceName string, input []byte, used map[string]bool) {
+	var scan tgoScanner.Scanner
+	scan.InitSource(original, sourceName, input, nil, tgoScanner.ScanComments|tgoScanner.TGo)
 	for {
 		_, tok, literal := scan.Scan()
 		if tok == token.IDENT {
