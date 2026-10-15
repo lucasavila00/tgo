@@ -3,7 +3,8 @@
 ## Decision and reason
 
 Use a private copy of Go's type checker and its matching export-data reader.
-Keep Go's standard parser, with frontend preparation for added syntax.
+Build the matching private parser and scanner from tracked Go patches. Their
+grammar reads all supported TGo syntax directly.
 
 The earlier driver inserted helpers and reloaded packages to discover success
 types. Direct checking resolves `outer(inner()!)!` in one source check. If values

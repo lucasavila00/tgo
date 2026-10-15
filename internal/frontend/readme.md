@@ -6,17 +6,17 @@
 import "github.com/lucasavila00/tgo/internal/frontend"
 ```
 
-Package frontend lets the compiler read TGo with Go's parser.
+Package frontend reads TGo source for the compiler.
 
-TGo adds syntax such as fetch\(\)\! and if expressions. The frontend replaces these forms with temporary Go syntax and records their meaning. For example, a temporary call represents an if expression; its branches still belong to the enclosing source function. The checker uses that record to apply TGo rules. Lowering uses it to generate ordinary Go statements.
+The private Go parser reads every supported TGo form in one parse. It records the exact source nodes for error operators, value expressions, comprehensions, and short returns. Grammar rules decide which call an operator belongs to and which braces belong to an expression.
 
-### Keep source edits and source meaning separate
+### Keep source meaning before building checker calls
 
-Each syntax rule returns an edit and its TGo record. One file preparation owns the prepared text, records, and positions. It applies text edits and position changes together. Errors and syntax nodes thus keep the positions of the input, even when a replacement has a different length.
+After parsing succeeds, the frontend reserves source identifiers and saves source call names. It then names the recorded syntax containers and builds calls for checking. A single bottom\-up walk inserts postfix calls, so a nested generated helper cannot enter another call's error context.
 
-Conditional syntax can be ambiguous with an ordinary Go statement. Its preparation and parser recovery share recognition and replacement rules. Preparation handles clear operands first. If Go parsing fails, recovery can identify another operand and request the same kind of edit. This preserves ordinary Go statement parsing and allows nested TGo forms.
+Conditional branches and comprehension clauses remain statements in the enclosing source function. Their syntax containers let checking and lowering apply TGo rules without changing return targets or source bindings.
 
-ParseFile returns the completed tree and TGo records together. Type checking and code generation use that result; source preparation does not choose types.
+Physical file names identify files for Go build selection. Logical source names and line directives identify positions in diagnostics. The scanner records both from the original input. ParseFile returns the completed syntax and source records together.
 
 ## type Comprehension
 
@@ -34,7 +34,7 @@ type Comprehension struct {
 
 ## type Marker
 
-Marker records a call's postfix operator and original source span.
+Marker records a postfix operation and its original source position.
 
 ```go
 type Marker struct {
@@ -42,8 +42,6 @@ type Marker struct {
     Wrap     bool
     CallName string
     Position token.Position
-    // EndOffset is the byte offset just after the operator in the input.
-    EndOffset int
 }
 ```
 
@@ -67,7 +65,7 @@ type Parsed struct {
 func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed, error)
 ```
 
-ParseFile parses added expressions and maps syntax positions to the input. Conditional bodies remain statements in the original enclosing function.
+ParseFile reads TGo grammar and builds the syntax and records used by checking. Source names are saved before checker calls replace postfix operands.
 
 ## type ShortReturn
 

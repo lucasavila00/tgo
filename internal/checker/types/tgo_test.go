@@ -27,6 +27,11 @@ func checkTGo(t *testing.T, source string) (*types.Info, error) {
 	for name, position := range parsed.Conditionals {
 		config.TGo[name] = types.TGoOperation{Conditional: true, Position: position}
 	}
+	for name, record := range parsed.Comprehensions {
+		config.TGo[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges,
+			Output: record.Output, Position: record.Position}
+		config.TGo[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
+	}
 	for name, op := range parsed.Propagations {
 		config.TGo[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
 	}
@@ -368,6 +373,45 @@ func TestSwitchExpressionDiagnosticPosition(t *testing.T) {
 			_, err := checkTGo(t, test.source)
 			if err == nil || !strings.HasPrefix(err.Error(), test.position) {
 				t.Fatalf("error: %v, want position %s", err, test.position)
+			}
+		})
+	}
+}
+
+// TestComprehensionOutputTypes checks comma and key-value outputs, including named header collections.
+func TestComprehensionOutputTypes(t *testing.T) {
+	for _, source := range []string{
+		`var values=map[int]int{x, x*2 for x:=range 3}`,
+		`var values=map[int]int{x:x*2 for x:=range 3}`,
+		`var values=[]int{x, for x:=range 3}`,
+		`type Numbers []int; func f() {for range Numbers{x, for x:=range 3} {}}`,
+		`type Table[K comparable,V any] map[K]V; func f() {for range Table[int,int]{x,x*2 for x:=range 3} {}}`,
+		`type Table[K comparable,V any] map[K]V; func f() {` +
+			`if xs:=Table[int,int]{x,x*2, for x:=range 3}; len(xs)>0 {}}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			if _, err := checkTGo(t, source); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// TestComprehensionOutputCountErrors checks that the checker rejects wrong output counts after parsing.
+func TestComprehensionOutputCountErrors(t *testing.T) {
+	for _, source := range []string{
+		`var values=[]int{for range 3}`,
+		`var values=[]int{1,x for x:=range 3}`,
+		`var values=[]int{1,x,2 for x:=range 3}`,
+		`var values=map[int]int{x for x:=range 3}`,
+		`var values=map[int]int{x:x*2,1:2 for x:=range 3}`,
+		`type Numbers []int; func f() {for range Numbers{for range 3} {}}`,
+		`type Numbers []int; func f() {if xs:=Numbers{for range 3};len(xs)>0 {}}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			_, err := checkTGo(t, source)
+			if err == nil || !strings.Contains(err.Error(), "comprehension output must match") {
+				t.Fatalf("error: %v; want an output count diagnostic", err)
 			}
 		})
 	}

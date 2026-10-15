@@ -28,7 +28,7 @@ func TestParsePropagationPositions(t *testing.T) {
 	}
 }
 
-// TestParseErrorKeepsOriginalPosition checks that a parser error refers to the input after postfix replacement.
+// TestParseErrorKeepsOriginalPosition checks a parser error position after a postfix operator.
 func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 	input := "package p\nfunc f() { _ = call()! + }\n"
 	_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
@@ -86,11 +86,11 @@ func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSe
 	if op.Wrap {
 		width = 2
 	}
-	if input[op.Position.Offset:op.EndOffset] != strings.Repeat("!", width) {
+	if input[op.Position.Offset:op.Position.Offset+width] != strings.Repeat("!", width) {
 		t.Fatalf("operator offset: %v", op.Position)
 	}
-	if file.Offset(call.End()) != op.EndOffset {
-		t.Fatalf("marker end: %d; operator end: %d", file.Offset(call.End()), op.EndOffset)
+	if file.Offset(call.End()) != op.Position.Offset+width {
+		t.Fatalf("marker end: %d; operator end: %d", file.Offset(call.End()), op.Position.Offset+width)
 	}
 	physical := fset.PositionFor(call.End()-token.Pos(width), false)
 	adjusted := fset.Position(call.End() - token.Pos(width))
