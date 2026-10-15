@@ -1,7 +1,7 @@
 package types_test
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"strings"
 	"testing"
@@ -10,31 +10,15 @@ import (
 	"github.com/lucasavila00/tgo/internal/frontend"
 )
 
-// checkTGo parses TGo, registers marker operations, and returns checked type information or a type error.
+// checkTGo parses TGo and returns checked type information or a type error.
 func checkTGo(t *testing.T, source string) (*types.Info, error) {
 	t.Helper()
 	fset := token.NewFileSet()
-	parsed, err := frontend.ParseFile(fset, "main.tgo", "main.tgo", []byte("package p\n"+source),
-		make(map[string]bool))
+	parsed, err := frontend.ParseFile(fset, "main.tgo", "main.tgo", []byte("package p\n"+source))
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := types.Config{TGo: make(map[string]types.TGoOperation)}
-	for name, record := range parsed.ShortReturns {
-		config.TGo[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess,
-			Position: record.Position}
-	}
-	for name, position := range parsed.Conditionals {
-		config.TGo[name] = types.TGoOperation{Conditional: true, Position: position}
-	}
-	for name, record := range parsed.Comprehensions {
-		config.TGo[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges,
-			Output: record.Output, Position: record.Position}
-		config.TGo[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
-	}
-	for name, op := range parsed.Propagations {
-		config.TGo[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position, CallName: op.CallName}
-	}
+	config := types.Config{}
 	info := &types.Info{
 		Types:     make(map[ast.Expr]types.TypeAndValue),
 		Defs:      make(map[*ast.Ident]types.Object),
@@ -260,6 +244,13 @@ func TestPropagationTypes(t *testing.T) {
 			""},
 
 		{"error only", `func call() error {return nil}; func f() error {call()!;return nil}`, ""},
+		{"parenthesized propagation",
+			`func call()(int,error,error){return 1,nil,nil}; func f()error{_=(call()!)!;return nil}`, ""},
+		{"propagated call target",
+			`func factory()(func()(int,error),error){return nil,nil}; ` +
+				`func f()error{_=factory()!()!!;return nil}`, ""},
+		{"propagated empty result",
+			`func call()error{return nil}; func f()error{_=(call()!)!;return nil}`, "final error result"},
 		{"generic",
 			`func call[T any](v T) (T,error) {return v,nil}; func f() error ` +
 				`{_=call(call(1)!)!;return nil}`,
@@ -275,15 +266,11 @@ func TestPropagationTypes(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fset := token.NewFileSet()
-			parsed, err := frontend.ParseFile(fset, "main.tgo", "main.tgo", []byte("package p\n"+test.source),
-				make(map[string]bool))
+			parsed, err := frontend.ParseFile(fset, "main.tgo", "main.tgo", []byte("package p\n"+test.source))
 			if err != nil {
 				t.Fatal(err)
 			}
-			config := types.Config{TGo: make(map[string]types.TGoOperation)}
-			for name, op := range parsed.Propagations {
-				config.TGo[name] = types.TGoOperation{Wrap: op.Wrap, Position: op.Position}
-			}
+			config := types.Config{}
 			_, err = config.Check("example.com/p", fset, []*ast.File{parsed.File}, nil)
 			if test.error == "" {
 				if err != nil {
@@ -414,5 +401,114 @@ func TestComprehensionOutputCountErrors(t *testing.T) {
 				t.Fatalf("error: %v; want an output count diagnostic", err)
 			}
 		})
+	}
+}
+
+// TestComprehensionScopes checks generator order and ordinary local visibility.
+func TestComprehensionScopes(t *testing.T) {
+	for _, source := range []string{
+		`func f(x []int) []int {return []int{x for _,x:=range x}}`,
+		`func f() []int {return []int{x+y for x:=range 3 for y:=range x}}`,
+		`func f() []int {return []int{x for x:=range 3 for x:=range x}}`,
+		`func f() []int {return []int{if true {x:=x+1; x} else {x} for x:=range 3}}`,
+		`func f() []func()int {return []func()int{func()int{return x} for x:=range 3}}`,
+		`var values=[]func()int{func()int{return x} for x:=range 3}`,
+		`var values=[]func()func()int{func()func()int{return func()int{return x}} for x:=range 3}`,
+		`var value=if true {x:=1; func()int{return x}} else {func()int{return 0}}`,
+		`func f[T ~int](n T) []T {return []T{x for x:=range n}}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			if _, err := checkTGo(t, source); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	for _, test := range []struct{ source, message string }{
+		{`func f() []int {return []int{x for x:=range y for y:=range 3}}`, "undefined: y"},
+		{`func f() []int {return []int{if true {_=later; later:=1; later} else {x} for x:=range 3}}`,
+			"undefined: later"},
+		{`func f() []int {return []int{x for x:=range 3}; _=x}`, "undefined: x"},
+		{`var values=[]int{1 for x:=range 3}`, "declared and not used: x"},
+		{`func f() []int {return []int{x for x:=range if true {continue} else {[]int{1}}}}`,
+			"continue not in for statement"},
+		{`func f() []int {return []int{if true {func(){break}(); x} else {x} for x:=range 3}}`,
+			"break not in for"},
+		{`var value=if true {x:=1; func()int{return 0}} else {func()int{return 0}}`, "declared and not used: x"},
+	} {
+		t.Run(test.source, func(t *testing.T) {
+			_, err := checkTGo(t, test.source)
+			if err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("error: %v; want %q", err, test.message)
+			}
+		})
+	}
+}
+
+// TestComprehensionBindingFacts checks exact scope and variable identities before the written generators.
+func TestComprehensionBindingFacts(t *testing.T) {
+	info, err := checkTGo(t, `func f(x []int) []int {return []int{if true {x:=x+1; x} else {x} for _,x:=range x}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var comprehension *ast.ComprehensionExpr
+	for expression := range info.ExprScopes {
+		if node, ok := expression.(*ast.ComprehensionExpr); ok {
+			comprehension = node
+		}
+	}
+	if comprehension == nil {
+		t.Fatal("missing comprehension scope")
+	}
+	generator := comprehension.Clauses[0].(*ast.RangeClause)
+	binding := info.Defs[generator.Value.(*ast.Ident)]
+	collection := generator.X.(*ast.Ident)
+	if info.Uses[collection] == binding || info.Uses[collection].Type().String() != "[]int" {
+		t.Fatal("range source must use the function parameter")
+	}
+	conditional := comprehension.Output[0].(*ast.IfExpr)
+	declaration := conditional.Body.List[0].(*ast.AssignStmt)
+	prior := declaration.Rhs[0].(*ast.BinaryExpr).X.(*ast.Ident)
+	local := info.Defs[declaration.Lhs[0].(*ast.Ident)]
+	final := conditional.Body.List[1].(*ast.ExprStmt).X.(*ast.Ident)
+	alternative := conditional.Else.(*ast.BlockStmt).List[0].(*ast.ExprStmt).X.(*ast.Ident)
+	if info.Uses[prior] != binding || info.Uses[alternative] != binding || info.Uses[final] != local {
+		t.Fatal("generator and branch-local bindings changed")
+	}
+	if binding.Pos() != generator.Value.Pos() {
+		t.Fatal("generator declaration lost its source position")
+	}
+	if info.ExprScopes[alternative].Lookup("x") != nil ||
+		info.Scopes[generator].Lookup("x") != binding {
+		t.Fatal("generator must own its variable in its recorded scope")
+	}
+}
+
+// TestComprehensionJumpTargets checks the source target before and after each generator starts.
+func TestComprehensionJumpTargets(t *testing.T) {
+	info, err := checkTGo(t, `func f(xs []int) []int {outer: for {
+		_=[]int{if true {continue} else {x+y}
+			for x:=range if true {continue outer} else {xs}
+			for y:=range if true {continue} else {xs}}
+		break
+	}; return nil}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var comprehension *ast.ComprehensionExpr
+	for expression := range info.ExprScopes {
+		if node, ok := expression.(*ast.ComprehensionExpr); ok {
+			comprehension = node
+		}
+	}
+	first := comprehension.Clauses[0].(*ast.RangeClause)
+	second := comprehension.Clauses[1].(*ast.RangeClause)
+	firstJump := first.X.(*ast.IfExpr).Body.List[0].(*ast.BranchStmt)
+	secondJump := second.X.(*ast.IfExpr).Body.List[0].(*ast.BranchStmt)
+	outputJump := comprehension.Output[0].(*ast.IfExpr).Body.List[0].(*ast.BranchStmt)
+	if _, ok := info.BranchTargets[firstJump].(*ast.ForStmt); !ok {
+		t.Fatal("first source must continue the enclosing source loop")
+	}
+	if info.BranchTargets[secondJump] != first || info.BranchTargets[outputJump] != second {
+		t.Fatal("comprehension jumps have the wrong generator targets")
 	}
 }

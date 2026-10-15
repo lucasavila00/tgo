@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
@@ -11,8 +11,8 @@ import (
 func (r *Context) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok &&
-			(r.input.Conditionals[call] != nil || r.input.Comprehensions[call] != nil) {
+		switch node.(type) {
+		case *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
 			found = true
 			return false
 		}

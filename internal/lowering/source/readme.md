@@ -10,7 +10,7 @@ Package source records checked facts that lowering needs before statements move.
 
 Go syntax does not always evaluate an expression. An array length is constant; some range operands do not run; a deferred call runs when its function returns. The inventory records these limits with each expression's physical file and byte offsets. It also records the source function that owns a return.
 
-Parent links describe the original syntax. Lowering uses them to find source jump targets and contextual types after it constructs replacement statements. This input stays unchanged during emission. Each rewrite owns separate output state, so the same checked source can produce independent outputs.
+Parent links retain the original expression contexts. Checked scopes and jump targets keep their source identities after lowering moves statements. This input stays unchanged during emission. Each rewrite owns separate output state, so the same checked source can produce independent outputs.
 
 ## func RangeElided
 
@@ -19,6 +19,14 @@ func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool
 ```
 
 RangeElided reports whether Go omits evaluation of a range expression.
+
+## func RangeOperandElided
+
+```go
+func RangeOperandElided(checked *checker.Package, expression, value ast.Expr) bool
+```
+
+RangeOperandElided reports whether range omits evaluation of its checked operand.
 
 ## type Inventory
 

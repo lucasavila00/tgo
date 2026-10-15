@@ -69,7 +69,7 @@ func main() {
 		t.Fatal(err)
 	}
 	loader := checker.NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"},
-		make(map[string]bool), sizes)
+		sizes)
 	checked, err := loader.Check(roots[0])
 	if err != nil {
 		t.Fatal(err)
@@ -78,11 +78,11 @@ func main() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := source.LowerPropagations(nil)
+	first, err := source.LowerPropagations()
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := source.LowerPropagations(nil)
+	second, err := source.LowerPropagations()
 	if err != nil {
 		t.Fatal(err)
 	}

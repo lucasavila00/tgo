@@ -3,42 +3,34 @@ package shared
 import (
 	"bytes"
 	"fmt"
-	"go/ast"
-	"go/format"
+	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/format"
 	"go/token"
 	"reflect"
-
-	"github.com/lucasavila00/tgo/internal/lowering/source"
 )
 
 // CheckLoweredOperations reports any selected operation that was not emitted.
 func (r *Context) CheckLoweredOperations() error {
-	s := r.input.Inventory
-	for _, site := range s.Sites {
-		expression := s.Expressions[source.Site(site)]
-		if _, expected := r.input.Propagations[expression]; expected && !r.request.lowered[expression] {
-			return fmt.Errorf("%s: propagation was not lowered", s.Checked.Fset.Position(expression.Pos()))
-		}
+	var missing error
+	for _, file := range r.input.Inventory.Checked.Syntax {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if missing != nil {
+				return false
+			}
+			switch node := node.(type) {
+			case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
+				if !r.request.lowered[node.(ast.Expr)] {
+					missing = fmt.Errorf("%s: TGo expression was not lowered", r.input.Inventory.Checked.Fset.Position(node.Pos()))
+				}
+			case *ast.ShortReturnStmt:
+				if !r.request.loweredReturns[node] {
+					missing = fmt.Errorf("%s: short return was not lowered", r.input.Inventory.Checked.Fset.Position(node.Pos()))
+				}
+			}
+			return missing == nil
+		})
 	}
-	if err := r.checkLoweredElements(); err != nil {
-		return err
-	}
-	for call := range r.input.Comprehensions {
-		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: comprehension was not lowered", s.Checked.Fset.Position(call.Pos()))
-		}
-	}
-	for statement := range r.input.ShortReturns {
-		if !r.request.loweredReturns[statement] {
-			return fmt.Errorf("%s: short return was not lowered", s.Checked.Fset.Position(statement.Pos()))
-		}
-	}
-	for call := range r.input.Conditionals {
-		if !r.request.lowered[call] {
-			return fmt.Errorf("%s: conditional expression was not lowered", s.Checked.Fset.Position(call.Pos()))
-		}
-	}
-	return nil
+	return missing
 }
 
 // Contains reports whether a node contains selected lowering work.
@@ -49,38 +41,33 @@ func (r *Context) Contains(node ast.Node) bool {
 	if contains(node, r.input.Target) {
 		return true
 	}
-	if r.containsShortReturn(node) {
-		return true
+	if !r.input.TGo {
+		return false
 	}
-	for expression := range r.input.Propagations {
-		if contains(node, expression) {
-			return true
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		switch child.(type) {
+		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+			found = true
 		}
-	}
-	for expression := range r.input.Comprehensions {
-		if contains(node, expression) {
-			return true
-		}
-	}
-	if r.containsElement(node) {
-		return true
-	}
-	for expression := range r.input.Conditionals {
-		if contains(node, expression) {
-			return true
-		}
-	}
-	return false
+		return !found
+	})
+	return found
 }
 
-// isTarget reports whether the expression is an insertion target or a recorded TGo expression.
+// isTarget reports whether the expression requires insertion or a TGo rule.
 func (r *Context) isTarget(expression ast.Expr) bool {
-	if expression == r.input.Target && expression != nil {
+	if expression != nil && expression == r.input.Target {
 		return true
 	}
-	_, ok := r.input.Propagations[expression]
-	call, _ := expression.(*ast.CallExpr)
-	return ok || r.input.Conditionals[call] != nil || r.input.Comprehensions[call] != nil
+	if !r.input.TGo {
+		return false
+	}
+	switch expression.(type) {
+	case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
+		return true
+	}
+	return false
 }
 
 // Emit returns formatted files without changing the checked input.
@@ -99,6 +86,9 @@ func (r *Context) Emit() (Output, error) {
 		for _, spec := range fileRewrite.file.extraImports {
 			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
 			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
+		}
+		if err := ordinaryOutput(outputFile); err != nil {
+			return Output{}, err
 		}
 		var buf bytes.Buffer
 		if err := format.Node(
@@ -145,47 +135,15 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 	return rewritten.Interface().(ast.Node)
 }
 
-// checkLoweredElements reports a comprehension output marker that remains absent from the emitted-operation records.
-func (r *Context) checkLoweredElements() error {
-	s := r.input.Inventory
-	for _, file := range s.Checked.Syntax {
-		var missing error
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && s.Checked.Operations[id.Name].Element &&
-					!r.request.lowered[call] {
-					missing = fmt.Errorf("%s: comprehension output was not lowered", s.Checked.Fset.Position(call.Pos()))
-				}
-			}
-			return missing == nil
-		})
-		if missing != nil {
-			return missing
-		}
-	}
-	return nil
-}
-
-// containsElement reports whether syntax contains a checked comprehension output marker.
-func (r *Context) containsElement(node ast.Node) bool {
-	found := false
+// ordinaryOutput reports a source-only node left in generated Go.
+func ordinaryOutput(node ast.Node) error {
+	var invalid error
 	ast.Inspect(node, func(child ast.Node) bool {
-		if call, ok := child.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && r.input.Inventory.Checked.Operations[id.Name].Element {
-				found = true
-			}
+		switch child.(type) {
+		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+			invalid = fmt.Errorf("TGo syntax remains in generated Go: %T", child)
 		}
-		return !found
+		return invalid == nil
 	})
-	return found
-}
-
-// containsShortReturn reports whether the source range contains a checked short return.
-func (r *Context) containsShortReturn(node ast.Node) bool {
-	for statement := range r.input.ShortReturns {
-		if contains(node, statement) {
-			return true
-		}
-	}
-	return false
+	return invalid
 }

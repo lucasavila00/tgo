@@ -1,14 +1,14 @@
 package frontend
 
 import (
-	"fmt"
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
+	"sort"
 	"strings"
 	"testing"
 )
 
-// TestPostfixOperands checks source call names before nested helper calls are constructed.
+// TestPostfixOperands checks source call context on the actual nested propagation nodes.
 func TestPostfixOperands(t *testing.T) {
 	for _, test := range []struct {
 		expression string
@@ -27,16 +27,16 @@ func TestPostfixOperands(t *testing.T) {
 		t.Run(test.expression, func(t *testing.T) {
 			input := "package p\nfunc run() error { _ = " + test.expression + "; return nil }"
 			set := token.NewFileSet()
-			parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+			parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(parsed.Propagations) != len(test.names) {
-				t.Fatalf("operators: %d, want %d", len(parsed.Propagations), len(test.names))
+			if len(parsed.CallNames) != len(test.names) {
+				t.Fatalf("operators: %d, want %d", len(parsed.CallNames), len(test.names))
 			}
 			for index, name := range test.names {
-				operation := parsed.Propagations[fmt.Sprintf("tgoPropagation%d", index+1)]
-				if operation.CallName != name || operation.Wrap != test.wrap[index] {
+				operation := orderedPropagations(parsed)[index]
+				if parsed.CallNames[operation] != name || operation.Wrap != test.wrap[index] {
 					t.Fatalf("operator %d: %+v", index, operation)
 				}
 			}
@@ -55,8 +55,7 @@ func TestPostfixNewlines(t *testing.T) {
 	} {
 		t.Run(body, func(t *testing.T) {
 			input := "package p\nfunc run() error {\n" + body + "\n}"
-			parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input),
-				make(map[string]bool))
+			parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input))
 			if parsed == nil || err != nil {
 				t.Fatalf("parsed: %v; error: %v", parsed, err)
 			}
@@ -64,26 +63,20 @@ func TestPostfixNewlines(t *testing.T) {
 	}
 }
 
-// TestPostfixFailedParseNames checks that a failed attempt does not reserve helper names.
-func TestPostfixFailedParseNames(t *testing.T) {
-	used := make(map[string]bool)
+// TestPostfixFailedParseReturnsNoSyntax checks that a failed parse does not publish a partial source tree.
+func TestPostfixFailedParseReturnsNoSyntax(t *testing.T) {
 	input := []byte("package p\nfunc run() error { target()!; _ = }")
-	if _, err := ParseFile(token.NewFileSet(), "bad.tgo", "bad.tgo", input, used); err == nil {
-		t.Fatal("invalid source parsed")
-	}
-	for name := range used {
-		if strings.HasPrefix(name, "tgoPropagation") {
-			t.Fatalf("failed parse reserved %s", name)
-		}
+	if parsed, err := ParseFile(token.NewFileSet(), "bad.tgo", "bad.tgo", input); parsed != nil || err == nil {
+		t.Fatalf("parsed: %v; diagnostic: %v", parsed, err)
 	}
 	input = []byte("package p\nfunc run() error { target()!; return nil }")
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", input, used)
-	if err != nil || parsed.Propagations["tgoPropagation1"].Name != "tgoPropagation1" {
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", input)
+	if err != nil || len(parsed.CallNames) != 1 {
 		t.Fatalf("parsed: %v; error: %v", parsed, err)
 	}
 }
 
-// TestPostfixMixedSyntaxNames checks helper names and spans across mixed TGo syntax.
+// TestPostfixMixedSyntaxNames checks native propagation identity and spans across mixed TGo syntax.
 func TestPostfixMixedSyntaxNames(t *testing.T) {
 	for _, expression := range []string{
 		"if ok { target()! } else { target()!! }",
@@ -94,14 +87,12 @@ func TestPostfixMixedSyntaxNames(t *testing.T) {
 		t.Run(expression, func(t *testing.T) {
 			input := "package p\nfunc run() error { _ = " + expression + "; return ..., nil }"
 			set := token.NewFileSet()
-			used := make(map[string]bool)
-			parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input), used)
+			parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(parsed.Propagations) != 2 || !used["tgoPropagation1"] || !used["tgoPropagation2"] ||
-				used["tgoPropagation3"] {
-				t.Fatalf("operations: %+v; names: %v", parsed.Propagations, used)
+			if len(parsed.CallNames) != 2 {
+				t.Fatalf("source call names: %v", parsed.CallNames)
 			}
 			checkPropagationPositions(t, input)
 		})
@@ -111,39 +102,64 @@ func TestPostfixMixedSyntaxNames(t *testing.T) {
 // TestPostfixCallBinding checks that a suffix on a type assertion cannot select an earlier call.
 func TestPostfixCallBinding(t *testing.T) {
 	input := "package p\nfunc run() error { _ = factory().(error)!; return nil }"
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input))
 	if parsed != nil || err == nil || !strings.Contains(err.Error(), "propagation requires a call") {
 		t.Fatalf("parsed: %v; error: %v", parsed, err)
 	}
 }
 
-// TestPostfixMultipleFiles checks source positions and helper names across file-set bases.
+// TestPostfixMultipleFiles checks source positions and call context across file-set bases.
 func TestPostfixMultipleFiles(t *testing.T) {
-	set, used := token.NewFileSet(), make(map[string]bool)
+	set := token.NewFileSet()
 	for _, filename := range []string{"first.tgo", "second.tgo"} {
 		input := "package p\nfunc run() error { _ = (target()) /* source */ !!; return nil }"
-		parsed, err := ParseFile(set, filename+".go", filename, []byte(input), used)
+		parsed, err := ParseFile(set, filename+".go", filename, []byte(input))
 		if err != nil {
 			t.Fatal(err)
 		}
 		ast.Inspect(parsed.File, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
+			operation, ok := node.(*ast.PropagateExpr)
 			if !ok {
 				return true
 			}
-			name, ok := call.Fun.(*ast.Ident)
-			if !ok {
-				return true
-			}
-			operation, exists := parsed.Propagations[name.Name]
-			if exists && (set.Position(call.End()).Offset != strings.Index(input, "!!")+2 ||
-				operation.Position.Filename != filename) {
-				t.Fatalf("call end: %v; operator: %+v", set.Position(call.End()), operation)
+			if set.Position(operation.End()).Offset != strings.Index(input, "!!")+2 ||
+				set.Position(operation.OpPos).Filename != filename {
+				t.Fatalf("node end: %v; operator: %v", set.Position(operation.End()), set.Position(operation.OpPos))
 			}
 			return true
 		})
 	}
-	if !used["tgoPropagation1"] || !used["tgoPropagation2"] {
-		t.Fatalf("names: %v", used)
+}
+
+// orderedPropagations returns native operators in source token order for call-context assertions.
+func orderedPropagations(parsed *Parsed) []*ast.PropagateExpr {
+	var operations []*ast.PropagateExpr
+	for expression := range parsed.CallNames {
+		operations = append(operations, expression)
+	}
+	sort.Slice(operations, func(first, second int) bool { return operations[first].OpPos < operations[second].OpPos })
+	return operations
+}
+
+// TestPostfixShortReturnCallee checks source context for directly called functions with shortened returns.
+func TestPostfixShortReturnCallee(t *testing.T) {
+	for _, body := range []string{"return ..., err", "return 1, ..."} {
+		for _, suffix := range []string{"!", "!!"} {
+			t.Run(body+suffix, func(t *testing.T) {
+				callee := "func() (int,error) { " + body + " }"
+				input := "package p; func f(err error) error { _ = " + callee + "()" + suffix + "; return nil }"
+				parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
+				if err != nil {
+					t.Fatal(err)
+				}
+				operations := orderedPropagations(parsed)
+				if len(operations) != 1 || parsed.CallNames[operations[0]] != callee {
+					t.Fatalf("call context: %v; want %q", parsed.CallNames, callee)
+				}
+				if operations[0].Wrap != (suffix == "!!") {
+					t.Fatalf("wrap: %t; suffix: %s", operations[0].Wrap, suffix)
+				}
+			})
+		}
 	}
 }

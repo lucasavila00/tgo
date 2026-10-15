@@ -1,9 +1,11 @@
 package checker
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
-	"go/parser"
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
+	stockast "go/ast"
+	stockparser "go/parser"
 	"go/token"
 	gotypes "go/types"
 	"os"
@@ -41,13 +43,22 @@ func main() { fmt.Println(choose(true)) }
 	if err != nil {
 		t.Fatal(err)
 	}
-	loader := NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool), sizes)
+	loader := NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, sizes)
 	pkg, err := loader.Check(roots[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(pkg.Conditionals) != 1 {
-		t.Fatalf("conditionals: %d", len(pkg.Conditionals))
+	conditionals := 0
+	for _, file := range pkg.Syntax {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if _, ok := node.(*ast.IfExpr); ok {
+				conditionals++
+			}
+			return true
+		})
+	}
+	if conditionals != 1 {
+		t.Fatalf("conditionals: %d", conditionals)
 	}
 }
 
@@ -67,13 +78,13 @@ func TestLoaderCachesPackageIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	loader := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
-		make(map[string]bool), sizes)
+		sizes)
 	first, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first.Operations) != 2 {
-		t.Fatalf("operations: %d", len(first.Operations))
+	if len(first.CallNames) != 2 {
+		t.Fatalf("source call names: %d", len(first.CallNames))
 	}
 	variant := *metadata
 	variant.ID = "example.com/p [example.com/p.test]"
@@ -120,6 +131,7 @@ func TestCheckGoKeepsStockObjects(t *testing.T) {
 	}
 	stock := roots[0]
 	original := stock.Types.Scope().Lookup("Value")
+	originalSyntax, originalInfo := stock.Syntax[0], stock.TypesInfo
 	checked, err := CheckGo(stock, dir)
 	if err != nil {
 		t.Fatal(err)
@@ -133,16 +145,21 @@ func TestCheckGoKeepsStockObjects(t *testing.T) {
 	if _, ok := checked.Types.Scope().Lookup("Value").Type().(*types.Basic); !ok {
 		t.Fatal("private object uses stock types")
 	}
-	ast.Inspect(stock.Syntax[0], func(node ast.Node) bool {
-		if id, ok := node.(*ast.Ident); ok && id.Name == "Value" {
-			if stock.TypesInfo.Defs[id] != original || checked.TypesInfo.Defs[id] == nil {
-				t.Fatal("binding information missing or changed")
-			}
+	stockast.Inspect(stock.Syntax[0], func(node stockast.Node) bool {
+		if id, ok := node.(*stockast.Ident); ok && id.Name == "Value" && stock.TypesInfo.Defs[id] != original {
+			t.Fatal("stock binding information changed")
 		}
 		return true
 	})
-	if checked.Fset != stock.Fset || checked.Syntax[0] != stock.Syntax[0] {
-		t.Fatal("ordinary syntax was replaced")
+	privateDefinition := checked.Types.Scope().Lookup("Value")
+	ast.Inspect(checked.Syntax[0], func(node ast.Node) bool {
+		if id, ok := node.(*ast.Ident); ok && id.Name == "Value" && checked.TypesInfo.Defs[id] != privateDefinition {
+			t.Fatal("private binding is not attached to the private source node")
+		}
+		return true
+	})
+	if stock.Syntax[0] != originalSyntax || stock.TypesInfo != originalInfo || checked.Fset != stock.Fset {
+		t.Fatal("stock syntax, type information, or file-set identity changed")
 	}
 }
 
@@ -161,14 +178,19 @@ func TestOrdinaryGoCheckingMatchesStock(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			fset := token.NewFileSet()
-			file, err := parser.ParseFile(fset, "main.go", "package p\n"+source, parser.SkipObjectResolution)
+			file, err := stockparser.ParseFile(fset, "main.go", "package p\n"+source, stockparser.SkipObjectResolution)
 			if err != nil {
 				t.Fatal(err)
 			}
 			stock := gotypes.Config{}
-			_, stockErr := stock.Check("example.com/p", fset, []*ast.File{file}, nil)
+			_, stockErr := stock.Check("example.com/p", fset, []*stockast.File{file}, nil)
+			privateSet := token.NewFileSet()
+			privateFile, err := parser.ParseFile(privateSet, "main.go", "package p\n"+source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
 			private := types.Config{}
-			_, privateErr := private.Check("example.com/p", fset, []*ast.File{file}, nil)
+			_, privateErr := private.Check("example.com/p", privateSet, []*ast.File{privateFile}, nil)
 			if (stockErr == nil) != (privateErr == nil) {
 				t.Fatalf("stock error: %v; private error: %v", stockErr, privateErr)
 			}
@@ -201,12 +223,58 @@ func run() error {next()!;return nil}
 		t.Fatal(err)
 	}
 	loader := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"},
-		make(map[string]bool), sizes)
+		sizes)
 	checked, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if length := checked.Types.Scope().Lookup("storage").Type().(*types.Array).Len(); length != 0 {
 		t.Fatalf("array length: %d; want 0", length)
+	}
+}
+
+// TestNativeCheckerOwnsBindings checks source object identity and scopes after syntax-only parsing.
+func TestNativeCheckerOwnsBindings(t *testing.T) {
+	input := "package p; func f(x int, xs []int) []int { _ = if x := 1; x > 0 { x } else { x }; " +
+		"_ = x; return []int{x for _, x := range xs if x > 0} }"
+	for _, mode := range []parser.Mode{0, parser.AllErrors, parser.SkipObjectResolution} {
+		set := token.NewFileSet()
+		file, err := parser.ParseTGoFile(set, "main.tgo", "main.tgo", input, mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		info := newInfo()
+		config := types.Config{}
+		if _, err := config.Check("example.com/bindings", set, []*ast.File{file}, info); err != nil {
+			t.Fatal(err)
+		}
+		checkNativeSourceBindings(t, file.Decls[0].(*ast.FuncDecl), info)
+	}
+}
+
+// checkNativeSourceBindings checks that initializer and generator names retain distinct checked objects.
+func checkNativeSourceBindings(t *testing.T, function *ast.FuncDecl, info *types.Info) {
+	t.Helper()
+	parameter := info.Defs[function.Type.Params.List[0].Names[0]]
+	conditional := function.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.IfExpr)
+	initializer := conditional.Init.(*ast.AssignStmt).Lhs[0].(*ast.Ident)
+	local := info.Defs[initializer]
+	outside := function.Body.List[1].(*ast.AssignStmt).Rhs[0].(*ast.Ident)
+	collection := function.Body.List[2].(*ast.ReturnStmt).Results[0].(*ast.ComprehensionExpr)
+	clause := collection.Clauses[0].(*ast.RangeClause)
+	generator := info.Defs[clause.Value.(*ast.Ident)]
+	if parameter == nil || local == nil || generator == nil || parameter == local || local == generator {
+		t.Fatalf("source bindings: parameter=%v; initializer=%v; generator=%v", parameter, local, generator)
+	}
+	if info.Uses[outside] != parameter || info.Uses[conditional.Cond.(*ast.BinaryExpr).X.(*ast.Ident)] != local {
+		t.Fatal("initializer binding crossed its source scope")
+	}
+	if info.Uses[collection.Output[0].(*ast.Ident)] != generator ||
+		info.Uses[collection.Clauses[1].(*ast.FilterClause).Cond.(*ast.BinaryExpr).X.(*ast.Ident)] != generator {
+		t.Fatal("generator binding does not own its output and filter uses")
+	}
+	if info.ExprScopes[outside].Lookup("x") != parameter || info.Scopes[conditional].Lookup("x") != local ||
+		info.ExprScopes[collection.Output[0]].Lookup("x") != generator {
+		t.Fatal("checked lexical scopes do not match their source bindings")
 	}
 }

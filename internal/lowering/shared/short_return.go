@@ -1,24 +1,23 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"github.com/lucasavila00/tgo/internal/frontend"
 )
 
 // shortReturnStatement supplies omitted results without a function wrapper.
-func (r *Context) shortReturnStatement(statement *ast.ReturnStmt, record frontend.ShortReturn) []ast.Stmt {
-	returnMarker := statement.Results[0].(*ast.CallExpr)
-	statementsEvaluation := r.Operands(returnMarker.Args)
+func (r *Context) shortReturnStatement(statement *ast.ShortReturnStmt) []ast.Stmt {
+	statementsEvaluation := r.Operands(statement.Results)
 	statements, returnValues := statementsEvaluation.Statements, statementsEvaluation.Expressions()
-	if record.ZeroSuccess {
+	if statement.ZeroSuccess {
 		zeroValues := r.PrepareFailureResults()
 		returnValues = append(zeroValues, returnValues...)
 	} else {
-		if len(returnValues) == 1 && r.resultCount(returnMarker.Args[0]) > 1 {
-			tupleStatements, tupleResults := r.shortReturnTuple(returnValues[0], returnMarker.Args[0])
+		_, tuple := statementsEvaluation.Values[0].Type.(*types.Tuple)
+		if len(returnValues) == 1 && tuple {
+			tupleStatements, tupleResults := r.shortReturnTuple(returnValues[0], statement.Results[0])
 			statements = append(statements, tupleStatements...)
 			returnValues = tupleResults
 		}
@@ -26,16 +25,15 @@ func (r *Context) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 		statements = append(statements, nilStatements...)
 		returnValues = append(returnValues, nilResult)
 	}
-	returnStatement := *statement
-	returnStatement.Results = returnValues
+	returnStatement := ast.ReturnStmt{Return: statement.Return, Results: returnValues}
 	r.request.loweredReturns[statement] = true
 	return append(statements, &returnStatement)
 }
 
 // shortReturnNil supplies nil for the omitted error result, using typed zero storage when source hides nil.
-func (r *Context) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Expr) {
-	scope := r.input.Inventory.Checked.Types.Scope().Innermost(statement.Pos())
-	_, nilBinding := scope.LookupParent("nil", statement.Pos())
+func (r *Context) shortReturnNil(statement *ast.ShortReturnStmt) ([]ast.Stmt, ast.Expr) {
+	scope := r.input.Inventory.Checked.TypesInfo.Scopes[statement]
+	nilBinding := r.lookupBinding(scope, "nil", statement.Pos())
 	if nilBinding == types.Universe.Lookup("nil") {
 		return nil, ast.NewIdent("nil")
 	}

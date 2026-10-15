@@ -1,8 +1,8 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
-	"go/ast"
 	"os"
 	"path/filepath"
 	"testing"

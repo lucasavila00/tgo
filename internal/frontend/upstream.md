@@ -10,12 +10,13 @@ patch requires a shifted match. The package folders retain Go's BSD license.
 
 Grammar rules read every supported TGo form and retain exact source nodes.
 The scanner reads postfix operators, applies Go semicolon insertion, and
-stores tokens needed for lookahead. The return grammar reads two adjacent
-periods as `..`. Source spans and line directives refer to the original input.
+stores tokens needed for lookahead. The return grammar reads a first or last
+`...` result with the required comma. Source spans and line directives refer to the original input.
 
-The frontend publishes records only after parsing succeeds. It saves source
-call names before naming syntax containers and creating checker calls. Value
-branches and comprehension clauses retain the enclosing source function.
+The parser returns native TGo nodes from the private AST. The checker records
+types, lexical scopes, and jump targets on those same nodes. The frontend saves
+source call text for error context after parsing succeeds. Value branches and
+comprehension clauses retain the enclosing source function.
 
 To update Go, change the shared version pin, review the patch against that
 version, and regenerate. Check ordinary Go syntax, TGo grammar, diagnostics,

@@ -22,8 +22,10 @@ itself uses original module paths and creates no temporary module.
 ## Tracked and generated files
 
 The pinned version, patch, preparation script, and TGo extensions are tracked.
-Generated upstream Go files are ignored by Git; do not edit them. The checker
-and importer must use the same Go version and private type objects.
+Generated upstream Go files are ignored by Git; do not edit them. The AST,
+parser, printer, checker, and importer use the same Go version.
+Checking records facts on private source nodes; lowering reads those same nodes.
+Stock Go package and type objects remain separate.
 
 TGo rules and tests live in `types/tgo.go` and `types/tgo_test.go`. The patch adds
 checker hooks and private import paths. Preparation omits upstream tests,

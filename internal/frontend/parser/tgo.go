@@ -1,24 +1,22 @@
 package parser
 
-import (
-	"go/ast"
-	"go/token"
-)
+import "github.com/lucasavila00/tgo/internal/ast"
 
-// parsePostfix consumes one operator and records its current call operand.
+// parsePostfix reads one source operator and retains its immediate operand.
 func (p *parser) parsePostfix(operand ast.Expr) ast.Expr {
 	start, end, wrap := p.pos, p.end(), p.lit == "!!"
 	p.next()
-	if _, call := ast.Unparen(operand).(*ast.CallExpr); !call {
+	call := ast.Unparen(operand)
+	for {
+		propagation, nested := call.(*ast.PropagateExpr)
+		if !nested {
+			break
+		}
+		call = ast.Unparen(propagation.X)
+	}
+	if _, isCall := call.(*ast.CallExpr); !isCall {
 		p.error(start, "propagation requires a call")
 		return &ast.BadExpr{From: operand.Pos(), To: end}
 	}
-	if p.postfixEnds == nil {
-		p.postfixEnds = make(map[token.Pos]token.Pos)
-	}
-	p.postfixEnds[operand.End()] = end
-	if p.forms != nil {
-		p.forms.Postfix = append(p.forms.Postfix, Postfix{Operand: operand, Start: start, End: end, Wrap: wrap})
-	}
-	return operand
+	return &ast.PropagateExpr{X: operand, OpPos: start, OpEnd: end, Wrap: wrap}
 }

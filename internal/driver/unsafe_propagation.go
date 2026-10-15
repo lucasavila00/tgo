@@ -2,8 +2,8 @@ package driver
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
 
 	"github.com/lucasavila00/tgo/internal/checker"
 )
@@ -52,22 +52,15 @@ func unsafeLayoutBuiltin(pkg *checker.Package, call *ast.CallExpr) *types.Builti
 // rejectOperandPropagation panics with the source position if an operand contains error propagation.
 func rejectOperandPropagation(pkg *checker.Package, operand ast.Expr, builtinName string) {
 	ast.Inspect(operand, func(node ast.Node) bool {
-		marker, ok := node.(*ast.CallExpr)
+		operation, ok := node.(*ast.PropagateExpr)
 		if !ok {
-			return true
-		}
-		name, ok := marker.Fun.(*ast.Ident)
-		if !ok {
-			return true
-		}
-		operation, ok := pkg.Operations[name.Name]
-		if !ok || operation.Conditional || operation.Comprehension || operation.Element || operation.ShortReturn {
 			return true
 		}
 		operator := "!"
 		if operation.Wrap {
 			operator = "!!"
 		}
-		panic(fmt.Sprintf("%s: %s is not allowed inside unsafe.%s operands", operation.Position, operator, builtinName))
+		panic(fmt.Sprintf("%s: %s is not allowed inside unsafe.%s operands",
+			pkg.Fset.Position(operation.OpPos), operator, builtinName))
 	})
 }

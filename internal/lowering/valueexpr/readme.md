@@ -17,7 +17,7 @@ A branch can contain propagation or a comprehension. Recursive expression and st
 ## func Expression
 
 ```go
-func Expression(r *shared.Context, call *ast.CallExpr, statement ast.Stmt) shared.Result
+func Expression(r *shared.Context, expression ast.Expr) shared.Result
 ```
 
 Expression produces a checked value from the reached branch.

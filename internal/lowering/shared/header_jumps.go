@@ -1,19 +1,19 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 )
 
 // prepareBreakExit keeps source break targets when operand code moves before a statement.
-func (r *Context) prepareBreakExit(target ast.Stmt, roots ...ast.Node) *ast.Ident {
+func (r *Context) prepareBreakExit(target ast.Node, roots ...ast.Node) *ast.Ident {
 	var exit *ast.Ident
 	for _, root := range roots {
 		if root == nil {
 			continue
 		}
 		ast.Inspect(root, func(node ast.Node) bool {
-			if fn, ok := node.(*ast.FuncLit); ok && r.RealFunction(fn) {
+			if _, ok := node.(*ast.FuncLit); ok {
 				return false
 			}
 			branch, ok := node.(*ast.BranchStmt)
@@ -33,12 +33,12 @@ func (r *Context) prepareBreakExit(target ast.Stmt, roots ...ast.Node) *ast.Iden
 }
 
 // withBreakExit puts the exit outside all operand and statement locals.
-func (r *Context) withBreakExit(source, target ast.Stmt, output []ast.Stmt, exit *ast.Ident) []ast.Stmt {
+func (r *Context) withBreakExit(source ast.Node, target ast.Stmt, output []ast.Stmt, exit *ast.Ident) []ast.Stmt {
 	if exit == nil {
 		return output
 	}
 	if r.functionState.controlTargets == nil {
-		r.functionState.controlTargets = make(map[ast.Stmt]ast.Stmt)
+		r.functionState.controlTargets = make(map[ast.Node]ast.Stmt)
 	}
 	r.functionState.controlTargets[source] = target
 	inner := &ast.BlockStmt{List: output}

@@ -2,9 +2,9 @@ package shared
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
-	"go/parser"
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
 	"go/token"
 	"reflect"
 	"strconv"
@@ -32,7 +32,7 @@ func (r *Context) TemporaryType(typ types.Type, original ast.Expr) ast.Expr {
 // temporaryTypeAt builds type syntax valid at the requested source position and records needed imports or aliases.
 // It records a diagnostic when the type cannot be named there.
 func (r *Context) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
-	nameCheck := r.checkTypeNames(typ, position)
+	nameCheck := r.checkTypeNames(typ, original, position)
 	if nameCheck.problem != "" {
 		if r.request.err == nil {
 			errorPosition := r.temporaryTypeErrorPosition(original)

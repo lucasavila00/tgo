@@ -1,18 +1,19 @@
 package parser
 
 import (
-	"go/ast"
 	"go/token"
+
+	"github.com/lucasavila00/tgo/internal/ast"
 )
 
-// parseTGoReturnStmt reads a return list with an optional first or last ... element.
-func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
+// parseTGoReturnStmt reads return operands and a first or last ellipsis placeholder.
+func (p *parser) parseTGoReturnStmt() ast.Stmt {
 	statement := &ast.ReturnStmt{Return: p.expect(token.RETURN)}
-	operator := token.NoPos
+	operator, operatorEnd := token.NoPos, token.NoPos
 	zeroSuccess := p.tok == token.ELLIPSIS
 	implicitEnd := false
 	if zeroSuccess {
-		operator = p.pos
+		operator, operatorEnd = p.pos, p.end()
 		p.next()
 		p.expect(token.COMMA)
 		if p.tok == token.SEMICOLON || p.tok == token.RBRACE || p.tok == token.EOF {
@@ -25,7 +26,7 @@ func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 		for p.tok == token.COMMA {
 			p.next()
 			if p.tok == token.ELLIPSIS {
-				operator = p.pos
+				operator, operatorEnd = p.pos, p.end()
 				line := p.lineFor(p.pos)
 				p.next()
 				implicitEnd = p.tok == token.EOF || p.lineFor(p.pos) > line
@@ -37,30 +38,12 @@ func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 			statement.Results = append(statement.Results, p.parseRhs())
 		}
 	}
-	if operator.IsValid() {
-		p.recordShortReturn(statement, operator, zeroSuccess)
-	}
 	if !implicitEnd {
 		p.expectSemi()
 	}
+	if operator.IsValid() {
+		return &ast.ShortReturnStmt{Return: statement.Return, Placeholder: operator,
+			PlaceholderEnd: operatorEnd, Results: statement.Results, ZeroSuccess: zeroSuccess}
+	}
 	return statement
-}
-
-// recordShortReturn stores operands in one helper call at their original positions.
-func (p *parser) recordShortReturn(statement *ast.ReturnStmt, operator token.Pos, zeroSuccess bool) {
-	position, closing := operator, operator+2
-	if len(statement.Results) > 0 {
-		if statement.Results[0].Pos() < position {
-			position = statement.Results[0].Pos()
-		}
-		if end := p.sourceExpressionEnd(statement.Results[len(statement.Results)-1]) - 1; end > closing {
-			closing = end
-		}
-	}
-	call := syntaxCall(position, closing, statement.Results)
-	statement.Results = []ast.Expr{call}
-	if p.forms != nil {
-		p.forms.ShortReturns = append(p.forms.ShortReturns,
-			ShortReturn{Statement: statement, Call: call, Position: operator, ZeroSuccess: zeroSuccess})
-	}
 }

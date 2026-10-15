@@ -3,7 +3,6 @@ package lowering
 import (
 	"fmt"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
-	"go/ast"
 
 	"github.com/lucasavila00/tgo/internal/lowering/source"
 )
@@ -31,34 +30,20 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 
 // LowerPropagations replaces checked TGo operations with ordinary Go.
 // It returns formatted file contents by absolute path without writing files.
+// A package with no TGo syntax returns no changed files.
 // It reports an error if any accepted operation was not replaced.
-func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	checked := s.inventory.Checked
-	input := shared.Input{
-		Propagations:   make(map[ast.Expr]shared.Propagation),
-		Comprehensions: checked.Comprehensions,
-		Conditionals:   checked.Conditionals,
-		ShortReturns:   checked.ShortReturns,
+func (s *Source) LowerPropagations() (map[string][]byte, error) {
+	r := newRewrite(s, shared.Input{TGo: true})
+	hasWork := false
+	for _, file := range s.inventory.Checked.Syntax {
+		if r.Contains(file) {
+			hasWork = true
+			break
+		}
 	}
-	for site, expression := range s.inventory.Expressions {
-		call, ok := expression.(*ast.CallExpr)
-		if !ok {
-			continue
-		}
-		id, ok := call.Fun.(*ast.Ident)
-		if !ok {
-			continue
-		}
-		operation, ok := operations[id.Name]
-		if !ok {
-			continue
-		}
-		if site.Reason != "" {
-			return nil, fmt.Errorf("propagation has no current-function evaluation: %s", site.Reason)
-		}
-		input.Propagations[call] = shared.Propagation(operation)
+	if !hasWork {
+		return nil, nil
 	}
-	r := newRewrite(s, input)
 	output, err := r.Emit()
 	if err != nil {
 		return nil, err

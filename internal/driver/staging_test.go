@@ -50,6 +50,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	files := map[string][]byte{
 		"go.mod":      []byte("module example.com/stages\n\ngo 1.27.1\n"),
 		"main.tgo":    []byte("package p\nvar Value = if true {Keep} else {0}\n"),
+		"plain.tgo":   []byte("package p; var Plain=3\n"),
 		"ordinary.go": []byte("package p; var Keep=2\n"),
 		"main_tgo.go": []byte("invalid snapshot"),
 		"asset.bin":   bytes.Repeat([]byte{42}, 1<<20),
@@ -60,7 +61,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 		}
 	}
 	Compile(root)
-	for _, name := range []string{"main.tgo", "ordinary.go", "asset.bin"} {
+	for _, name := range []string{"main.tgo", "plain.tgo", "ordinary.go", "asset.bin"} {
 		got, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(got, files[name]) {
 			t.Fatalf("changed input %s: %v", name, err)
@@ -69,6 +70,10 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
 	if err != nil || len(got) == 0 || bytes.Equal(got, files["main.tgo"]) {
 		t.Fatalf("generated disk output: %v, %s", err, got)
+	}
+	got, err = os.ReadFile(filepath.Join(root, "plain_tgo.go"))
+	if err != nil || string(got) != "package p\n\nvar Plain = 3\n" {
+		t.Fatalf("plain file in lowered package: %q; error: %v", got, err)
 	}
 }
 
@@ -98,7 +103,7 @@ func TestCompileRemovesFailedStageAndAllowsRetry(t *testing.T) {
 	Compile(root)
 	got, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
 	if err != nil || !bytes.Equal(got, corrected) {
-		t.Fatalf("retry output: %v", err)
+		t.Fatalf("retry output: %q; error: %v", got, err)
 	}
 }
 

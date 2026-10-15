@@ -1,23 +1,15 @@
-// Package frontend reads TGo source for the compiler.
+// Package frontend reads TGo source into native syntax nodes.
 //
-// The private Go parser reads every supported TGo form in one parse. It
-// records the exact source nodes for error operators, value expressions,
-// comprehensions, and short returns. Grammar rules decide which call an
-// operator belongs to and which braces belong to an expression.
+// The parser reads the complete source once. A postfix operator belongs to its
+// actual operand. An if expression owns its branches. A comprehension owns its
+// written outputs and clauses. The checker and lowerer use these same nodes,
+// so types, bindings, and error positions refer to the source that the user wrote.
 //
-// # Keep source meaning before building checker calls
+// Value branches and collection clauses belong to the enclosing source
+// function. Returns, defers, and jumps keep that function's meaning. A function
+// literal appears in the tree only when the source contains a function literal.
 //
-// After parsing succeeds, the frontend reserves source identifiers and saves
-// source call names. It then names the recorded syntax containers and builds
-// calls for checking. A single bottom-up walk inserts postfix calls, so a
-// nested generated helper cannot enter another call's error context.
-//
-// Conditional branches and comprehension clauses remain statements in the
-// enclosing source function. Their syntax containers let checking and lowering
-// apply TGo rules without changing return targets or source bindings.
-//
-// Physical file names identify files for Go build selection. Logical source
-// names and line directives identify positions in diagnostics. The scanner
-// records both from the original input. ParseFile returns the completed syntax
-// and source records together.
+// Physical file names select Go build inputs. Logical source names and line
+// directives identify diagnostics. Both use the original input positions.
+// The frontend also saves source call text for the context added by !!.
 package frontend

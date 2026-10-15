@@ -125,14 +125,6 @@ func (r *Context) CheckLoweredOperations() error
 
 CheckLoweredOperations reports any selected operation that was not emitted.
 
-### func \(\*Context\) CollectionOutput
-
-```go
-func (r *Context) CollectionOutput(name string) *CollectionDestination
-```
-
-CollectionOutput finds an output destination in the current function.
-
 ### func \(\*Context\) CompleteExpression
 
 ```go
@@ -149,29 +141,37 @@ func (r *Context) CompletePropagation(expression ast.Expr)
 
 CompletePropagation records a completed error propagation and its insertion.
 
-### func \(\*Context\) ComprehensionAt
-
-```go
-func (r *Context) ComprehensionAt(call *ast.CallExpr) *frontend.Comprehension
-```
-
-ComprehensionAt returns the checked collection expression at a marker call.
-
 ### func \(\*Context\) ComprehensionBindings
 
 ```go
-func (r *Context) ComprehensionBindings(body *ast.BlockStmt)
+func (r *Context) ComprehensionBindings(expression *ast.ComprehensionExpr)
 ```
 
 ComprehensionBindings gives generator variables fresh names. Checked object identity keeps their output uses and closures separate from outer bindings.
 
-### func \(\*Context\) ConditionalAt
+### func \(\*Context\) ComprehensionOperand
 
 ```go
-func (r *Context) ConditionalAt(call *ast.CallExpr) ast.Stmt
+func (r *Context) ComprehensionOperand(expression ast.Expr, capture bool) Result
 ```
 
-ConditionalAt returns the checked value\-producing statement at a marker call.
+ComprehensionOperand adds output parentheses and saves a range source when requested.
+
+### func \(\*Context\) ComprehensionRange
+
+```go
+func (r *Context) ComprehensionRange(clause *ast.RangeClause, body *ast.BlockStmt) []ast.Stmt
+```
+
+ComprehensionRange emits a range for one source clause with its prepared body.
+
+### func \(\*Context\) ComprehensionStatements
+
+```go
+func (r *Context) ComprehensionStatements(statements []ast.Stmt) []ast.Stmt
+```
+
+ComprehensionStatements keeps generated locals out of paths entered by a source goto.
 
 ### func \(\*Context\) Contains
 
@@ -293,14 +293,6 @@ func (r *Context) PrepareSliceImport()
 
 PrepareSliceImport reserves a slices import for collection output.
 
-### func \(\*Context\) PropagationAt
-
-```go
-func (r *Context) PropagationAt(expression ast.Expr) (Propagation, bool)
-```
-
-PropagationAt returns an active operation in the current function.
-
 ### func \(\*Context\) RangeStatement
 
 ```go
@@ -309,14 +301,6 @@ func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt
 
 RangeStatement lowers a range with its original iteration and assignment order.
 
-### func \(\*Context\) RealFunction
-
-```go
-func (r *Context) RealFunction(function *ast.FuncLit) bool
-```
-
-RealFunction distinguishes a source closure from generated comprehension syntax.
-
 ### func \(\*Context\) ReflectPackage
 
 ```go
@@ -324,14 +308,6 @@ func (r *Context) ReflectPackage() *ast.Ident
 ```
 
 ReflectPackage returns the reflect import for the current file.
-
-### func \(\*Context\) RegisterComprehension
-
-```go
-func (r *Context) RegisterComprehension(record *frontend.Comprehension, destination *CollectionDestination)
-```
-
-RegisterComprehension connects generated ranges and output calls in this function.
 
 ### func \(\*Context\) ResultOf
 
@@ -364,6 +340,14 @@ func (r *Context) SaveResults(value Value, discardSuccess, errorResult bool) Res
 ```
 
 SaveResults stores selected call results and retains their checked types.
+
+### func \(\*Context\) ScopeOf
+
+```go
+func (r *Context) ScopeOf(expression ast.Expr) *types.Scope
+```
+
+ScopeOf returns the checked evaluation scope, including comprehension bindings.
 
 ### func \(\*Context\) SlicePackage
 
@@ -429,6 +413,14 @@ func (r *Context) ValueTypeSwitchStatement(statement *ast.TypeSwitchStmt, result
 
 ValueTypeSwitchStatement lowers a type switch with an explicit branch transformer.
 
+### func \(\*Context\) VisibleBinding
+
+```go
+func (r *Context) VisibleBinding(expression ast.Expr, name string) types.Object
+```
+
+VisibleBinding finds a source name that remains visible after moved bindings get fresh names.
+
 ## type Dispatch
 
 Dispatch selects rules with the current function context.
@@ -446,13 +438,10 @@ Input holds source facts and the selected operations. Build it before emission.
 
 ```go
 type Input struct {
-    Inventory      *source.Inventory
-    Target         ast.Expr
-    After          After
-    Propagations   map[ast.Expr]Propagation
-    Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-    Conditionals   map[*ast.CallExpr]ast.Stmt
-    ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+    Inventory *source.Inventory
+    Target    ast.Expr
+    After     After
+    TGo       bool
 }
 ```
 
@@ -464,18 +453,6 @@ Output contains the generated files and the selected insertion's completion.
 type Output struct {
     Files    map[string][]byte
     Inserted bool
-}
-```
-
-## type Propagation
-
-Propagation defines the error action for a typed marker call.
-
-```go
-type Propagation struct {
-    Position token.Position
-    Wrap     bool
-    CallName string
 }
 ```
 

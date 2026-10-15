@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	stock "go/parser"
 	"go/token"
 	"reflect"
@@ -29,8 +29,9 @@ func TestShortReturnGrammar(t *testing.T) {
 		t.Run(body, func(t *testing.T) {
 			input := "package p\nfunc f() (int,error) { " + body + "\n}"
 			positions := token.NewFileSet()
-			_, forms, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
+			file, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
 				ParseComments|AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.ShortReturns) == 0 {
 				t.Fatalf("returns: %d; error: %v", len(forms.ShortReturns), err)
 			}
@@ -42,23 +43,17 @@ func TestShortReturnGrammar(t *testing.T) {
 }
 
 // checkShortReturnContainer checks the recorded return node and operand source spans.
-func checkShortReturnContainer(t *testing.T, positions *token.FileSet, input string, form ShortReturn) {
+func checkShortReturnContainer(t *testing.T, positions *token.FileSet, input string, form *ast.ShortReturnStmt) {
 	t.Helper()
-	position := positions.Position(form.Position)
+	position := positions.Position(form.Placeholder)
 	if position.Filename != "main.tgo" || input[position.Offset:position.Offset+3] != "..." {
 		t.Fatalf("ellipsis position: %v", position)
 	}
-	if len(form.Statement.Results) != 1 || form.Statement.Results[0] != form.Call {
-		t.Fatal("return record does not identify the parsed node")
+	if form.End() < form.PlaceholderEnd || form.PlaceholderEnd != form.Placeholder+3 {
+		t.Fatal("placeholder outside return source span")
 	}
-	if name := form.Call.Fun.(*ast.Ident).Name; name != "" {
-		t.Fatalf("parser assigned a helper name: %q", name)
-	}
-	if form.Statement.End() < form.Position+3 {
-		t.Fatal("ellipsis outside return source span")
-	}
-	for _, operand := range form.Call.Args {
-		if operand.Pos() < form.Statement.Pos() || operand.End() > form.Statement.End() {
+	for _, operand := range form.Results {
+		if operand.Pos() < form.Pos() || operand.End() > form.End() {
 			t.Fatal("operand outside source return span")
 		}
 	}
@@ -73,7 +68,7 @@ func TestShortReturnGrammarRejectsWrongPositions(t *testing.T) {
 		"return .. err", "return value ..", "return call(values..)", "return 1..", "return []..int{}",
 	} {
 		t.Run(body, func(t *testing.T) {
-			_, _, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
+			_, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
 				"package p; func f() { "+body+" }", AllErrors|SkipObjectResolution)
 			if err == nil {
 				t.Fatal("invalid short return parsed")
@@ -90,8 +85,8 @@ func TestOrdinaryReturnEllipsisMatchesGo(t *testing.T) {
 			mode := ParseComments | AllErrors | SkipObjectResolution
 			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
-				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+			if !sameGoTree(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !sameGoTree(got, want),
 					gotError, wantError)
 			}
 		})
@@ -111,8 +106,8 @@ func TestOrdinaryDotPairsMatchGo(t *testing.T) {
 			mode := ParseComments | AllErrors | SkipObjectResolution
 			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
-				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+			if !sameGoTree(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !sameGoTree(got, want),
 					gotError, wantError)
 			}
 		})
@@ -122,7 +117,7 @@ func TestOrdinaryDotPairsMatchGo(t *testing.T) {
 // TestShortReturnContextStopsAtFunction checks that a nested function owns its return grammar.
 func TestShortReturnContextStopsAtFunction(t *testing.T) {
 	input := "package p; func f() (int, error) { return func() int { _ = x ..; return 1 }(), ... }"
-	_, _, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
+	_, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
 		AllErrors|SkipObjectResolution)
 	if err == nil || !strings.Contains(err.Error(), "expected selector or type assertion") {
 		t.Fatalf("nested function diagnostic: %v", err)
@@ -155,8 +150,8 @@ func TestDotTypeGrammarMatchesGo(t *testing.T) {
 			mode := ParseComments | AllErrors | SkipObjectResolution
 			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
-				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+			if !sameGoTree(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !sameGoTree(got, want),
 					gotError, wantError)
 			}
 		})
@@ -175,10 +170,11 @@ func TestShortReturnKeepsNextStatement(t *testing.T) {
 	} {
 		t.Run(body, func(t *testing.T) {
 			input := "package p\nfunc f() { " + body + "\n}"
-			file, forms, err := ParseTGoFile(token.NewFileSet(), "main.go", "main.tgo", input,
+			file, err := ParseTGoFile(token.NewFileSet(), "main.go", "main.tgo", input,
 				ParseComments|AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.ShortReturns) != 1 {
-				t.Fatalf("return records: %d; error: %v", len(forms.ShortReturns), err)
+				t.Fatalf("return nodes: %d; error: %v", len(forms.ShortReturns), err)
 			}
 			statements := file.Decls[0].(*ast.FuncDecl).Body.List
 			if len(statements) != 2 {
@@ -195,7 +191,7 @@ func TestShortReturnKeepsNextStatement(t *testing.T) {
 // TestShortReturnUsesPhysicalLine checks that a line directive cannot end a statement on the same source line.
 func TestShortReturnUsesPhysicalLine(t *testing.T) {
 	input := "package p; func f() { return value, ... /*line virtual.tgo:99:1*/ next() }"
-	_, _, err := ParseTGoFile(token.NewFileSet(), "main.go", "main.tgo", input,
+	_, err := ParseTGoFile(token.NewFileSet(), "main.go", "main.tgo", input,
 		ParseComments|AllErrors|SkipObjectResolution)
 	if err == nil || !strings.Contains(err.Error(), "short return requires ... to be the first or last result") {
 		t.Fatalf("same-line diagnostic: %v", err)
@@ -216,8 +212,8 @@ func TestOrdinaryEllipsesMatchGo(t *testing.T) {
 			mode := ParseComments | AllErrors | SkipObjectResolution
 			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
-				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+			if !sameGoTree(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !sameGoTree(got, want),
 					gotError, wantError)
 			}
 		})

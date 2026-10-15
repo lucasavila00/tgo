@@ -1,13 +1,13 @@
 package frontend
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"strings"
 	"testing"
 )
 
-// TestParseShortReturns checks return markers with tuples, comments, propagation, and nested expressions.
+// TestParseShortReturns checks shortened returns with tuples, comments, propagation, and nested expressions.
 func TestParseShortReturns(t *testing.T) {
 	for _, body := range []string{
 		"return ..., err",
@@ -44,7 +44,6 @@ func TestRejectShortReturnSyntax(t *testing.T) {
 				"main_tgo.go",
 				"main.tgo",
 				[]byte("package p\nfunc f() error { "+body+" }"),
-				make(map[string]bool),
 			)
 			if err == nil || !strings.Contains(err.Error(), "main.tgo:") {
 				t.Fatalf("source diagnostic: %v", err)
@@ -56,59 +55,48 @@ func TestRejectShortReturnSyntax(t *testing.T) {
 // TestShortReturnLeavesOrdinaryGo checks that dots in strings, comments, numbers, and variadic calls stay unchanged.
 func TestShortReturnLeavesOrdinaryGo(t *testing.T) {
 	input := "package p\nfunc f(xs ...float64) float64 { _ = `..`; /* .. */ return g(xs...) + 1.5 }"
-	parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
-	if err != nil || len(parsed.ShortReturns) != 0 {
+	parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
+	if err != nil || len(shortReturns(parsed.File)) != 0 {
 		t.Fatalf("ordinary syntax changed: %v", err)
 	}
 }
 
-// checkShortReturnPositions parses a return body and requires one source-position check per return record.
+// checkShortReturnPositions parses a return body and requires one source-position check per source return.
 func checkShortReturnPositions(t *testing.T, body string) {
 	t.Helper()
 	input := "package p\nfunc f() (int, error) { " + body + "\n}"
 	set := token.NewFileSet()
-	parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.ShortReturns) == 0 {
-		t.Fatal("missing return record")
+	if len(shortReturns(parsed.File)) == 0 {
+		t.Fatal("missing shortened return")
 	}
 	seen := 0
 	ast.Inspect(parsed.File, func(node ast.Node) bool {
-		seen += checkShortReturnPosition(t, input, parsed, node)
+		seen += checkShortReturnPosition(t, input, set, node)
 		return true
 	})
-	if seen != len(parsed.ShortReturns) {
-		t.Fatalf("%d returns, %d records", seen, len(parsed.ShortReturns))
+	if seen != len(shortReturns(parsed.File)) {
+		t.Fatalf("%d checked returns, %d source returns", seen, len(shortReturns(parsed.File)))
 	}
 }
 
-// checkShortReturnPosition checks the ... source span and operand bounds of one return marker.
-// It returns one for a checked marker and zero for other nodes.
-func checkShortReturnPosition(t *testing.T, input string, parsed *Parsed, node ast.Node) int {
+// checkShortReturnPosition checks the ... source span and operand bounds of one shortened return.
+// It returns one for a checked return and zero for other nodes.
+func checkShortReturnPosition(t *testing.T, input string, set *token.FileSet, node ast.Node) int {
 	t.Helper()
-	statement, ok := node.(*ast.ReturnStmt)
-	if !ok || len(statement.Results) != 1 {
-		return 0
-	}
-	call, ok := statement.Results[0].(*ast.CallExpr)
+	statement, ok := node.(*ast.ShortReturnStmt)
 	if !ok {
 		return 0
 	}
-	id, ok := call.Fun.(*ast.Ident)
-	if !ok {
-		return 0
-	}
-	record, ok := parsed.ShortReturns[id.Name]
-	if !ok {
-		return 0
-	}
+	position := set.Position(statement.Placeholder)
 
-	if input[record.Position.Offset:record.Position.Offset+3] != "..." || record.Position.Filename != "main.tgo" {
-		t.Fatalf("operator position: %v", record.Position)
+	if input[position.Offset:position.Offset+3] != "..." || position.Filename != "main.tgo" {
+		t.Fatalf("operator position: %v", position)
 	}
-	for _, operand := range call.Args {
+	for _, operand := range statement.Results {
 		if operand.Pos() < statement.Pos() || operand.End() > statement.End() {
 			t.Fatal("operand outside return span")
 		}
