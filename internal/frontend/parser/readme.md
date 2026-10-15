@@ -10,7 +10,7 @@ Package parser reads Go and TGo with separate grammar modes.
 
 ParseFile reads ordinary Go. ParseTGoFile adds postfix error propagation, value\-producing if and switch, comprehensions, and shortened returns. The loader selects the mode from the input language. The file name does not select a grammar.
 
-Each TGo form has a native node in the private AST. Its fields retain the written operands and original token positions. Branches and clauses remain in their source function. The checker supplies lexical scopes and types; AST traversal visits the source children in their written order.
+Each TGo form has a native node in the private AST. Its fields retain the written operands and original token positions. Branches and clauses remain in their source function. The checker supplies lexical scopes and types; AST traversal visits the source children in their written order. ParseTGoFile always returns syntax only. The private checker owns identifier bindings and lexical scopes through its Info records.
 
 scripts/prepare\-frontend.sh applies the tracked patch to the shared pinned Go source. The parser, scanner, AST, printer, and checker use that version.
 
@@ -80,7 +80,7 @@ If the source couldn't be read, the returned AST is nil and the error indicates 
 func ParseTGoFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode) (*ast.File, error)
 ```
 
-ParseTGoFile reads TGo syntax with its physical file identity and logical source name.
+ParseTGoFile reads TGo syntax with its physical file identity and logical source name. It leaves identifier objects, File.Scope, and File.Unresolved empty. The private checker records bindings and scopes on the returned source nodes.
 
 ## type Mode
 

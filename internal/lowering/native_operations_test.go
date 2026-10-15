@@ -292,3 +292,42 @@ func checkNativeOutput(t *testing.T, input, expected string) {
 		t.Fatalf("got %q, want %q\n%s", actual, expected, output[filename])
 	}
 }
+
+// TestNativeShortReturnCallees checks propagation, identity, and context for both return placeholders.
+func TestNativeShortReturnCallees(t *testing.T) {
+	input := `package main
+import (
+ "errors"
+ "fmt"
+)
+var broken = errors.New("broken")
+func first(err error) (int, error) {
+ return func() (int, error) { return ..., err }()!, nil
+}
+func firstWrapped(err error) (int, error) {
+ return func() (int, error) { return ..., err }()!!, nil
+}
+func last(err error) (int, error) {
+ return func() (int, error) { if err != nil { return 0, err }; return 1, ... }()!, nil
+}
+func lastWrapped(err error) (int, error) {
+ return func() (int, error) { if err != nil { return 0, err }; return 1, ... }()!!, nil
+}
+func main() {
+ for _, err := range []error{nil, broken} {
+  a, firstError := first(err)
+  b, lastError := last(err)
+  fmt.Println(a, b, firstError == err, lastError == err)
+ }
+ _, err := firstWrapped(broken)
+ fmt.Println(errors.Is(err, broken), err.Error() == "func() (int, error) { return ..., err }: broken")
+ _, err = lastWrapped(broken)
+ fmt.Println(errors.Is(err, broken),
+  err.Error() == "func() (int, error) { if err != nil { return 0, err }; return 1, ... }: broken")
+ a, firstError := firstWrapped(nil)
+ b, lastError := lastWrapped(nil)
+ fmt.Println(a, b, firstError == nil, lastError == nil)
+}
+`
+	checkNativeOutput(t, input, "0 1 true true\n0 0 true true\ntrue true\ntrue true\n0 1 true true\n")
+}

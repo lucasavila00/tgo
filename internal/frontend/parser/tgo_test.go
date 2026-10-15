@@ -84,3 +84,36 @@ func TestOrdinaryModeRejectsTGo(t *testing.T) {
 		}
 	}
 }
+
+// TestTGoParserLeavesBindingToChecker checks that native parsing always returns syntax without legacy objects.
+func TestTGoParserLeavesBindingToChecker(t *testing.T) {
+	input := "package p; func f(x int, xs []int) []int { _ = if x := 1; x > 0 { x } else { x }; " +
+		"_ = x; return []int{x for _, x := range xs if x > 0} }"
+	for _, mode := range []Mode{0, AllErrors, SkipObjectResolution} {
+		file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if file.Scope != nil || file.Unresolved != nil {
+			t.Fatalf("mode %v: scope %v; unresolved %v", mode, file.Scope, file.Unresolved)
+		}
+		ast.Inspect(file, func(node ast.Node) bool {
+			if identifier, ok := node.(*ast.Ident); ok && identifier.Obj != nil {
+				t.Fatalf("mode %v: identifier %s has an object", mode, identifier.Name)
+			}
+			return true
+		})
+	}
+}
+
+// TestGoParserObjectModes checks that ordinary Go keeps its optional legacy resolution.
+func TestGoParserObjectModes(t *testing.T) {
+	input := "package p; func f(x int) int { return x }; var n = f(1)"
+	for _, mode := range []Mode{0, AllErrors, SkipObjectResolution} {
+		file, err := ParseFile(token.NewFileSet(), "main.go", input, mode)
+		stockFile, stockError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
+		if !sameGoTree(file, stockFile) || !reflect.DeepEqual(err, stockError) {
+			t.Fatalf("mode %v: AST or diagnostics differ from Go", mode)
+		}
+	}
+}

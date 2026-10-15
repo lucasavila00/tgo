@@ -232,3 +232,49 @@ func run() error {next()!;return nil}
 		t.Fatalf("array length: %d; want 0", length)
 	}
 }
+
+// TestNativeCheckerOwnsBindings checks source object identity and scopes after syntax-only parsing.
+func TestNativeCheckerOwnsBindings(t *testing.T) {
+	input := "package p; func f(x int, xs []int) []int { _ = if x := 1; x > 0 { x } else { x }; " +
+		"_ = x; return []int{x for _, x := range xs if x > 0} }"
+	for _, mode := range []parser.Mode{0, parser.AllErrors, parser.SkipObjectResolution} {
+		set := token.NewFileSet()
+		file, err := parser.ParseTGoFile(set, "main.tgo", "main.tgo", input, mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		info := newInfo()
+		config := types.Config{}
+		if _, err := config.Check("example.com/bindings", set, []*ast.File{file}, info); err != nil {
+			t.Fatal(err)
+		}
+		checkNativeSourceBindings(t, file.Decls[0].(*ast.FuncDecl), info)
+	}
+}
+
+// checkNativeSourceBindings checks that initializer and generator names retain distinct checked objects.
+func checkNativeSourceBindings(t *testing.T, function *ast.FuncDecl, info *types.Info) {
+	t.Helper()
+	parameter := info.Defs[function.Type.Params.List[0].Names[0]]
+	conditional := function.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.IfExpr)
+	initializer := conditional.Init.(*ast.AssignStmt).Lhs[0].(*ast.Ident)
+	local := info.Defs[initializer]
+	outside := function.Body.List[1].(*ast.AssignStmt).Rhs[0].(*ast.Ident)
+	collection := function.Body.List[2].(*ast.ReturnStmt).Results[0].(*ast.ComprehensionExpr)
+	clause := collection.Clauses[0].(*ast.RangeClause)
+	generator := info.Defs[clause.Value.(*ast.Ident)]
+	if parameter == nil || local == nil || generator == nil || parameter == local || local == generator {
+		t.Fatalf("source bindings: parameter=%v; initializer=%v; generator=%v", parameter, local, generator)
+	}
+	if info.Uses[outside] != parameter || info.Uses[conditional.Cond.(*ast.BinaryExpr).X.(*ast.Ident)] != local {
+		t.Fatal("initializer binding crossed its source scope")
+	}
+	if info.Uses[collection.Output[0].(*ast.Ident)] != generator ||
+		info.Uses[collection.Clauses[1].(*ast.FilterClause).Cond.(*ast.BinaryExpr).X.(*ast.Ident)] != generator {
+		t.Fatal("generator binding does not own its output and filter uses")
+	}
+	if info.ExprScopes[outside].Lookup("x") != parameter || info.Scopes[conditional].Lookup("x") != local ||
+		info.ExprScopes[collection.Output[0]].Lookup("x") != generator {
+		t.Fatal("checked lexical scopes do not match their source bindings")
+	}
+}

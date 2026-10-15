@@ -9,7 +9,7 @@
  	"go/token"
  	"io"
  	"io/fs"
-@@ -81,7 +81,16 @@
+@@ -81,7 +81,18 @@
  // errors were found, the result is a partial AST (with [ast.Bad]* nodes
  // representing the fragments of erroneous source code). Multiple errors
  // are returned via a scanner.ErrorList which is sorted by source position.
@@ -19,15 +19,17 @@
 +}
 +
 +// ParseTGoFile reads TGo syntax with its physical file identity and logical source name.
++// It leaves identifier objects, File.Scope, and File.Unresolved empty.
++// The private checker records bindings and scopes on the returned source nodes.
 +func ParseTGoFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode) (*ast.File, error) {
-+	return parseFile(fset, filename, sourceName, src, mode, true)
++	return parseFile(fset, filename, sourceName, src, mode|SkipObjectResolution, true)
 +}
 +
 +func parseFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode, tgo bool) (f *ast.File, err error) {
  	if fset == nil {
  		panic("parser.ParseFile: no token.FileSet provided (fset == nil)")
  	}
-@@ -95,6 +104,7 @@
+@@ -95,6 +106,7 @@
  	file := fset.AddFile(filename, -1, len(text))
  
  	var p parser
