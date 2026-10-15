@@ -35,7 +35,7 @@ func TestNativeNodeTraversal(t *testing.T) {
 
 // TestNativeControlFlowNodes checks branch children and return spans without a function container.
 func TestNativeControlFlowNodes(t *testing.T) {
-	shortened := &ShortReturnStmt{Return: 20, Dots: 27, DotsEnd: 29,
+	shortened := &ShortReturnStmt{Return: 20, Placeholder: 27, PlaceholderEnd: 29,
 		Results: []Expr{&Ident{Name: "err", NamePos: 30}}, ZeroSuccess: true}
 	branch := &IfExpr{If: 1, Cond: &Ident{Name: "ready", NamePos: 4},
 		Body: &BlockStmt{Lbrace: 10, List: []Stmt{shortened}, Rbrace: 35},
@@ -57,8 +57,8 @@ func TestNativeControlFlowNodes(t *testing.T) {
 	if !seen[shortened] || !seen[statement] || branch.End() != 51 || choice.End() != 81 || shortened.End() != 33 {
 		t.Fatal("child identity or source end changed")
 	}
-	shortened.ZeroSuccess, shortened.Dots, shortened.DotsEnd = false, 34, 36
+	shortened.ZeroSuccess, shortened.Placeholder, shortened.PlaceholderEnd = false, 34, 36
 	if shortened.End() != 36 {
-		t.Fatal("trailing dots are outside the return span")
+		t.Fatal("trailing placeholder is outside the return span")
 	}
 }

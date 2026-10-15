@@ -2124,10 +2124,10 @@ ShortReturnStmt supplies the error or success results and omits the other result
 
 ```go
 type ShortReturnStmt struct {
-    Return, Dots, DotsEnd token.Pos
-    Results               []Expr
-    ZeroSuccess           bool
-    Ellipsis              token.Pos
+    Return, Placeholder, PlaceholderEnd token.Pos
+    Results                             []Expr
+    ZeroSuccess                         bool
+    OperandEllipsis                     token.Pos
 }
 ```
 
@@ -2137,7 +2137,7 @@ type ShortReturnStmt struct {
 func (statement *ShortReturnStmt) End() token.Pos
 ```
 
-End returns the end of the last operand, dots, or ellipsis.
+End returns the end of the last operand, placeholder, or operand ellipsis.
 
 ### func \(\*ShortReturnStmt\) Pos
 

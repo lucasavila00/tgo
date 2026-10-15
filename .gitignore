@@ -22,3 +22,6 @@
 !/internal/ast/doc.go
 !/internal/ast/tgo.go
 !/internal/ast/tgo_test.go
+/internal/printer/*.go
+!/internal/printer/doc.go
+!/internal/printer/tgo_test.go

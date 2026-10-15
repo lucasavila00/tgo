@@ -1,0 +1,33 @@
+--- a/printer/comment.go
++++ b/printer/comment.go
+@@ -5,7 +5,7 @@
+ package printer
+ 
+ import (
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
+ 	"go/doc/comment"
+ 	"strings"
+ )
+--- a/printer/nodes.go
++++ b/printer/nodes.go
+@@ -9,7 +9,7 @@
+ package printer
+ 
+ import (
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
+ 	"go/token"
+ 	"strconv"
+ 	"strings"
+--- a/printer/printer.go
++++ b/printer/printer.go
+@@ -7,7 +7,7 @@
+ 
+ import (
+ 	"fmt"
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
+ 	"go/build/constraint"
+ 	"go/token"
+ 	"io"
