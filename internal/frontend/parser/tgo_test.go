@@ -118,13 +118,14 @@ func TestGoParserObjectModes(t *testing.T) {
 		if !sameGoTree(&fileTree, &stockTree) || !reflect.DeepEqual(err, stockError) {
 			t.Fatalf("mode %v: AST or diagnostics differ from Go", mode)
 		}
-		checkGoFileScope(t, file.Scope, stockFile.Scope)
+		checkGoFileScope(t, file, stockFile)
 	}
 }
 
 // checkGoFileScope compares each legacy package object without depending on map print order.
-func checkGoFileScope(t *testing.T, scope *ast.Scope, stockScope *stockast.Scope) {
+func checkGoFileScope(t *testing.T, file *ast.File, stockFile *stockast.File) {
 	t.Helper()
+	scope, stockScope := file.Scope, stockFile.Scope
 	if scope == nil || stockScope == nil {
 		if (scope == nil) != (stockScope == nil) {
 			t.Fatal("package scope presence differs from Go")
