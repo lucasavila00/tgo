@@ -73,8 +73,8 @@ func TestValueGrammarKeepsStatements(t *testing.T) {
 // TestSyntaxContainerIncludesPostfix checks source spans before postfix AST normalization.
 func TestSyntaxContainerIncludesPostfix(t *testing.T) {
 	for _, body := range []string{
-		`return .. call()!!`,
-		`return .. first() + call()!`,
+		`return ..., call()!!`,
+		`return ..., first() + call()!`,
 		`return []int{call()!! for range 1}`,
 		`return map[int]int{1: first() + call()! for range 1}`,
 	} {

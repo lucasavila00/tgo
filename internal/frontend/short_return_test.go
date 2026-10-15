@@ -10,21 +10,21 @@ import (
 // TestParseShortReturns checks return markers with tuples, comments, propagation, and nested expressions.
 func TestParseShortReturns(t *testing.T) {
 	for _, body := range []string{
-		"return .. err",
-		"return value ..",
-		"return x, y ..",
-		"return pair() ..",
-		"return ..\n err",
-		"return .. // before\n err // after\n",
-		"return .. err /* after */",
-		"return .. err // after\n",
-		"return value .. /* after\n */ println(1)",
-		"return value ..\n println(1)",
-		"return call()! ..",
-		"return if ready { return .. err; 1 } else { 2 } ..",
-		"return []int{if ready {return .. err; 1} else {2} for range 1} ..",
-		"return `raw\r\n..` ..",
-		"return value /* .. */ .. // comment\n println(1)",
+		"return ..., err",
+		"return value, ...",
+		"return x, y, ...",
+		"return pair(), ...",
+		"return ...,\n err",
+		"return ..., // before\n err // after\n",
+		"return ..., err /* after */",
+		"return ..., err // after\n",
+		"return value, ... /* after\n */ println(1)",
+		"return value, ...\n println(1)",
+		"return call()!, ...",
+		"return if ready { return ..., err; 1 } else { 2 }, ...",
+		"return []int{if ready {return ..., err; 1} else {2} for range 1}, ...",
+		"return `raw\r\n..`, ...",
+		"return value /* .. */, ... // comment\n println(1)",
 	} {
 		t.Run(body, func(t *testing.T) {
 			checkShortReturnPositions(t, body)
@@ -32,9 +32,12 @@ func TestParseShortReturns(t *testing.T) {
 	}
 }
 
-// TestRejectShortReturnSyntax checks that invalid .. forms return diagnostics with input positions.
+// TestRejectShortReturnSyntax checks that invalid ellipsis forms return diagnostics with input positions.
 func TestRejectShortReturnSyntax(t *testing.T) {
-	for _, body := range []string{"return ..", "return .. err ..", "return x .. y", "return x .., y", "return .., err"} {
+	for _, body := range []string{
+		"return ...,", "return ..., err, ...", "return x, ... y", "return x, ..., y",
+		"return ... err", "return value ...", "return ..., ..., err", "return .. err", "return value ..",
+	} {
 		t.Run(body, func(t *testing.T) {
 			_, err := ParseFile(
 				token.NewFileSet(),
@@ -81,7 +84,7 @@ func checkShortReturnPositions(t *testing.T, body string) {
 	}
 }
 
-// checkShortReturnPosition checks the .. source span and operand bounds of one return marker.
+// checkShortReturnPosition checks the ... source span and operand bounds of one return marker.
 // It returns one for a checked marker and zero for other nodes.
 func checkShortReturnPosition(t *testing.T, input string, parsed *Parsed, node ast.Node) int {
 	t.Helper()
@@ -102,7 +105,7 @@ func checkShortReturnPosition(t *testing.T, input string, parsed *Parsed, node a
 		return 0
 	}
 
-	if input[record.Position.Offset:record.Position.Offset+2] != ".." || record.Position.Filename != "main.tgo" {
+	if input[record.Position.Offset:record.Position.Offset+3] != "..." || record.Position.Filename != "main.tgo" {
 		t.Fatalf("operator position: %v", record.Position)
 	}
 	for _, operand := range call.Args {

@@ -155,7 +155,7 @@ type Postfix struct {
 
 ## type ShortReturn
 
-ShortReturn identifies omitted results and the source position of .. .
+ShortReturn identifies omitted results and the source position of ... .
 
 ```go
 type ShortReturn struct {

@@ -147,9 +147,9 @@ Short returns omit zero values on failure and the nil error on success.
 func Parse(text string) (int, error) {
     value, err := strconv.Atoi(text)
     if err != nil {
-        return .. err
+        return ..., err
     }
-    return value ..
+    return value, ...
 }
 ```
 

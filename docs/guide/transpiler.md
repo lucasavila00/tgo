@@ -49,17 +49,17 @@ inside nested function bodies in that operand.
 
 ## Omit zero results and nil errors
 
-Use `return .. err` to return zero values for the success results and `err`
-for the final result. Use `return value ..` to return the supplied success
+Use `return ..., err` to return zero values for the success results and `err`
+for the final result. Use `return value, ...` to return the supplied success
 values and nil for the final result:
 
 ```text
 func Parse(text string) (int, error) {
     value, err := strconv.Atoi(text)
     if err != nil {
-        return .. err
+        return ..., err
     }
-    return value ..
+    return value, ...
 }
 ```
 
@@ -68,12 +68,12 @@ Each zero value has its result's declared type, including generic types.
 
 Both forms require unnamed results. The final result must implement `error`;
 the trailing form also requires that type to accept nil. Supply every success
-result, as in `return x, y ..`. One multiple-result call can supply them all:
-`return pair() ..`. Operands follow Go's assignment and evaluation rules.
+result, as in `return x, y, ...`. One multiple-result call can supply them all:
+`return pair(), ...`. Operands follow Go's assignment and evaluation rules.
 
-`return .. err` returns unconditionally and preserves the supplied error,
+`return ..., err` returns unconditionally and preserves the supplied error,
 including nil and typed nil conversions. Deferred calls still run at function
-exit. Write a space before the dots after a number: `return 1 ..`.
+exit. Separate the placeholder from supplied values with a comma.
 
 ## Use an if expression as a value
 

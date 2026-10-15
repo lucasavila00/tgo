@@ -52,7 +52,7 @@ func TestUnaryTokens(t *testing.T) {
 	for _, input := range []string{
 		"return !\nfalse", "!!flag", "f() != nil", "f()\n!flag", "f()/*\n*/!flag",
 		"//line virtual.go:20\nreturn !flag", "f()\n!\nflag",
-		"return value ..\nnext()", "return ..\nerr", "func f(x..T) {}", "x.. /*\n*/next()",
+		"return value, ...\nnext()", "return ...,\nerr", "return value ..\nnext()", "func f(x..T) {}", "x.. /*\n*/next()",
 	} {
 		t.Run(input, func(t *testing.T) {
 			ordinary := scanInput(input, ScanComments)
@@ -67,8 +67,8 @@ func TestUnaryTokens(t *testing.T) {
 // TestLookaheadKeepsTokenSpans checks that buffered tokens retain their original sequence and end positions.
 func TestLookaheadKeepsTokenSpans(t *testing.T) {
 	for _, input := range []string{
-		"\ufeffpackage p\n//line virtual.tgo:40:2\nfunc f() { call()!! /*\ncomment*/ return value ..\n}",
-		"return .. // before\nerr", "call()! // after\nnext()", "call()!!/*\ncomment*/next()",
+		"\ufeffpackage p\n//line virtual.tgo:40:2\nfunc f() { call()!! /*\ncomment*/ return value, ...\n}",
+		"return ..., // before\nerr", "call()! // after\nnext()", "call()!!/*\ncomment*/next()",
 	} {
 		t.Run(input, func(t *testing.T) {
 			set := token.NewFileSet()

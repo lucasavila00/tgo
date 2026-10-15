@@ -6,11 +6,11 @@ import (
 )
 
 func fail(err error) (int, string, error) {
-	return .. err
+	return ..., err
 }
 
 func succeed() (int, string, error) {
-	return 7, "ok" ..
+	return 7, "ok", ...
 }
 
 func main() {

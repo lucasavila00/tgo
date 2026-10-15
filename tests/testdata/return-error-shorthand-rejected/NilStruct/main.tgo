@@ -4,5 +4,5 @@ type failure struct{}
 func (failure) Error() string { return "failure" }
 
 func run() (int, failure) {
-	return 1 ..
+	return 1, ...
 }

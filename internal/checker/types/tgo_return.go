@@ -40,10 +40,6 @@ func (check *Checker) shortReturn(statement *ast.ReturnStmt) bool {
 		check.error(statement, IncompatibleAssign, "short return requires a final result that implements error")
 		return true
 	}
-	if call.Ellipsis.IsValid() {
-		check.errorf(atPos(call.Ellipsis), InvalidSyntaxTree, "short return operands cannot end with ...")
-		return true
-	}
 	if operation.ZeroSuccess {
 		check.initVars(results.vars[errorResultIndex:], call.Args, statement)
 	} else {
