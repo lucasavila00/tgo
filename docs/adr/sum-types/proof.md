@@ -26,8 +26,8 @@ propagation: enum results become nil and error identity stays unchanged.
 
 ## Evidence
 
-Completed: a temporary Go prototype checked amd64 sizes (24/40/24 bytes), alignment
-(8), zero allocations for string construction/copy/read, copied tags, live
+Completed: a temporary Go prototype checked amd64 sizes (24/40/24/16 bytes), alignment
+(8), zero allocations for string construction/copy/read, scalar packing, copied tags, live
 references after GC, and inactive pointer clearing. Command:
 `go test -v /tmp/tgo-sum-layout-proof/layout_test.go`.
 These measurements cover generated-style Go, not a compiler implementation.

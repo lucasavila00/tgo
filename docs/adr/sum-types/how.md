@@ -8,7 +8,7 @@ named-type and type-parameter identity before instantiation. Indirect recursion
 uses Go references.
 
 Use the smallest `uint8/16/32/64` tag that fits all variants plus zero for nil.
-Put slots in first-use order; Go supplies alignment. Constructors build zeroed
+Order slots by first use; Go supplies alignment. Constructors build zeroed
 structs and fill active slots. Replacement copies whole structs, clearing inactive
 references. Go accessors return `(payload, ok)`, zero/false on mismatch.
 
@@ -26,14 +26,15 @@ case 1, 2: label = snapshot.text
 
 ## Tradeoffs
 
-On amd64, this uses 24 bytes versus 40 with separate string fields.
-`uint64|float64` needs 24 bytes versus a 16-byte overlapping union.
+On amd64: 24 bytes versus 40 with separate string fields.
+`uint64|float64` uses 24 bytes; safe scalar bit packing needs 16.
+Typed slots favor direct operations over minimum size.
 
 [Go scans fixed pointer maps](https://go.dev/src/runtime/mbitmap.go).
-Byte unions hide references; canonical pointer/scalar slots require unsafe
-reconstruction. Interfaces can box payloads. Typed slots keep Go operations;
+Byte unions hide references; general pointer/scalar reconstruction needs unsafe
+operations. Interfaces can box;
 [escape analysis](https://go.dev/doc/gc-guide#Escape_analysis) decides stack placement.
 
-Universal nil accepts Go zeros at one extra case. Nonzero enums need
+Universal nil accepts Go zeros with one extra case. Nonzero enums need
 initialization proofs and optional wrappers. An explicit empty default saves
 cases but forces a payload-free domain choice.
