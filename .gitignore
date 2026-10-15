@@ -17,3 +17,8 @@
 /internal/frontend/parser/parser.go
 /internal/frontend/parser/resolver.go
 /internal/frontend/scanner/scanner.go
+
+/internal/ast/*.go
+!/internal/ast/doc.go
+!/internal/ast/tgo.go
+!/internal/ast/tgo_test.go
