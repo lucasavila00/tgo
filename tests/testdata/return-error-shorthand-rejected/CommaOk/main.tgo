@@ -1,5 +1,5 @@
 package rejected
 
 func run(values map[string]int) (int, bool, error) {
-	return values["x"] ..
+	return values["x"], ...
 }

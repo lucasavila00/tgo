@@ -5,13 +5,13 @@ import (
 	"unsafe"
 )
 
-var callback = func() (int, error) { return 1 .. }
-var value, initialErr = func() (int, error) { return 2 .. }()
+var callback = func() (int, error) { return 1, ... }
+var value, initialErr = func() (int, error) { return 2, ... }()
 var callbacks = []func() (int, error){
-	func() (int, error) { return 3 .. },
+	func() (int, error) { return 3, ... },
 }
-const size = unsafe.Sizeof(func() (int, error) { return 4 .. })
-const length = len([1]func() (int, error){func() (int, error) { return 5 .. }})
+const size = unsafe.Sizeof(func() (int, error) { return 4, ... })
+const length = len([1]func() (int, error){func() (int, error) { return 5, ... }})
 
 func main() {
 	number, err := callback()

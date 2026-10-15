@@ -1,4 +1,4 @@
 package rejected
 
-var value = 1 ..
+var value = 1, ...
 

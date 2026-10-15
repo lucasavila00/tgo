@@ -92,7 +92,7 @@ func TestPostfixMixedSyntaxNames(t *testing.T) {
 		"[]int{if ok { target()! } else { target()!! }}",
 	} {
 		t.Run(expression, func(t *testing.T) {
-			input := "package p\nfunc run() error { _ = " + expression + "; return .. nil }"
+			input := "package p\nfunc run() error { _ = " + expression + "; return ..., nil }"
 			set := token.NewFileSet()
 			used := make(map[string]bool)
 			parsed, err := ParseFile(set, "main_tgo.go", "main.tgo", []byte(input), used)

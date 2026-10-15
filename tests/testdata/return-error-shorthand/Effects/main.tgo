@@ -16,12 +16,12 @@ func done() { events = append(events, "D") }
 
 func ordered(flag bool) (int, int, error) {
 	defer done()
-	return effect("A", 1), if flag { effect("B", 2) } else { effect("C", 3) } ..
+	return effect("A", 1), if flag { effect("B", 2) } else { effect("C", 3) }, ...
 }
 
 func early(err error) (int, int, error) {
 	defer done()
-	return effect("A", 1), if true { return .. err; 2 } else { 3 } ..
+	return effect("A", 1), if true { return ..., err; 2 } else { 3 }, ...
 }
 
 func pair() (int, string) {
@@ -29,7 +29,7 @@ func pair() (int, string) {
 }
 
 func multiple() (any, any, error) {
-	return pair() ..
+	return pair(), ...
 }
 
 func main() {

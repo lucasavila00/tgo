@@ -16,7 +16,7 @@ func (p *parser) parseTGoReturnStmt() *ast.ReturnStmt {
 		p.next()
 		p.expect(token.COMMA)
 		if p.tok == token.SEMICOLON || p.tok == token.RBRACE || p.tok == token.EOF {
-			p.error(operator, "short return requires an error operand")
+			p.error(p.pos, "short return requires an error operand")
 		} else {
 			statement.Results = p.parseList(true)
 		}

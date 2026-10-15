@@ -34,7 +34,7 @@ type Comprehension struct {
 	Ranges       []*ast.RangeStmt
 }
 
-// ShortReturn identifies omitted results and the source position of .. .
+// ShortReturn identifies omitted results and the source position of ... .
 type ShortReturn struct {
 	Statement   *ast.ReturnStmt
 	Call        *ast.CallExpr

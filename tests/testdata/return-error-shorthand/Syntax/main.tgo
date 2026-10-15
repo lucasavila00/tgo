@@ -8,20 +8,20 @@ import (
 func count(values ...int) int { return len(values) }
 
 func decimal(values []int) (float64, error) {
-	return float64(count(values...)) + 1.5 .. // trailing comment
+	return float64(count(values...)) + 1.5, ... // trailing comment
 }
 
 func newline(err error) (int, error) {
-	return .. // leading comment
+	return ..., // leading comment
 		err // operand comment
 }
 
 func raw() (string, error) {
-	return `.. is text` ..
+	return `.. is text`, ...
 }
 
 func last() (int, error) {
-	return 3 .. /* multiline
+	return 3, ... /* multiline
 	comment */
 }
 

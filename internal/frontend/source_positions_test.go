@@ -89,7 +89,7 @@ func TestTGoRecordsLogicalSourcePositions(t *testing.T) {
 		{"_ = if ok { target()! } else { 0 }; return nil", []string{"if", "!"}},
 		{"_ = switch n { case 1: target()!!; default: 0 }; return nil", []string{"switch", "!!"}},
 		{"_ = []int{target(x)!! for _, x := range xs}; return nil", []string{"[]int", "!!"}},
-		{"return .. target()!", []string{"..", "!"}},
+		{"return ..., target()!", []string{"...", "!"}},
 	} {
 		t.Run(test.body, func(t *testing.T) {
 			const sourceName = "pkg/main.tgo"

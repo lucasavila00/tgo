@@ -28,16 +28,16 @@ func done() { events = append(events, "D") }
 
 func original(fail bool) (int, int, error) {
 	defer done()
-	return read("L", false)!, read("R", fail)! ..
+	return read("L", false)!, read("R", fail)!, ...
 }
 
 func wrapped(fail bool) (int, error) {
 	defer done()
-	return read("W", fail)!! ..
+	return read("W", fail)!!, ...
 }
 
 func tuple(fail bool) (int, string, error) {
-	return pair(fail)! ..
+	return pair(fail)!, ...
 }
 
 func main() {
