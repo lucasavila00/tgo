@@ -28,17 +28,17 @@ func sourceCallNames(fset *token.FileSet, file *ast.File, input []byte) map[*ast
 	return names
 }
 
-// sourceCallName prints a Go callee or retains its source text when it contains a value-producing form.
+// sourceCallName prints a Go callee or retains its source text when it contains a native TGo form.
 func sourceCallName(fset *token.FileSet, expression ast.Expr, input []byte) string {
-	containsValueForm := false
+	containsTGoForm := false
 	ast.Inspect(expression, func(node ast.Node) bool {
 		switch node.(type) {
-		case *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
-			containsValueForm = true
+		case *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+			containsTGoForm = true
 		}
-		return !containsValueForm
+		return !containsTGoForm
 	})
-	if containsValueForm {
+	if containsTGoForm {
 		file := fset.File(expression.Pos())
 		return string(input[file.Offset(expression.Pos()):file.Offset(expression.End())])
 	}

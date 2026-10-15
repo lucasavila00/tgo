@@ -140,3 +140,26 @@ func orderedPropagations(parsed *Parsed) []*ast.PropagateExpr {
 	sort.Slice(operations, func(first, second int) bool { return operations[first].OpPos < operations[second].OpPos })
 	return operations
 }
+
+// TestPostfixShortReturnCallee checks source context for directly called functions with shortened returns.
+func TestPostfixShortReturnCallee(t *testing.T) {
+	for _, body := range []string{"return ..., err", "return 1, ..."} {
+		for _, suffix := range []string{"!", "!!"} {
+			t.Run(body+suffix, func(t *testing.T) {
+				callee := "func() (int,error) { " + body + " }"
+				input := "package p; func f(err error) error { _ = " + callee + "()" + suffix + "; return nil }"
+				parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
+				if err != nil {
+					t.Fatal(err)
+				}
+				operations := orderedPropagations(parsed)
+				if len(operations) != 1 || parsed.CallNames[operations[0]] != callee {
+					t.Fatalf("call context: %v; want %q", parsed.CallNames, callee)
+				}
+				if operations[0].Wrap != (suffix == "!!") {
+					t.Fatalf("wrap: %t; suffix: %s", operations[0].Wrap, suffix)
+				}
+			})
+		}
+	}
+}
