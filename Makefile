@@ -1,10 +1,11 @@
 GOMARKDOC = go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0
-DOC_PACKAGES = ./cmd/tgo ./pkg/transpiler ./internal/driver ./internal/checker ./internal/frontend ./internal/lowering ./internal/lowering/shared ./internal/lowering/propagation ./internal/lowering/comprehensions ./internal/lowering/valueexpr ./internal/lowering/source ./internal/lowering/names ./internal/controlflow
+DOC_PACKAGES = ./cmd/tgo ./pkg/transpiler ./internal/driver ./internal/checker ./internal/frontend ./internal/frontend/parser ./internal/frontend/scanner ./internal/lowering ./internal/lowering/shared ./internal/lowering/propagation ./internal/lowering/comprehensions ./internal/lowering/valueexpr ./internal/lowering/source ./internal/lowering/names ./internal/controlflow
 
 .PHONY: prepare docs docs-check lint
 
 prepare:
 	sh scripts/prepare-checker.sh
+	sh scripts/prepare-frontend.sh
 
 docs: prepare
 	@set -e; for package in $(DOC_PACKAGES); do $(GOMARKDOC) "$$package"; done

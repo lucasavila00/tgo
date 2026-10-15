@@ -13,3 +13,7 @@
 !/internal/checker/types/tgo_inference.go
 !/internal/checker/types/tgo_controlflow.go
 !/internal/checker/types/tgo_state.go
+/internal/frontend/parser/interface.go
+/internal/frontend/parser/parser.go
+/internal/frontend/parser/resolver.go
+/internal/frontend/scanner/scanner.go

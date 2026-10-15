@@ -34,7 +34,8 @@ That disk-stage version still read and returned assets. The current driver
 lists their paths without reading unrelated asset contents. The
 `BenchmarkCompileAssets` benchmark retains this comparison workload.
 
-Frontend parsing has a separate cost. `BenchmarkConditionalParsing` measured
+Frontend parsing has a separate cost. Before direct grammar parsing,
+`BenchmarkConditionalParsing` measured
 Go 1.27.1 on an AMD EPYC-Turin:
 
 | Input | Earlier preparation | Batched preparation |
@@ -43,9 +44,27 @@ Go 1.27.1 on an AMD EPYC-Turin:
 | 512 independent values | 574 ms; 577 MB | 5.14 ms; 4.06 MB |
 | 512 nested values | 804 ms; 545 MB | 888 ms; 621 MB |
 
-Independent values benefit from shared edits and parsing. Deep nesting still
-needs repeated preparation and subtree parsing; its worst-case cost is quadratic.
-This parser work is different from reloading the module for each operator.
+The preparation-based parser shared edits for independent values. Deep nesting
+repeated preparation and subtree parsing, with quadratic worst-case cost.
+The current parser reads all TGo grammar directly in one parse.
+
+The direct parser used Go 1.27.1, Linux amd64, the same CPU model, and
+`GOMAXPROCS=2`. These samples use one iteration per case:
+
+```sh
+go test ./internal/frontend -run '^$' -bench '^BenchmarkConditionalParsing$' -benchtime=1x
+```
+
+| Input | Direct parser | Allocated bytes |
+| --- | ---: | ---: |
+| 32 independent values | 0.183 ms | 68.2 KB |
+| 512 independent values | 14.7 ms | 5.95 MB |
+| 512 nested values | 39.6 ms | 6.52 MB |
+
+Nested parsing no longer repeats subtree preparation. Helper naming still
+searches from name 1 for each helper. This adds repeated work as the number of
+forms grows. The independent-value sample is slower than batched preparation;
+the nested-value sample is faster.
 
 Read the [driver](../internal/driver/readme.md), [checker](../internal/checker/readme.md),
 and [frontend](../internal/frontend/readme.md) for the current process.
