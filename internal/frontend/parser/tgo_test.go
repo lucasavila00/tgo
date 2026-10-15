@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/lucasavila00/tgo/internal/ast"
+	stockast "go/ast"
 	stock "go/parser"
 	"go/token"
 	"reflect"
@@ -112,8 +113,30 @@ func TestGoParserObjectModes(t *testing.T) {
 	for _, mode := range []Mode{0, AllErrors, SkipObjectResolution} {
 		file, err := ParseFile(token.NewFileSet(), "main.go", input, mode)
 		stockFile, stockError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-		if !sameGoTree(file, stockFile) || !reflect.DeepEqual(err, stockError) {
+		fileTree, stockTree := *file, *stockFile
+		fileTree.Scope, stockTree.Scope = nil, nil
+		if !sameGoTree(&fileTree, &stockTree) || !reflect.DeepEqual(err, stockError) {
 			t.Fatalf("mode %v: AST or diagnostics differ from Go", mode)
+		}
+		checkGoFileScope(t, file.Scope, stockFile.Scope)
+	}
+}
+
+// checkGoFileScope compares each legacy package object without depending on map print order.
+func checkGoFileScope(t *testing.T, scope *ast.Scope, stockScope *stockast.Scope) {
+	t.Helper()
+	if scope == nil || stockScope == nil {
+		if (scope == nil) != (stockScope == nil) {
+			t.Fatal("package scope presence differs from Go")
+		}
+		return
+	}
+	if scope.Outer != nil || stockScope.Outer != nil || len(scope.Objects) != len(stockScope.Objects) {
+		t.Fatal("package scope structure differs from Go")
+	}
+	for name, object := range scope.Objects {
+		if !sameGoTree(object, stockScope.Objects[name]) {
+			t.Fatalf("package object %s differs from Go", name)
 		}
 	}
 }
