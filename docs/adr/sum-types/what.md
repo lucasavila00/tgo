@@ -1,7 +1,5 @@
 # Sum types: WHAT
 
-Proposal; not implemented.
-
 ## Goal
 
 Store payloads inline and match every form.

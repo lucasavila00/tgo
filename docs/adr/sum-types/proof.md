@@ -26,12 +26,11 @@ propagation: enum results become nil and error identity stays unchanged.
 
 ## Evidence
 
-Completed: a temporary Go prototype checked amd64 sizes (24/40/24/16 bytes), alignment
-(8), zero allocations for string construction/copy/read, scalar packing, copied tags, live
-references after GC, and inactive pointer clearing. Command:
-`go test -v /tmp/tgo-sum-layout-proof/layout_test.go`.
-These measurements cover generated-style Go, not a compiler implementation.
+Add `TestSumTypes` and `BenchmarkSumTypes` under `tests/`. Run
+`go test ./tests -run '^TestSumTypes$'` and
+`go test ./tests -run '^$' -bench '^BenchmarkSumTypes$' -benchmem`.
 
-Planned: focused compiler fixtures, allocation benchmarks, race checks, tag-width
-boundaries, and full hosted CI. GC retention and cross-architecture measurements
-remain untested.
+Require the HOW sizes on amd64 and zero added allocations for string
+construction/copy/read. Check tag-width boundaries, GC retention, and layouts
+on other architectures. Compare allocation counts with handwritten Go references.
+These are required checks for implementation.
