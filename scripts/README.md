@@ -2,7 +2,7 @@
 
 `prepare-checker.sh` builds private Go checker source from a pinned version and
 patch. `prepare-frontend.sh` builds the private parser and scanner with the same
-Go version. `prepare-ast.sh` builds the shared syntax nodes and Go printer from
+Go version. `prepare-ast.sh` builds the shared syntax nodes, Go printer, and formatter from
 that version. `make prepare` calls these scripts. See
 [checker preparation](../internal/checker/upstream.md) for inputs, generated
 files, and Go updates.

@@ -37,7 +37,7 @@ func checkSources(sources *selectedSources) *checkedModule {
 	module := sources.module
 	sizes, err := checker.TargetSizes(module.dir)
 	must(err)
-	loader := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used, sizes)
+	loader := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, sizes)
 	checked := &checkedModule{root: module.dir, tgoFiles: module.tgoFiles, activeFiles: make(map[string]bool)}
 	for _, metadata := range sources.packages {
 		if metadata.Module == nil || !metadata.Module.Main {

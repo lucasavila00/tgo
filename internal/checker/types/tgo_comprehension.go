@@ -1,86 +1,85 @@
 package types
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
-// comprehensionExpr checks the collection type, generator bindings, and body in a comprehension scope.
-// It records output types and range statements for later checks.
-func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind {
-	operation, _ := check.tgoOperation(call)
-	if check.tgo.comprehensionRanges == nil {
-		check.tgo.comprehensionRanges = make(map[*ast.RangeStmt]bool)
-	}
-	for _, loop := range operation.Ranges {
-		check.tgo.comprehensionRanges[loop] = true
-		if loop.Key != nil && loop.Tok != token.DEFINE {
-			check.error(loop, InvalidSyntaxTree, "comprehension generators must declare bindings with :=")
-		}
-	}
-	typ := check.typ(call.Args[0])
+// comprehensionExpr checks range sources, bindings, filters, and output in execution order.
+func (check *Checker) comprehensionExpr(x *operand, comprehension *ast.ComprehensionExpr) exprKind {
+	defer check.recordRuntimeExpression()
+	typ := check.typ(comprehension.Type)
 	key, element := ComprehensionTypes(typ)
-	x.expr, x.typ_ = call, Typ[Invalid]
+	x.expr, x.typ_ = comprehension, Typ[Invalid]
 	if element == nil {
-		check.error(call.Args[0], InvalidLit, "comprehension requires a slice or map type with one element type")
+		check.error(comprehension.Type, InvalidLit, "comprehension requires a slice or map type with one element type")
 		return expression
 	}
-	if check.tgo.comprehensionTypes == nil {
-		check.tgo.comprehensionTypes = make(map[string][]Type)
-	}
-	check.tgo.comprehensionTypes[operation.Output] = []Type{element}
-	if key != nil {
-		check.tgo.comprehensionTypes[operation.Output] = []Type{key, element}
-	}
-	previous := check.statementContext
+	previousContext, previousTargets := check.statementContext, check.controlTargets
 	check.statementContext &^= fallthroughOk | finalSwitchCase | inTypeSwitch
-	body := call.Args[1].(*ast.FuncLit).Body
+	defer func() {
+		check.statementContext, check.controlTargets = previousContext, previousTargets
+	}()
 	packageBody := check.sig == nil && check.scope.Parent() == check.pkg.scope
-	check.openScope(body, "comprehension")
-	check.stmtList(check.statementContext, body.List)
+	check.openScope(comprehension, "comprehension")
+	defer check.closeScope()
 	if packageBody {
-		check.usage(check.scope)
+		check.queuePackageUsage(check.scope)
 	}
-	check.closeScope()
-	check.statementContext = previous
-	check.hasCallOrRecv = true
-	x.mode_, x.typ_ = value, typ
-	return expression
-}
-
-// comprehensionOutput checks each output operand against the collection element or key and value types.
-func (check *Checker) comprehensionOutput(x *operand, call *ast.CallExpr) exprKind {
-	id := call.Fun.(*ast.Ident)
-	targets := check.tgo.comprehensionTypes[id.Name]
-	x.expr, x.mode_, x.typ_ = call, novalue, NewTuple()
-	if len(call.Args) != len(targets) {
-		check.error(call, WrongArgCount, "comprehension output must match the collection's element or key and value")
-		x.invalidate()
-		return statement
+	for _, clause := range comprehension.Clauses {
+		switch clause := clause.(type) {
+		case *ast.RangeClause:
+			if clause.Key != nil && clause.Tok != token.DEFINE {
+				check.error(clause, InvalidSyntaxTree, "comprehension generators must declare bindings with :=")
+			}
+			position := clause.TokPos
+			if !position.IsValid() {
+				position = clause.Range
+			}
+			check.rangeHeader(clause, token.NoPos, atPos(position), clause.Key, clause.Value, nil, clause.X,
+				clause.Tok == token.DEFINE)
+			defer check.closeScope()
+			check.controlTargets = append(check.controlTargets, clause)
+			check.statementContext |= breakOk | continueOk
+		case *ast.FilterClause:
+			var condition operand
+			check.expr(nil, &condition, clause.Cond)
+			if condition.isValid() && !allBoolean(condition.typ()) {
+				check.error(clause.Cond, InvalidCond, "non-boolean condition in if statement")
+			}
+		}
 	}
-	for i, expression := range call.Args {
+	targets := []Type{element}
+	if key != nil {
+		targets = []Type{key, element}
+	}
+	outputs := comprehensionOperands(comprehension.Output)
+	if len(outputs) != len(targets) {
+		check.error(comprehension, WrongArgCount, "comprehension output must match the collection's element or key and value")
+		return expression
+	}
+	for i, expression := range outputs {
 		var output operand
 		check.rawExpr(newTarget(targets[i], "comprehension output"), &output, expression, targets[i], false)
 		check.assignment(&output, targets[i], "comprehension output")
 	}
-	return statement
+	x.mode_, x.typ_ = value, typ
+	return expression
 }
 
-// operationStatements returns source statements without a marker function scope.
-func (check *Checker) operationStatements(call *ast.CallExpr) ast.Stmt {
-	operation, found := check.tgoOperation(call)
-	if !found {
-		return nil
+// comprehensionOperands reads key:value outputs without changing their source nodes.
+func comprehensionOperands(outputs []ast.Expr) []ast.Expr {
+	var operands []ast.Expr
+	for _, output := range outputs {
+		if pair, ok := output.(*ast.KeyValueExpr); ok {
+			operands = append(operands, pair.Key, pair.Value)
+		} else {
+			operands = append(operands, output)
+		}
 	}
-	if operation.Conditional {
-		return call.Args[0].(*ast.FuncLit).Body.List[0]
-	}
-	if operation.Comprehension {
-		return call.Args[1].(*ast.FuncLit).Body
-	}
-	return nil
+	return operands
 }
 
 // ComprehensionTypes returns the common key and element types of a collection.
@@ -111,11 +110,8 @@ func ComprehensionTypes(typ Type) (Type, Type) {
 	return key, element
 }
 
-// isComprehension checks whether an expression is a configured comprehension marker call.
+// isComprehension reports a native collection comprehension.
 func (check *Checker) isComprehension(expression ast.Expr) bool {
-	if call, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
-		op, found := check.tgoOperation(call)
-		return found && op.Comprehension
-	}
-	return false
+	_, ok := ast.Unparen(expression).(*ast.ComprehensionExpr)
+	return ok
 }

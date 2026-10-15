@@ -59,7 +59,6 @@ type ShortReturnStmt struct {
 	Return, Placeholder, PlaceholderEnd token.Pos
 	Results                             []Expr
 	ZeroSuccess                         bool
-	OperandEllipsis                     token.Pos
 }
 
 // Pos returns the start of the call operand.
@@ -124,14 +123,11 @@ func (*FilterClause) comprehensionClause() {}
 // Pos returns the return keyword's position.
 func (statement *ShortReturnStmt) Pos() token.Pos { return statement.Return }
 
-// End returns the end of the last operand, placeholder, or operand ellipsis.
+// End returns the end of the last operand or placeholder.
 func (statement *ShortReturnStmt) End() token.Pos {
 	end := statement.PlaceholderEnd
 	if len(statement.Results) != 0 && statement.Results[len(statement.Results)-1].End() > end {
 		end = statement.Results[len(statement.Results)-1].End()
-	}
-	if statement.OperandEllipsis.IsValid() && statement.OperandEllipsis+3 > end {
-		end = statement.OperandEllipsis + 3
 	}
 	return end
 }

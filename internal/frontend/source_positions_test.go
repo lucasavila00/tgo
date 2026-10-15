@@ -1,7 +1,7 @@
 package frontend
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	stockScanner "go/scanner"
 	"go/token"
 	"reflect"
@@ -21,23 +21,30 @@ func TestPostfixLogicalSourcePositions(t *testing.T) {
 		} {
 			for _, suffix := range []string{"!", "!!"} {
 				t.Run(sourceName+directive+suffix, func(t *testing.T) {
-					input := "package p\n" + directive + "func run() error { _ = target(\"é\")" + suffix + "; return nil }"
-					const physical = "/build/pkg/main_tgo.go"
-					parsed, err := ParseFile(set, physical, sourceName, []byte(input), make(map[string]bool))
-					if err != nil {
-						t.Fatal(err)
-					}
-					offset := strings.Index(input, suffix)
-					want := scannedSourcePosition(input, sourceName, offset)
-					operation := parsed.Propagations["tgoPropagation1"]
-					if operation.Position != want {
-						t.Fatalf("operator position: %v; want %v", operation.Position, want)
-					}
-					checkPhysicalAndLogicalPosition(t, set, parsed, physical, want, len(suffix))
+					checkPostfixSourcePosition(t, set, sourceName, directive, suffix)
 				})
 			}
 		}
 	}
+}
+
+// checkPostfixSourcePosition compares one propagation node with stock logical line resolution.
+func checkPostfixSourcePosition(t *testing.T, set *token.FileSet, sourceName, directive, suffix string) {
+	t.Helper()
+	input := "package p\n" + directive + "func run() error { _ = target(\"é\")" + suffix + "; return nil }"
+	const physical = "/build/pkg/main_tgo.go"
+	parsed, err := ParseFile(set, physical, sourceName, []byte(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	offset := strings.Index(input, suffix)
+	want := scannedSourcePosition(input, sourceName, offset)
+	for operation := range parsed.CallNames {
+		if set.Position(operation.OpPos) != want {
+			t.Fatalf("operator position: %v; want %v", set.Position(operation.OpPos), want)
+		}
+	}
+	checkPhysicalAndLogicalPosition(t, set, parsed, physical, want, len(suffix))
 }
 
 // scannedSourcePosition uses Go's scanner with the logical file name as the diagnostic reference.
@@ -53,22 +60,18 @@ func scannedSourcePosition(input, sourceName string, offset int) token.Position 
 	}
 }
 
-// checkPhysicalAndLogicalPosition checks that a helper uses the physical file and logical line information.
+// checkPhysicalAndLogicalPosition checks that the source node uses the physical file and logical line information.
 func checkPhysicalAndLogicalPosition(t *testing.T, set *token.FileSet, parsed *Parsed, physical string,
 	want token.Position, width int) {
 	t.Helper()
 	found := false
 	ast.Inspect(parsed.File, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
+		operation, ok := node.(*ast.PropagateExpr)
 		if !ok {
 			return true
 		}
-		name, ok := call.Fun.(*ast.Ident)
-		if !ok || name.Name != "tgoPropagation1" {
-			return true
-		}
 		found = true
-		position := call.End() - token.Pos(width)
+		position := operation.End() - token.Pos(width)
 		if set.File(position).Name() != physical || set.PositionFor(position, false).Filename != physical ||
 			set.Position(position) != want {
 			t.Fatalf("physical: %s; logical: %v; want: %v", set.File(position).Name(), set.Position(position), want)
@@ -76,7 +79,7 @@ func checkPhysicalAndLogicalPosition(t *testing.T, set *token.FileSet, parsed *P
 		return true
 	})
 	if !found {
-		t.Fatal("missing propagation helper")
+		t.Fatal("missing propagation node")
 	}
 }
 
@@ -89,13 +92,14 @@ func TestTGoRecordsLogicalSourcePositions(t *testing.T) {
 		{"_ = if ok { target()! } else { 0 }; return nil", []string{"if", "!"}},
 		{"_ = switch n { case 1: target()!!; default: 0 }; return nil", []string{"switch", "!!"}},
 		{"_ = []int{target(x)!! for _, x := range xs}; return nil", []string{"[]int", "!!"}},
-		{"return .. target()!", []string{"..", "!"}},
+		{"return ..., target()!", []string{"...", "!"}},
 	} {
 		t.Run(test.body, func(t *testing.T) {
 			const sourceName = "pkg/main.tgo"
 			input := "package p\n//line virtual.tgo:70:2\nfunc run() error { " + test.body + " }"
-			parsed, err := ParseFile(token.NewFileSet(), "/build/pkg/main_tgo.go", sourceName,
-				[]byte(input), make(map[string]bool))
+			set := token.NewFileSet()
+			parsed, err := ParseFile(set, "/build/pkg/main_tgo.go", sourceName,
+				[]byte(input))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -104,7 +108,7 @@ func TestTGoRecordsLogicalSourcePositions(t *testing.T) {
 				offset := strings.Index(input, start)
 				want[offset] = scannedSourcePosition(input, sourceName, offset)
 			}
-			if positions := featureSourcePositions(parsed); !reflect.DeepEqual(positions, want) {
+			if positions := featureSourcePositions(set, parsed); !reflect.DeepEqual(positions, want) {
 				t.Fatalf("positions: %v; want %v", positions, want)
 			}
 		})
@@ -115,8 +119,8 @@ func TestTGoRecordsLogicalSourcePositions(t *testing.T) {
 func TestParserLogicalDiagnosticPosition(t *testing.T) {
 	const sourceName = "pkg/main.tgo"
 	input := "package p\n//line virtual.tgo:70:2\nfunc run() error { _ = target()! + }"
-	parsed, err := ParseFile(token.NewFileSet(), "/build/pkg/main_tgo.go", sourceName, []byte(input),
-		make(map[string]bool))
+	set := token.NewFileSet()
+	parsed, err := ParseFile(set, "/build/pkg/main_tgo.go", sourceName, []byte(input))
 	if parsed != nil || err == nil {
 		t.Fatalf("parsed: %v; error: %v", parsed, err)
 	}
@@ -127,20 +131,28 @@ func TestParserLogicalDiagnosticPosition(t *testing.T) {
 	}
 }
 
-// featureSourcePositions collects the original position of each parsed TGo operation.
-func featureSourcePositions(parsed *Parsed) map[int]token.Position {
+// featureSourcePositions collects the original token position of each native TGo form.
+func featureSourcePositions(set *token.FileSet, parsed *Parsed) map[int]token.Position {
 	positions := make(map[int]token.Position)
-	for _, operation := range parsed.Propagations {
-		positions[operation.Position.Offset] = operation.Position
-	}
-	for _, position := range parsed.Conditionals {
-		positions[position.Offset] = position
-	}
-	for _, comprehension := range parsed.Comprehensions {
-		positions[comprehension.Position.Offset] = comprehension.Position
-	}
-	for _, result := range parsed.ShortReturns {
-		positions[result.Position.Offset] = result.Position
-	}
+	ast.Inspect(parsed.File, func(node ast.Node) bool {
+		var position token.Pos
+		switch node := node.(type) {
+		case *ast.PropagateExpr:
+			position = node.OpPos
+		case *ast.IfExpr:
+			position = node.If
+		case *ast.SwitchExpr:
+			position = node.Pos()
+		case *ast.ComprehensionExpr:
+			position = node.Pos()
+		case *ast.ShortReturnStmt:
+			position = node.Placeholder
+		}
+		if position.IsValid() {
+			mapped := set.Position(position)
+			positions[mapped.Offset] = mapped
+		}
+		return true
+	})
 	return positions
 }

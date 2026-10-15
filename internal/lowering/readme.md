@@ -22,18 +22,6 @@ After receives references to the evaluated expression results.
 type After func(results []ast.Expr) []ast.Stmt
 ```
 
-## type Propagation
-
-Propagation defines the error action for a typed marker call.
-
-```go
-type Propagation struct {
-    Position token.Position
-    Wrap     bool
-    CallName string
-}
-```
-
 ## type Site
 
 Site identifies an expression in the original source. Offsets are bytes.
@@ -89,7 +77,7 @@ InsertAfter returns Go files with the callback's statements after the selected e
 ### func \(\*Source\) LowerPropagations
 
 ```go
-func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error)
+func (s *Source) LowerPropagations() (map[string][]byte, error)
 ```
 
 LowerPropagations replaces checked TGo operations with ordinary Go. It returns formatted file contents by absolute path without writing files. It reports an error if any accepted operation was not replaced.

@@ -1,8 +1,8 @@
 package controlflow_test
 
 import (
-	"go/ast"
-	"go/parser"
+	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/frontend/parser"
 	"go/token"
 	"testing"
 
@@ -56,6 +56,41 @@ func TestBranchPaths(t *testing.T) {
 				id, ok := call.Fun.(*ast.Ident)
 				return ok && id.Name == "panic"
 			}})
+			if result.Tail != test.tail || result.End != test.end {
+				t.Fatalf("got %+v; want tail=%t end=%t", result, test.tail, test.end)
+			}
+		})
+	}
+}
+
+// TestNativeBranchPaths checks native values and generator sources in execution order.
+func TestNativeBranchPaths(t *testing.T) {
+	for _, test := range []struct {
+		name, source string
+		tail, end    bool
+	}{
+		{"if_returns", `_ = if flag {return} else {return}; value()`, false, false},
+		{"if_partial_return", `_ = if flag {return} else {1}; value()`, true, true},
+		{"else_if_returns", `_ = if flag {return} else if flag {return} else {return}; value()`, false, false},
+		{"switch_returns", `_ = switch flag {case true:return;default:return}; value()`, false, false},
+		{"short_return", `return ..., err; value()`, false, false},
+		{"comprehension_empty", `_ = []int{if flag {return} else {return} for x:=range values}; value()`, true, true},
+		{"comprehension_source_returns", `_ = []int{x for x:=range if flag {return} else {return}}; value()`, false, false},
+		{"comprehension_later_source_returns",
+			`_ = []int{x+y for x:=range values for y:=range if flag {return} else {return}}; value()`, true, true},
+		{"comprehension_source_continue",
+			`_ = []int{x for x:=range if flag {continue} else {continue}}; value()`, false, false},
+		{"comprehension_next_source_continue",
+			`_ = []int{x+y for x:=range values for y:=range if flag {continue} else {continue}}; value()`, true, true},
+		{"native_closure_return", `_ = if flag {func() {return}(); 1} else {2}; value()`, true, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			file, err := parser.ParseTGoFile(token.NewFileSet(), "source.tgo", "source.tgo",
+				[]byte("package p; func f(){"+test.source+"}"), 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result := controlflow.Branch(file.Decls[0].(*ast.FuncDecl).Body, controlflow.Syntax{})
 			if result.Tail != test.tail || result.End != test.end {
 				t.Fatalf("got %+v; want tail=%t end=%t", result, test.tail, test.end)
 			}

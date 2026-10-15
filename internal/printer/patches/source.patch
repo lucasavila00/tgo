@@ -20,6 +20,19 @@
  	"go/token"
  	"strconv"
  	"strings"
+@@ -813,6 +813,12 @@
+ 	p.setPos(expr.Pos())
+ 
+ 	switch x := expr.(type) {
++	case *ast.PropagateExpr:
++		if p.Config.Mode&CallName == 0 {
++			panic("unlowered propagation expression")
++		}
++		p.expr1(x.X, prec1, depth)
++
+ 	case *ast.BadExpr:
+ 		p.print("BadExpr")
+ 
 --- a/printer/printer.go
 +++ b/printer/printer.go
 @@ -7,7 +7,7 @@
@@ -31,3 +44,11 @@
  	"go/build/constraint"
  	"go/token"
  	"io"
+@@ -1297,6 +1297,7 @@
+ 	TabIndent                  // use tabs for indentation independent of UseSpaces
+ 	UseSpaces                  // use spaces instead of tabs for alignment
+ 	SourcePos                  // emit //line directives to preserve original source positions
++	CallName                   // print source call names without propagation operators
+ )
+ 
+ // The mode below is not included in printer's public API because

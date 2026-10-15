@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
@@ -10,7 +10,6 @@ import (
 // FormatPackage returns a fmt import that is visible at the call position.
 func (r *Context) FormatPackage(call ast.Expr) *ast.Ident {
 	checked := r.input.Inventory.Checked
-	scope := checked.Types.Scope().Innermost(call.Pos())
 	for _, file := range checked.Syntax {
 		if !contains(file, call) {
 			continue
@@ -24,7 +23,7 @@ func (r *Context) FormatPackage(call ast.Expr) *ast.Ident {
 			if !ok || binding.Imported().Path() != "fmt" || binding.Name() == "." || binding.Name() == "_" {
 				continue
 			}
-			_, visible := scope.LookupParent(binding.Name(), call.Pos())
+			visible := r.VisibleBinding(call, binding.Name())
 			if visible == binding {
 				return ast.NewIdent(binding.Name())
 			}

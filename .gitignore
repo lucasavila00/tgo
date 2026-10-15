@@ -6,6 +6,7 @@
 !/internal/checker/types/tgo_conditional_type.go
 !/internal/checker/types/tgo_return.go
 !/internal/checker/types/tgo_return_test.go
+!/internal/checker/types/tgo_semantics_test.go
 /internal/checker/gcimporter/*.go
 /internal/checker/upstream/
 !/internal/checker/types/tgo_conditional.go
@@ -25,5 +26,8 @@
 /internal/printer/*.go
 !/internal/printer/doc.go
 !/internal/printer/tgo_test.go
+/internal/format/*.go
+!/internal/format/doc.go
+!/internal/format/tgo_test.go
 
 /internal/ast/readme.md

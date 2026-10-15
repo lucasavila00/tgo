@@ -1,8 +1,8 @@
 package propagation
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
-	"go/ast"
 	"go/token"
 	"strconv"
 	"strings"
@@ -10,12 +10,11 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-// Expression evaluates a marked call and emits its failure return.
-func Expression(r *shared.Context, marker *ast.CallExpr, operation shared.Propagation,
-	discardSuccess bool) shared.Result {
-	call := marker.Args[0]
+// Expression evaluates the immediate operand and returns its final error on failure.
+func Expression(r *shared.Context, expression *ast.PropagateExpr, discardSuccess bool) shared.Result {
+	call := expression.X
 	evaluation := r.Expression(call)
-	saved := r.SaveResults(evaluation.Values[0], discardSuccess, true)
+	saved := saveOperandResults(r, evaluation.Values, discardSuccess)
 	statements := append(evaluation.Statements, saved.Statements...)
 	if len(saved.Values) == 0 {
 		panic("propagation requires an error result")
@@ -31,20 +30,41 @@ func Expression(r *shared.Context, marker *ast.CallExpr, operation shared.Propag
 	callError := saved.Values[len(saved.Values)-1]
 	failureStatements, failed := callFailure(r, callError, call)
 	statements = append(statements, failureStatements...)
-	errorValue := propagatedError(r, callError.Expression, returnErrorType, operation, call)
+	errorValue := propagatedError(r, callError.Expression, returnErrorType, expression, call)
 	results := append(zeroResults, errorValue)
 	failure := &ast.IfStmt{Cond: failed, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: results}}}}
 	statements = append(statements, failure)
-	r.CompletePropagation(marker)
+	r.CompletePropagation(expression)
 	if discardSuccess {
 		return shared.Result{Statements: statements}
 	}
 	return shared.Result{Statements: statements, Values: saved.Values[:len(saved.Values)-1]}
 }
 
+// saveOperandResults handles a tuple call or results already saved by nested propagation.
+func saveOperandResults(r *shared.Context, values []shared.Value, discardSuccess bool) shared.Result {
+	if len(values) == 1 {
+		return r.SaveResults(values[0], discardSuccess, true)
+	}
+	result := shared.Result{Values: append([]shared.Value(nil), values...)}
+	for index, value := range values {
+		if discardSuccess && index != len(values)-1 {
+			discard := &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value.Expression}}
+			result.Statements = append(result.Statements, discard)
+			continue
+		}
+		if !value.Temporary {
+			saved := r.Save(value)
+			result.Statements = append(result.Statements, saved.Statements...)
+			result.Values[index] = saved.Values[0]
+		}
+	}
+	return result
+}
+
 // propagatedError builds the failure value, adding the source call name only when context was requested.
 func propagatedError(r *shared.Context, callError ast.Expr, returnErrorType types.Type,
-	operation shared.Propagation, call ast.Expr) ast.Expr {
+	operation *ast.PropagateExpr, call ast.Expr) ast.Expr {
 	if !operation.Wrap {
 		return callError
 	}
@@ -52,7 +72,7 @@ func propagatedError(r *shared.Context, callError ast.Expr, returnErrorType type
 		panic("wrapped errors do not fit the function return type")
 	}
 	formatPackage := r.FormatPackage(call)
-	message := strings.ReplaceAll(operation.CallName, "%", "%%") + ": %w"
+	message := strings.ReplaceAll(r.Inventory().Checked.CallNames[operation], "%", "%%") + ": %w"
 	return &ast.CallExpr{
 		Fun:  &ast.SelectorExpr{X: formatPackage, Sel: ast.NewIdent("Errorf")},
 		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},
@@ -79,8 +99,7 @@ func callFailure(r *shared.Context, result shared.Value, call ast.Expr) ([]ast.S
 		nilCapable = true
 	}
 	if nilCapable {
-		scope := r.Inventory().Checked.Types.Scope().Innermost(call.Pos())
-		_, resolved := scope.LookupParent("nil", call.Pos())
+		resolved := r.VisibleBinding(call, "nil")
 		if resolved == types.Universe.Lookup("nil") {
 			return nil, &ast.BinaryExpr{X: value, Op: token.NEQ, Y: ast.NewIdent("nil")}
 		}

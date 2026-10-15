@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )

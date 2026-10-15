@@ -1,8 +1,8 @@
 package shared
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
 	"go/token"
 )
 
@@ -26,8 +26,8 @@ func (r *Context) Capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 func (r *Context) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
-	if call, ok := expr.(*ast.CallExpr); ok && r.input.Comprehensions[call] != nil {
-		statementsEvaluation := r.Expression(call)
+	if comprehension, ok := expr.(*ast.ComprehensionExpr); ok {
+		statementsEvaluation := r.Expression(comprehension)
 		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 		return statements, values[0]
 	}

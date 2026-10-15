@@ -1,22 +1,18 @@
 package types
 
-import "go/ast"
+import "github.com/lucasavila00/tgo/internal/ast"
 
 // prepareConditionalArgument records direct and nested branch values for inference.
 func (check *Checker) prepareConditionalArgument(expr ast.Expr) {
-	call, ok := ast.Unparen(expr).(*ast.CallExpr)
-	if !ok {
-		return
-	}
-	operation, found := check.tgoOperation(call)
-	if !found || !operation.Conditional {
+	call := ast.Unparen(expr)
+	if !conditionalExpression(call) {
 		return
 	}
 	if check.tgo.inferConditionals == nil {
-		check.tgo.inferConditionals = make(map[*ast.CallExpr]bool)
+		check.tgo.inferConditionals = make(map[ast.Expr]bool)
 	}
 	check.tgo.inferConditionals[call] = true
-	check.prepareConditionalTails(call.Args[0].(*ast.FuncLit).Body.List[0])
+	check.prepareConditionalExpression(call)
 }
 
 // prepareConditionalTails marks final conditional values for generic inference through nested branches and labels.
@@ -55,7 +51,7 @@ func (check *Checker) conditionalInference(params *Tuple, args []*operand) (*Tup
 	var expandedArgs []*operand
 	var add func(*Var, *operand)
 	add = func(param *Var, arg *operand) {
-		if call, ok := ast.Unparen(arg.expr).(*ast.CallExpr); ok && check.tgo.inferConditionals[call] && arg.isValid() {
+		if call := ast.Unparen(arg.expr); check.tgo.inferConditionals[call] && arg.isValid() {
 			for _, branch := range check.tgo.conditionalValues[call] {
 				add(param, branch)
 			}
@@ -71,8 +67,8 @@ func (check *Checker) conditionalInference(params *Tuple, args []*operand) (*Tup
 
 // assignConditionalArgument checks each branch against the inferred parameter.
 func (check *Checker) assignConditionalArgument(arg *operand, typ Type, context string) bool {
-	call, ok := ast.Unparen(arg.expr).(*ast.CallExpr)
-	if !ok || !check.tgo.inferConditionals[call] || !arg.isValid() {
+	call := ast.Unparen(arg.expr)
+	if !check.tgo.inferConditionals[call] || !arg.isValid() {
 		return false
 	}
 	for _, branch := range check.tgo.conditionalValues[call] {
@@ -95,4 +91,29 @@ func (check *Checker) assignConditionalArgument(arg *operand, typ Type, context 
 		expr = paren.X
 	}
 	return true
+}
+
+// conditionalExpression reports native expressions with branch values.
+func conditionalExpression(expression ast.Expr) bool {
+	switch expression.(type) {
+	case *ast.IfExpr, *ast.SwitchExpr:
+		return true
+	}
+	return false
+}
+
+// prepareConditionalExpression marks nested branch values for generic inference.
+func (check *Checker) prepareConditionalExpression(expression ast.Expr) {
+	switch expression := expression.(type) {
+	case *ast.IfExpr:
+		check.prepareConditionalTails(expression.Body)
+		switch alternative := expression.Else.(type) {
+		case *ast.BlockStmt:
+			check.prepareConditionalTails(alternative)
+		case *ast.IfExpr:
+			check.prepareConditionalExpression(alternative)
+		}
+	case *ast.SwitchExpr:
+		check.prepareConditionalTails(expression.Switch)
+	}
 }

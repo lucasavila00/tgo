@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"strings"
 	"testing"
@@ -25,8 +25,9 @@ func TestValueGrammar(t *testing.T) {
 		t.Run(expression, func(t *testing.T) {
 			input := "package p\nfunc f() { use(" + expression + ") }"
 			positions := token.NewFileSet()
-			file, forms, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
+			file, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
 				ParseComments|AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -41,16 +42,9 @@ func TestValueGrammar(t *testing.T) {
 }
 
 // checkConditionalContainer checks the syntax body and exact original source span.
-func checkConditionalContainer(t *testing.T, positions *token.FileSet, input string, form Conditional) {
+func checkConditionalContainer(t *testing.T, positions *token.FileSet, input string, form ast.Expr) {
 	t.Helper()
-	if name := form.Call.Fun.(*ast.Ident).Name; name != "" {
-		t.Fatalf("parser assigned a helper name: %q", name)
-	}
-	function, ok := form.Call.Args[0].(*ast.FuncLit)
-	if !ok || len(function.Body.List) != 1 {
-		t.Fatal("missing conditional statement container")
-	}
-	start, end := positions.Position(form.Position), positions.Position(form.Call.End())
+	start, end := positions.Position(form.Pos()), positions.Position(form.End())
 	if start.Filename != "main.tgo" || input[end.Offset-1] != '}' {
 		t.Fatalf("source span: %v to %v", start, end)
 	}
@@ -64,34 +58,36 @@ func TestValueGrammarKeepsStatements(t *testing.T) {
 	input := `package p; func f() { if ready { use(1) } else { use(2) }; ` +
 		`switch value { case 1: if ready { use(3) }; default: use(4) }; ` +
 		`use(if ready { defer done(); return 1 } else { 2 }) }`
-	_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, SkipObjectResolution)
+	file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, SkipObjectResolution)
+	forms := syntaxNodes(file)
 	if err != nil || len(forms.Conditionals) != 1 {
-		t.Fatalf("conditional records: %d; error: %v", len(forms.Conditionals), err)
+		t.Fatalf("value nodes: %d; error: %v", len(forms.Conditionals), err)
 	}
 }
 
 // TestSyntaxContainerIncludesPostfix checks source spans before postfix AST normalization.
 func TestSyntaxContainerIncludesPostfix(t *testing.T) {
 	for _, body := range []string{
-		`return .. call()!!`,
-		`return .. first() + call()!`,
+		`return ..., call()!!`,
+		`return ..., first() + call()!`,
 		`return []int{call()!! for range 1}`,
 		`return map[int]int{1: first() + call()! for range 1}`,
 	} {
 		t.Run(body, func(t *testing.T) {
 			input := "package p; func f() { " + body + " }"
-			_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, SkipObjectResolution)
+			file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.Postfix) != 1 {
-				t.Fatalf("postfix records: %d; error: %v", len(forms.Postfix), err)
+				t.Fatalf("propagation nodes: %d; error: %v", len(forms.Postfix), err)
 			}
-			var call *ast.CallExpr
+			var call ast.Node
 			if len(forms.ShortReturns) == 1 {
-				call = forms.ShortReturns[0].Call
+				call = forms.ShortReturns[0]
 			} else {
-				call = forms.Comprehensions[0].Output
+				call = forms.Comprehensions[0].Output[0]
 			}
-			if call.End() != forms.Postfix[0].End {
-				t.Fatalf("container end %d; operator end %d", call.End(), forms.Postfix[0].End)
+			if call.End() != forms.Postfix[0].OpEnd {
+				t.Fatalf("source node end %d; operator end %d", call.End(), forms.Postfix[0].OpEnd)
 			}
 		})
 	}
@@ -101,10 +97,11 @@ func TestSyntaxContainerIncludesPostfix(t *testing.T) {
 func TestHeaderAssignmentKeepsNestedStatementBodies(t *testing.T) {
 	input := "package p; func f() { if x := if ready { if flag { consume()\n" +
 		"for range values { use(1) } }; 1 } else { 2 }; x>0 { use(x) } }"
-	_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
+	file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
 		AllErrors|SkipObjectResolution)
+	forms := syntaxNodes(file)
 	if err != nil || len(forms.Conditionals) != 1 || len(forms.Comprehensions) != 0 {
-		t.Fatalf("value records: %d; collection records: %d; error: %v",
+		t.Fatalf("value nodes: %d; collection nodes: %d; error: %v",
 			len(forms.Conditionals), len(forms.Comprehensions), err)
 	}
 }

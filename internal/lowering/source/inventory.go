@@ -5,17 +5,17 @@
 // The inventory records these limits with each expression's physical file and
 // byte offsets. It also records the source function that owns a return.
 //
-// Parent links describe the original syntax. Lowering uses them to find source
-// jump targets and contextual types after it constructs replacement statements.
+// Parent links retain the original expression contexts. Checked scopes and jump
+// targets keep their source identities after lowering moves statements.
 // This input stays unchanged during emission. Each rewrite owns separate output
 // state, so the same checked source can produce independent outputs.
 package source
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
 	"go/token"
 	"path/filepath"
 )
@@ -70,13 +70,18 @@ func (s *Inventory) inventory(file *ast.File, dir string) {
 
 // RangeElided reports whether Go omits evaluation of a range expression.
 func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool {
-	if statement.Value != nil {
+	return RangeOperandElided(checked, statement.X, statement.Value)
+}
+
+// RangeOperandElided reports whether range omits evaluation of its checked operand.
+func RangeOperandElided(checked *checker.Package, expression, value ast.Expr) bool {
+	if value != nil {
 		return false
 	}
-	if tv := checked.TypesInfo.Types[statement.X]; tv.Value != nil {
+	if tv := checked.TypesInfo.Types[expression]; tv.Value != nil {
 		return true
 	}
-	typ := checked.TypesInfo.TypeOf(statement.X).Underlying()
+	typ := checked.TypesInfo.TypeOf(expression).Underlying()
 	if pointer, ok := typ.(*types.Pointer); ok {
 		typ = pointer.Elem().Underlying()
 	}
@@ -84,8 +89,12 @@ func RangeElided(checked *checker.Package, statement *ast.RangeStmt) bool {
 		return false
 	}
 	constantLength := true
-	ast.Inspect(statement.X, func(n ast.Node) bool {
-		if _, ok := n.(*ast.FuncLit); ok {
+	ast.Inspect(expression, func(n ast.Node) bool {
+		switch n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
+			constantLength = false
 			return false
 		}
 		if call, ok := n.(*ast.CallExpr); ok && checked.TypesInfo.Types[call].Value == nil &&
@@ -148,10 +157,7 @@ func (s *Inventory) expressionContext(expr ast.Expr, stack []ast.Node) (ast.Node
 		case *ast.FuncDecl:
 			enclosingFunction = parent
 		case *ast.FuncLit:
-			call, _ := s.Parents[parent].(*ast.CallExpr)
-			if s.Checked.Conditionals[call] == nil && s.Checked.Comprehensions[call] == nil {
-				enclosingFunction = parent
-			}
+			enclosingFunction = parent
 		default:
 			if currentReason := s.evaluationReason(stack[i], expr); currentReason != "" {
 				reason = currentReason
@@ -205,6 +211,10 @@ func (s *Inventory) evaluationReason(node ast.Node, expr ast.Expr) string {
 		}
 	case *ast.RangeStmt:
 		if contains(parent.X, expr) && RangeElided(s.Checked, parent) {
+			return "range expression is not evaluated"
+		}
+	case *ast.RangeClause:
+		if contains(parent.X, expr) && RangeOperandElided(s.Checked, parent.X, parent.Value) {
 			return "range expression is not evaluated"
 		}
 	case *ast.GoStmt:

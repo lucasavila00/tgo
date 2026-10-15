@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
@@ -12,20 +12,24 @@ func (r *Context) temporaryTypeErrorPosition(original ast.Expr) token.Position {
 	position := r.input.Inventory.Checked.Fset.Position(original.Pos())
 	var selected token.Pos
 	var best int
-	for expression, operation := range r.input.Propagations {
+	for _, expression := range r.input.Inventory.Expressions {
+		propagation, ok := expression.(*ast.PropagateExpr)
+		if !ok {
+			continue
+		}
+		operationPosition := r.input.Inventory.Checked.Fset.Position(propagation.OpPos)
 		distance := int(expression.Pos() - original.Pos())
 		if distance < 0 {
 			distance = -distance
 		}
 		closer := selected == 0 || distance < best
-		earlierAtSameDistance := distance == best && operation.Position.Offset < position.Offset
-		if operation.Position.IsValid() && r.functionState.frame != nil &&
-			contains(r.functionState.frame.function, expression) && (closer || earlierAtSameDistance) {
-			position = operation.Position
-			selected = expression.Pos()
-			best = distance
+		earlierAtSameDistance := distance == best && operationPosition.Offset < position.Offset
+		sameFunction := r.functionState.frame != nil && contains(r.functionState.frame.function, expression)
+		if operationPosition.IsValid() && sameFunction && (closer || earlierAtSameDistance) {
+			position, selected, best = operationPosition, expression.Pos(), distance
 		}
 	}
+
 	return position
 }
 
@@ -33,16 +37,18 @@ func (r *Context) temporaryTypeErrorPosition(original ast.Expr) token.Position {
 type typeNameCheck struct {
 	Context        *Context
 	position       token.Pos
+	scope          *types.Scope
 	problem        string
 	unsafePointer  bool
 	parameterNames map[*types.TypeParam]string
 }
 
 // checkTypeNames checks whether a temporary's type can be named at this source position and records required aliases.
-func (r *Context) checkTypeNames(typ types.Type, position token.Pos) *typeNameCheck {
+func (r *Context) checkTypeNames(typ types.Type, original ast.Expr, position token.Pos) *typeNameCheck {
 	check := &typeNameCheck{
 		Context:        r,
 		position:       position,
+		scope:          r.scopeAt(original, position),
 		parameterNames: make(map[*types.TypeParam]string),
 	}
 	check.visit(types.Default(typ))
@@ -59,8 +65,7 @@ func (c *typeNameCheck) visit(typ types.Type) {
 		}
 		c.visitName(types.Universe.Lookup(types.Default(typ).String()).(*types.TypeName))
 	case *types.TypeParam:
-		scope := c.Context.input.Inventory.Checked.Types.Scope().Innermost(c.position)
-		_, resolved := scope.LookupParent(typ.Obj().Name(), c.position)
+		resolved := c.Context.lookupBinding(c.scope, typ.Obj().Name(), c.position)
 		if resolved != typ.Obj() {
 			c.parameterNames[typ] = c.Context.parameterAlias(typ).Name
 		}
@@ -108,8 +113,7 @@ func (c *typeNameCheck) visitName(object *types.TypeName) {
 		}
 		return
 	}
-	scope := checked.Types.Scope().Innermost(c.position)
-	_, resolved := scope.LookupParent(object.Name(), c.position)
+	resolved := c.Context.lookupBinding(c.scope, object.Name(), c.position)
 	if resolved != object {
 		c.problem = "the source hides the type name " + object.Name()
 	}

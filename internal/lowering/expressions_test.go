@@ -2,9 +2,9 @@ package lowering
 
 import (
 	"bytes"
+	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/format"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
-	"go/ast"
-	"go/format"
 	"go/token"
 	"os"
 	"os/exec"
@@ -46,7 +46,7 @@ func main() { use(left(), right()) }
 			Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
 	}
 	r := newRewrite(source, shared.Input{Target: target, After: after})
-	file := *source.Package.Syntax[0]
+	file := *source.inventory.Checked.Syntax[0]
 	file.Decls = append([]ast.Decl(nil), file.Decls...)
 	for i, decl := range file.Decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "main" {
@@ -58,7 +58,7 @@ func main() { use(left(), right()) }
 		}
 	}
 	var output bytes.Buffer
-	if err := format.Node(&output, source.Package.Fset, &file); err != nil {
+	if err := format.Node(&output, source.inventory.Checked.Fset, &file); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), output.Bytes(), 0600); err != nil {

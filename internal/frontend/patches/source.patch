@@ -1,64 +1,67 @@
 --- a/parser/interface.go
 +++ b/parser/interface.go
-@@ -81,7 +81,13 @@
+@@ -9,7 +9,7 @@
+ import (
+ 	"bytes"
+ 	"errors"
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
+ 	"go/token"
+ 	"io"
+ 	"io/fs"
+@@ -81,7 +81,16 @@
  // errors were found, the result is a partial AST (with [ast.Bad]* nodes
  // representing the fragments of erroneous source code). Multiple errors
  // are returned via a scanner.ErrorList which is sorted by source position.
 -func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast.File, err error) {
 +func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (*ast.File, error) {
-+	file, _, err := ParseTGoFile(fset, filename, filename, src, mode)
-+	return file, err
++	return parseFile(fset, filename, filename, src, mode, false)
 +}
 +
-+// ParseTGoFile parses all TGo forms with physical file identity and logical source positions.
-+func ParseTGoFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode) (f *ast.File, forms Forms, err error) {
++// ParseTGoFile reads TGo syntax with its physical file identity and logical source name.
++func ParseTGoFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode) (*ast.File, error) {
++	return parseFile(fset, filename, sourceName, src, mode, true)
++}
++
++func parseFile(fset *token.FileSet, filename, sourceName string, src any, mode Mode, tgo bool) (f *ast.File, err error) {
  	if fset == nil {
  		panic("parser.ParseFile: no token.FileSet provided (fset == nil)")
  	}
-@@ -89,12 +95,14 @@
- 	// get source
- 	text, err := readSource(filename, src)
- 	if err != nil {
--		return nil, err
-+		return nil, forms, err
- 	}
- 
+@@ -95,6 +104,7 @@
  	file := fset.AddFile(filename, -1, len(text))
  
  	var p parser
-+	p.forms = &forms
-+	p.sourceName = sourceName
++	p.tgo, p.sourceName = tgo, sourceName
  	defer func() {
  		if e := recover(); e != nil {
  			// resume same panic if it's not a bailout
 --- a/parser/parser.go
 +++ b/parser/parser.go
-@@ -28,7 +28,7 @@
+@@ -26,9 +26,9 @@
+ 
+ import (
  	"fmt"
- 	"go/ast"
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
  	"go/build/constraint"
 -	"go/scanner"
 +	"github.com/lucasavila00/tgo/internal/frontend/scanner"
  	"go/token"
  	"strings"
  )
-@@ -38,6 +38,11 @@
+@@ -38,6 +38,9 @@
  	file    *token.File
  	errors  scanner.ErrorList
  	scanner scanner.Scanner
-+	forms *Forms
-+	postfixEnds map[token.Pos]token.Pos
++	tgo bool
 +	headerAssignment bool
-+	returnOperandLevel int
 +	sourceName string
  
  	// Tracing/debugging
  	mode   Mode // parsing mode
-@@ -76,8 +81,16 @@
- 
+@@ -77,7 +80,18 @@
  func (p *parser) init(file *token.File, src []byte, mode Mode) {
  	p.file = file
-+	p.returnOperandLevel = -1
  	eh := func(pos token.Position, msg string) { p.errors.Add(pos, msg) }
 -	p.scanner.Init(p.file, src, eh, scanner.ScanComments)
 +	sourceName := p.sourceName
@@ -68,82 +71,75 @@
 +	if sourceName != file.Name() {
 +		file.AddLineColumnInfo(0, sourceName, 1, 1)
 +	}
-+	p.scanner.InitSource(p.file, sourceName, src, eh, scanner.ScanComments|scanner.TGo)
++	scanMode := scanner.ScanComments
++	if p.tgo {
++		scanMode |= scanner.TGo
++	}
++	p.scanner.InitSource(p.file, sourceName, src, eh, scanMode)
  
  	p.top = true
  	p.mode = mode
-@@ -1459,9 +1472,11 @@
+@@ -1459,9 +1473,10 @@
  		return typ
  	}
  
 -	p.exprLev++
 +	previousLevel, previousHeader := p.exprLev, p.headerAssignment
-+	previousReturn := p.returnOperandLevel
-+	p.exprLev, p.headerAssignment, p.returnOperandLevel = 0, false, -1
++	p.exprLev, p.headerAssignment = 0, false
  	body := p.parseBody()
 -	p.exprLev--
-+	p.exprLev, p.headerAssignment, p.returnOperandLevel = previousLevel, previousHeader, previousReturn
++	p.exprLev, p.headerAssignment = previousLevel, previousHeader
  
  	return &ast.FuncLit{Type: typ, Body: body}
  }
-@@ -1474,6 +1489,8 @@
+@@ -1473,6 +1488,9 @@
+ 		defer un(trace(p, "Operand"))
  	}
  
- 	switch p.tok {
-+	case token.IF, token.SWITCH:
++	if p.tgo && (p.tok == token.IF || p.tok == token.SWITCH) {
 +		return p.parseValueConditional()
++	}
+ 	switch p.tok {
  	case token.IDENT:
  		x := p.parseIdent()
- 		return x
-@@ -1700,15 +1717,7 @@
+@@ -1700,6 +1718,9 @@
  		defer un(trace(p, "LiteralValue"))
  	}
  
--	lbrace := p.expect(token.LBRACE)
--	var elts []ast.Expr
--	p.exprLev++
--	if p.tok != token.RBRACE {
--		elts = p.parseElementList()
--	}
--	p.exprLev--
--	rbrace := p.expectClosing(token.RBRACE, "composite literal")
--	return &ast.CompositeLit{Type: typ, Lbrace: lbrace, Elts: elts, Rbrace: rbrace}
-+	return p.parseTGoLiteralValue(typ)
- }
- 
- func (p *parser) parsePrimaryExpr(x ast.Expr) ast.Expr {
-@@ -1727,7 +1736,15 @@
++	if p.tgo {
++		return p.parseTGoLiteralValue(typ)
++	}
+ 	lbrace := p.expect(token.LBRACE)
+ 	var elts []ast.Expr
+ 	p.exprLev++
+@@ -1727,6 +1748,11 @@
  	for n = 1; ; n++ {
  		incNestLev(p)
  		switch p.tok {
 +		case token.NOT:
-+			if p.lit == "" {
++			if !p.tgo || p.lit == "" {
 +				return x
 +			}
 +			x = p.parsePostfix(x)
  		case token.PERIOD:
-+			if p.returnOperandLevel >= 0 && p.exprLev == p.returnOperandLevel && p.startsShortReturn() {
-+				return x
-+			}
  			p.next()
  			switch p.tok {
- 			case token.IDENT:
-@@ -1759,12 +1776,12 @@
+@@ -1759,12 +1785,12 @@
  			// determine if '{' belongs to a composite literal or a block statement
  			switch t.(type) {
  			case *ast.BadExpr, *ast.Ident, *ast.SelectorExpr:
 -				if p.exprLev < 0 {
-+				if p.exprLev < 0 && !p.startsHeaderComprehension() {
++				if p.exprLev < 0 && (!p.tgo || !p.startsHeaderComprehension()) {
  					return x
  				}
  				// x is possibly a composite literal type
  			case *ast.IndexExpr, *ast.IndexListExpr:
 -				if p.exprLev < 0 {
-+				if p.exprLev < 0 && !p.startsHeaderComprehension() {
++				if p.exprLev < 0 && (!p.tgo || !p.startsHeaderComprehension()) {
  					return x
  				}
  				// x is possibly a composite literal type
-@@ -1940,6 +1957,8 @@
+@@ -1940,6 +1966,8 @@
  		pos, tok := p.pos, p.tok
  		p.next()
  		var y []ast.Expr
@@ -152,7 +148,7 @@
  		isRange := false
  		if mode == rangeOk && p.tok == token.RANGE && (tok == token.DEFINE || tok == token.ASSIGN) {
  			pos := p.pos
-@@ -1947,8 +1966,10 @@
+@@ -1947,8 +1975,10 @@
  			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRhs()}}
  			isRange = true
  		} else {
@@ -163,24 +159,23 @@
  		return &ast.AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}, isRange
  	}
  
-@@ -2047,15 +2068,7 @@
+@@ -2042,11 +2072,14 @@
+ 	return &ast.DeferStmt{Defer: pos, Call: call}
+ }
+ 
+-func (p *parser) parseReturnStmt() *ast.ReturnStmt {
++func (p *parser) parseReturnStmt() ast.Stmt {
+ 	if p.trace {
  		defer un(trace(p, "ReturnStmt"))
  	}
  
--	pos := p.pos
--	p.expect(token.RETURN)
--	var x []ast.Expr
--	if p.tok != token.SEMICOLON && p.tok != token.RBRACE {
--		x = p.parseList(true)
--	}
--	p.expectSemi()
--
--	return &ast.ReturnStmt{Return: pos, Results: x}
-+	return p.parseTGoReturnStmt()
- }
- 
- func (p *parser) parseBranchStmt(tok token.Token) *ast.BranchStmt {
-@@ -2152,6 +2165,10 @@
++	if p.tgo {
++		return p.parseTGoReturnStmt()
++	}
+ 	pos := p.pos
+ 	p.expect(token.RETURN)
+ 	var x []ast.Expr
+@@ -2152,6 +2185,10 @@
  }
  
  func (p *parser) parseIfStmt() *ast.IfStmt {
@@ -191,7 +186,7 @@
  	defer decNestLev(incNestLev(p))
  
  	if p.trace {
-@@ -2168,16 +2185,20 @@
+@@ -2168,16 +2205,20 @@
  		p.next()
  		switch p.tok {
  		case token.IF:
@@ -215,7 +210,7 @@
  	}
  
  	return &ast.IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
-@@ -2230,6 +2251,10 @@
+@@ -2230,6 +2271,10 @@
  }
  
  func (p *parser) parseSwitchStmt() ast.Stmt {
@@ -226,7 +221,7 @@
  	if p.trace {
  		defer un(trace(p, "SwitchStmt"))
  	}
-@@ -2273,7 +2298,9 @@
+@@ -2273,7 +2318,9 @@
  		list = append(list, p.parseCaseClause())
  	}
  	rbrace := p.expect(token.RBRACE)
@@ -237,6 +232,17 @@
  	body := &ast.BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
  
  	if typeSwitch {
+--- a/parser/resolver.go
++++ b/parser/resolver.go
+@@ -6,7 +6,7 @@
+ 
+ import (
+ 	"fmt"
+-	"go/ast"
++	"github.com/lucasavila00/tgo/internal/ast"
+ 	"go/token"
+ 	"strings"
+ )
 --- a/scanner/scanner.go
 +++ b/scanner/scanner.go
 @@ -41,6 +41,9 @@

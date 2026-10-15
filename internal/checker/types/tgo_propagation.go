@@ -1,23 +1,22 @@
 package types
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
 // propagationExpr checks the call final error and the enclosing function error result.
 // It records only the success results as the postfix expression type.
-func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation TGoOperation) exprKind {
-	position := atPos(check.fset.File(call.Pos()).Pos(operation.Position.Offset))
-	if conditional, ok := ast.Unparen(call.Args[0]).(*ast.CallExpr); ok {
-		if op, found := check.tgoOperation(conditional); found && op.Conditional {
-			check.error(position, InvalidSyntaxTree, "propagation requires a call")
-			x.invalidate()
-			return expression
-		}
+func (check *Checker) propagationExpr(x *operand, call *ast.PropagateExpr) exprKind {
+	defer check.recordRuntimeExpression()
+	position := atPos(call.OpPos)
+	if propagationCall(call.X) == nil {
+		check.error(position, InvalidSyntaxTree, "propagation requires a call")
+		x.invalidate()
+		return expression
 	}
-	check.rawExpr(nil, x, call.Args[0], nil, false)
+	check.rawExpr(nil, x, call.X, nil, false)
 	x.expr = call
 	if !x.isValid() {
 		return expression
@@ -39,7 +38,7 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 	}
 	returnedErrorType := errorResultType
 	operator := "!"
-	if operation.Wrap {
+	if call.Wrap {
 		returnedErrorType = Universe.Lookup("error").Type()
 		operator = "!!"
 	}
@@ -67,4 +66,29 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 		x.typ_ = NewTuple(results.vars[:results.Len()-1]...)
 	}
 	return statement
+}
+
+// propagationCall finds the source call through parentheses and earlier propagation.
+func propagationCall(expression ast.Expr) *ast.CallExpr {
+	for {
+		switch node := expression.(type) {
+		case *ast.ParenExpr:
+			expression = node.X
+		case *ast.PropagateExpr:
+			expression = node.X
+		case *ast.CallExpr:
+			return node
+		default:
+			return nil
+		}
+	}
+}
+
+// tupleExpression reports source expressions that can supply several results.
+func tupleExpression(expression ast.Expr) bool {
+	switch ast.Unparen(expression).(type) {
+	case *ast.CallExpr, *ast.PropagateExpr:
+		return true
+	}
+	return false
 }

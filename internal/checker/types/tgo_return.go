@@ -1,57 +1,41 @@
 package types
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
 // shortReturn checks the supplied operands against the source result types.
-func (check *Checker) shortReturn(statement *ast.ReturnStmt) bool {
-	if len(statement.Results) != 1 {
-		return false
-	}
-	call, ok := statement.Results[0].(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	operation, found := check.tgoOperation(call)
-	if !found || !operation.ShortReturn {
-		return false
-	}
+func (check *Checker) shortReturn(statement *ast.ShortReturnStmt) {
 	if check.sig == nil {
 		check.error(statement, InvalidSyntaxTree, "short return requires an enclosing function")
-		return true
+		return
 	}
 	results := check.sig.results
 	if results.Len() == 0 {
 		check.error(statement, IncompatibleAssign, "short return requires a final result that implements error")
-		return true
+		return
 	}
 	for _, result := range results.vars {
 		if result.name != "" {
 			check.error(statement, InvalidSyntaxTree, "short return requires unnamed results")
-			return true
+			return
 		}
 	}
 	errorResultIndex := results.Len() - 1
 	errorResultType := results.At(errorResultIndex).typ
 	if !AssignableTo(errorResultType, Universe.Lookup("error").Type()) {
 		check.error(statement, IncompatibleAssign, "short return requires a final result that implements error")
-		return true
+		return
 	}
-	if call.Ellipsis.IsValid() {
-		check.errorf(atPos(call.Ellipsis), InvalidSyntaxTree, "short return operands cannot end with ...")
-		return true
-	}
-	if operation.ZeroSuccess {
-		check.initVars(results.vars[errorResultIndex:], call.Args, statement)
+	if statement.ZeroSuccess {
+		check.initVars(results.vars[errorResultIndex:], statement.Results, statement)
 	} else {
 		if !AssignableTo(Typ[UntypedNil], errorResultType) {
 			check.error(statement, IncompatibleAssign, "short return requires nil to fit the final result type")
-			return true
+			return
 		}
-		check.initVars(results.vars[:errorResultIndex], call.Args, statement)
+		check.initVars(results.vars[:errorResultIndex], statement.Results, statement)
 	}
-	return true
 }

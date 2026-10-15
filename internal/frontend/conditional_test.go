@@ -1,7 +1,7 @@
 package frontend
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"strings"
 	"testing"
@@ -37,26 +37,20 @@ func TestParseConditionalExpressions(t *testing.T) {
 func TestPropagationSourcePositionsAndComments(t *testing.T) {
 	input := "package p\nfunc f() error {\n x := next()! // keep this comment\n _ = x\n return nil\n}\n"
 	set := token.NewFileSet()
-	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
 	count := 0
 	ast.Inspect(parsed.File, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
+		operation, ok := node.(*ast.PropagateExpr)
 		if !ok {
 			return true
 		}
-		id, ok := call.Fun.(*ast.Ident)
-		if !ok {
-			return true
-		}
-		if _, found := parsed.Propagations[id.Name]; found {
-			count++
-			pos, end := set.Position(call.Pos()), set.Position(call.End())
-			if input[pos.Offset:end.Offset] != "next()!" {
-				t.Fatalf("propagation source span: %v to %v", pos, end)
-			}
+		count++
+		pos, end := set.Position(operation.Pos()), set.Position(operation.End())
+		if input[pos.Offset:end.Offset] != "next()!" {
+			t.Fatalf("propagation source span: %v to %v", pos, end)
 		}
 		return true
 	})
@@ -73,8 +67,7 @@ func TestPropagationRequiresCall(t *testing.T) {
 	for _, operator := range []string{"!", "!!"} {
 		t.Run(operator, func(t *testing.T) {
 			input := "package p\nfunc f(err error) error { value := (err)" + operator + "; return value }"
-			parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input),
-				make(map[string]bool))
+			parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input))
 			if parsed != nil || err == nil || !strings.Contains(err.Error(),
 				"main.tgo:2:41: propagation requires a call") {
 				t.Fatalf("parsed: %v; diagnostic: %v", parsed, err)
@@ -83,16 +76,17 @@ func TestPropagationRequiresCall(t *testing.T) {
 	}
 }
 
-// TestConditionalNamesKeepSourceBindings checks that marker names avoid names declared in the input.
+// TestConditionalNamesKeepSourceBindings checks that native expressions retain source function bindings.
 func TestConditionalNamesKeepSourceBindings(t *testing.T) {
 	input := "package p\nfunc tgoConditional1() int {return 4}; func f() int { return if " +
 		"true { tgoConditional1() } else { 0 } }"
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, collision := parsed.Conditionals["tgoConditional1"]; collision {
-		t.Fatal("conditional marker replaced a source binding")
+	declaration := parsed.File.Decls[0].(*ast.FuncDecl)
+	if declaration.Name.Name != "tgoConditional1" {
+		t.Fatal("source function binding changed")
 	}
 }
 
@@ -117,12 +111,12 @@ func checkCopy(ok bool) {
 }
 
 `
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Conditionals) != 5 {
-		t.Fatalf("if values: %d, want 5", len(parsed.Conditionals))
+	if len(conditionalExpressions(parsed.File)) != 5 {
+		t.Fatalf("if values: %d, want 5", len(conditionalExpressions(parsed.File)))
 	}
 }
 
@@ -142,14 +136,16 @@ again:
  _ = mapping
 }
 `
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	set := token.NewFileSet()
+	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Conditionals) != 4 {
-		t.Fatalf("if values: %d, want 4", len(parsed.Conditionals))
+	if len(conditionalExpressions(parsed.File)) != 4 {
+		t.Fatalf("if values: %d, want 4", len(conditionalExpressions(parsed.File)))
 	}
-	for _, position := range parsed.Conditionals {
+	for _, expression := range conditionalExpressions(parsed.File) {
+		position := set.Position(expression.Pos())
 		if input[position.Offset:position.Offset+2] != "if" {
 			t.Fatalf("source position: %v", position)
 		}
@@ -164,13 +160,12 @@ func TestConditionalBatchIndependentOperands(t *testing.T) {
 		source.WriteString("if ok { use(0) }; use(if ok { 1 } else { 2 });\n")
 	}
 	source.WriteString("}\n")
-	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source.String()),
-		make(map[string]bool))
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source.String()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Conditionals) != 64 {
-		t.Fatalf("if values: %d, want 64", len(parsed.Conditionals))
+	if len(conditionalExpressions(parsed.File)) != 64 {
+		t.Fatalf("if values: %d, want 64", len(conditionalExpressions(parsed.File)))
 	}
 }
 
@@ -189,14 +184,15 @@ func TestParseSwitchExpressions(t *testing.T) {
 		t.Run(source, func(t *testing.T) {
 			input := "package p\n" + source
 			set := token.NewFileSet()
-			parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+			parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(parsed.Conditionals) == 0 {
+			if len(conditionalExpressions(parsed.File)) == 0 {
 				t.Fatal("no conditional expressions")
 			}
-			for _, pos := range parsed.Conditionals {
+			for _, expression := range conditionalExpressions(parsed.File) {
+				pos := set.Position(expression.Pos())
 				if !strings.HasPrefix(input[pos.Offset:], "switch") && !strings.HasPrefix(input[pos.Offset:], "if") {
 					t.Fatalf("source position: %v", pos)
 				}
@@ -210,14 +206,15 @@ func checkConditionalPositions(t *testing.T, source string) {
 	t.Helper()
 	input := "package p\n" + source
 	set := token.NewFileSet()
-	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(set, "main.tgo", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Conditionals) == 0 {
+	if len(conditionalExpressions(parsed.File)) == 0 {
 		t.Fatal("no conditional expressions")
 	}
-	for _, pos := range parsed.Conditionals {
+	for _, expression := range conditionalExpressions(parsed.File) {
+		pos := set.Position(expression.Pos())
 		if input[pos.Offset:pos.Offset+2] != "if" {
 			t.Fatalf("conditional position: %v", pos)
 		}
