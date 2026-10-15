@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"go/ast"
+	"go/scanner"
 	"go/token"
 	"strings"
 	"testing"
@@ -15,6 +16,11 @@ func TestParsePropagationPositions(t *testing.T) {
 		"package p\n//line virtual.tgo:40\nfunc f() error { _ = outer(inner()!)!!; return nil }",
 		"package p\nfunc f() error { _ = (call())!!; _ = call()!; return nil }",
 		"package p\nfunc f() error { _ = call(\"é\")!; return nil }",
+		"package p\nfunc f() error { _ = call() /* operand */ !!; return nil }",
+		"package p\nfunc f() error { _ = (outer(inner() /* operand */ !) ) /* outer */ !!; return nil }",
+		"package p\nfunc f(ok bool) error { _ = if ok { call()! } else { call()!! }; return nil }",
+		"package p\nfunc f(n int) error { _ = switch n { case 1: call()!; default: call()!! }; return nil }",
+		"package p\nfunc f(xs []int) error { _ = []int{call(x)!! for _, x := range xs}; return nil }",
 	} {
 		t.Run(input, func(t *testing.T) {
 			checkPropagationPositions(t, input)
@@ -35,6 +41,12 @@ func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 func checkPropagationPositions(t *testing.T, input string) {
 	t.Helper()
 	fset := token.NewFileSet()
+	checkPropagationPositionsInFileSet(t, fset, input)
+}
+
+// checkPropagationPositionsInFileSet checks marker spans with the existing file-set base.
+func checkPropagationPositionsInFileSet(t *testing.T, fset *token.FileSet, input string) {
+	t.Helper()
 	parsed, err := ParseFile(fset, "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
 	if err != nil {
 		t.Fatal(err)
@@ -89,6 +101,35 @@ func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSe
 		t.Fatal("operand is outside marker span")
 	}
 	return 1
+}
+
+// TestParsePropagationInMultipleFiles checks that original byte offsets do not become global token positions.
+func TestParsePropagationInMultipleFiles(t *testing.T) {
+	fset := token.NewFileSet()
+	for _, input := range []string{
+		"package p\nfunc first() error { call()!; return nil }",
+		"package p\nfunc second() error { outer(inner()!) /* operand */ !!; return nil }",
+	} {
+		checkPropagationPositionsInFileSet(t, fset, input)
+	}
+}
+
+// TestParseMalformedPostfix checks that separated or extra ! bytes remain invalid syntax.
+func TestParseMalformedPostfix(t *testing.T) {
+	for _, suffix := range []string{"!!!", "! !", "!/* split */!"} {
+		t.Run(suffix, func(t *testing.T) {
+			input := "package p\nfunc f() { call()" + suffix + "; return }"
+			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input),
+				make(map[string]bool))
+			if err == nil || !strings.Contains(err.Error(), "main.tgo:2:") {
+				t.Fatalf("diagnostic: %v", err)
+			}
+			diagnostic := err.(scanner.ErrorList)[0]
+			if diagnostic.Pos.Offset != strings.LastIndex(input, "!") {
+				t.Fatalf("diagnostic position: %v", diagnostic.Pos)
+			}
+		})
+	}
 }
 
 // TestParseMalformedGo checks that incomplete ordinary Go returns a diagnostic.
