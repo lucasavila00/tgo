@@ -25,3 +25,5 @@
 /internal/printer/*.go
 !/internal/printer/doc.go
 !/internal/printer/tgo_test.go
+
+/internal/ast/readme.md
