@@ -12,6 +12,15 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// TestNativeLoweringLeavesPlainPackageUnchanged checks that ordinary source requests no generated changes.
+func TestNativeLoweringLeavesPlainPackageUnchanged(t *testing.T) {
+	source, _ := loadNativeSource(t, "package main\nvar Value = 3\n")
+	output, err := source.LowerPropagations()
+	if err != nil || len(output) != 0 {
+		t.Fatalf("plain package output: %v; error: %v", output, err)
+	}
+}
+
 // TestNativeComprehensionScopes checks names after generator bindings move to fresh Go locals.
 func TestNativeComprehensionScopes(t *testing.T) {
 	input := `package main

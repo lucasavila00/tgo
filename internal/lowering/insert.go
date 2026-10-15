@@ -30,9 +30,20 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 
 // LowerPropagations replaces checked TGo operations with ordinary Go.
 // It returns formatted file contents by absolute path without writing files.
+// A package with no TGo syntax returns no changed files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations() (map[string][]byte, error) {
 	r := newRewrite(s, shared.Input{TGo: true})
+	hasWork := false
+	for _, file := range s.inventory.Checked.Syntax {
+		if r.Contains(file) {
+			hasWork = true
+			break
+		}
+	}
+	if !hasWork {
+		return nil, nil
+	}
 	output, err := r.Emit()
 	if err != nil {
 		return nil, err
