@@ -1,1 +1,1 @@
-expected selector or type assertion
+expected operand, found '...'

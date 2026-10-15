@@ -15,27 +15,27 @@ var ErrEmptyName = errors.New("empty name")
 
 func Greeting(name string) (string, error) {
 	if name == "" {
-		return , ErrEmptyName
+		return ..., ErrEmptyName
 	}
-	return "Hello, " + name,
+	return "Hello, " + name, ...
 }
 ```
 
 ## Return and propagate errors
 
-A trailing comma supplies the final `nil` result. A leading comma supplies the
-zero value for a result before an error.
+A last `...` supplies the final `nil` result. A first `...` supplies zero
+values for the success results. A comma separates it from supplied values.
 
 ```text
 func Name(user User) (string, error) {
-	return user.Name,
+	return user.Name, ...
 }
 
 func Parse(text string) (int, error) {
 	if text == "" {
-		return , ErrEmpty
+		return ..., ErrEmpty
 	}
-	return strconv.Atoi(text)!,
+	return strconv.Atoi(text)!, ...
 }
 ```
 
@@ -83,12 +83,12 @@ func (value Port) check() (Port, error) {
 	if value.number < 1 || value.number > 65535 {
 		return Port{}, ErrInvalidPort
 	}
-	return value,
+	return value, ...
 }
 
 func ParsePort(text string) (Port, error) {
 	number := strconv.Atoi(text)!
-	return Port{number: number}!,
+	return Port{number: number}!, ...
 }
 ```
 

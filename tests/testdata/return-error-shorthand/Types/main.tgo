@@ -14,47 +14,47 @@ func (StructError) Error() string { return "struct" }
 type PointerError interface { error; ~*Failure }
 
 func zeros(err error) (int, string, [2]int, Data, *int, []int, map[string]int, func() int, chan int, any, error) {
-	return .. err
+	return ..., err
 }
 
 func generic[T any](err error) (T, error) {
-	return .. err
+	return ..., err
 }
 
 func genericError[E PointerError]() (int, E) {
-	return 3 ..
+	return 3, ...
 }
 
 func concrete(err StructError) (int, StructError) {
-	return .. err
+	return ..., err
 }
 
 func typedNil(err *Failure) (int, error) {
-	return .. err
+	return ..., err
 }
 
 func pointerSuccess() (int, *Failure) {
-	return 4 ..
+	return 4, ...
 }
 
 func shift(n uint) (Num, error) {
-	return 1 << n ..
+	return 1 << n, ...
 }
 
 func conditional(ready bool) (uint8, error) {
-	return if ready { 127 } else { 0 } ..
+	return if ready { 127 } else { 0 }, ...
 }
 
 func shiftBeforeBranch(n uint, ready bool) (Num, int, error) {
-	return 1 << n, if ready { 1 } else { 0 } ..
+	return 1 << n, if ready { 1 } else { 0 }, ...
 }
 
 func nilValue() (any, error) {
-	return nil ..
+	return nil, ...
 }
 
 func richSuccess() (int, interface{ error }) {
-	return 5 ..
+	return 5, ...
 }
 
 func main() {

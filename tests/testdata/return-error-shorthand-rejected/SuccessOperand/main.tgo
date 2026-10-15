@@ -1,5 +1,5 @@
 package rejected
 
 func run() (int, error) {
-	return "wrong" ..
+	return "wrong", ...
 }

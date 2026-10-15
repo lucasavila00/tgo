@@ -2,25 +2,24 @@
 
 ## Approach
 
-Recognize adjacent `..` before or after return operands. Preserve Go token
-boundaries. Trailing `..` ends statements at newlines; leading `..` needs an
-operand.
+Read Go's `ELLIPSIS` token as the first or last return-list element. Require
+a comma between the placeholder and supplied operands. A trailing `...`
+ends the statement at a newline. A leading `...` needs an error operand.
 
-The frontend records the operator and original positions. A marker, an internal
-syntax node, lets Go's parser read operands. The checker uses the enclosing
-signature: reject named results, including `_`, and check supplied values against
-result types. Count the statement as a return for termination checks.
+The frontend records return operands, the placeholder position, and omitted
+results. The checker uses the enclosing signature: reject named results, including `_`, and check supplied
+values against result types. Count the statement as a return for termination checks.
 
 ## Example
 
-Reuse propagation's fresh typed zero locals for `return .. err`:
+Reuse propagation's typed zero locals for `return ..., err`:
 
 ```go
 var zero T
 return zero, err
 ```
 
-For `return pair() ..` in `(int, string, error)`, use declared result types:
+For `return pair(), ...` in `(int, string, error)`, use declared result types:
 
 ```go
 var first int

@@ -1,1 +1,1 @@
-short return permits .. only before or after its operands
+short return requires ... to be the first or last result
