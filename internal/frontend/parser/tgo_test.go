@@ -6,6 +6,7 @@ import (
 	stock "go/parser"
 	"go/token"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -135,8 +136,13 @@ func checkGoFileScope(t *testing.T, file *ast.File, stockFile *stockast.File) {
 	if scope.Outer != nil || stockScope.Outer != nil || len(scope.Objects) != len(stockScope.Objects) {
 		t.Fatal("package scope structure differs from Go")
 	}
-	for name, object := range scope.Objects {
-		if !sameGoTree(object, stockScope.Objects[name]) {
+	names := make([]string, 0, len(scope.Objects))
+	for name := range scope.Objects {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if !sameGoTree(scope.Objects[name], stockScope.Objects[name]) {
 			t.Fatalf("package object %s differs from Go", name)
 		}
 	}
