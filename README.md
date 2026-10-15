@@ -43,15 +43,16 @@ func Parse(text string) (int, error) {
 }
 ```
 
-An `if` can supply a value. A branch can run statements before its final value.
+An `if` can choose a field value when you build a struct.
 
 ```text
-func Label(active bool) string {
-    return if active {
-        fmt.Println("active")
-        "on"
-    } else {
-        "off"
+func NewClient(local bool) *http.Client {
+    return &http.Client{
+        Timeout: if local {
+            2 * time.Second
+        } else {
+            30 * time.Second
+        },
     }
 }
 ```
@@ -59,43 +60,42 @@ func Label(active bool) string {
 Equivalent Go:
 
 ```go
-func Label(active bool) string {
-    if active {
-        fmt.Println("active")
-        return "on"
-    } else {
-        return "off"
+func NewClient(local bool) *http.Client {
+    timeout := 30 * time.Second
+    if local {
+        timeout = 2 * time.Second
     }
+    return &http.Client{Timeout: timeout}
 }
 ```
 
-A `switch` can supply a value.
+A `switch` can choose a retry delay inside a call.
 
 ```text
-func Label(code int) string {
-    return switch code {
-    case 200:
-        "ok"
-    case 404:
-        "missing"
+func WaitBeforeRetry(attempt int) {
+    time.Sleep(switch attempt {
+    case 0:
+        100 * time.Millisecond
+    case 1:
+        time.Second
     default:
-        "error"
-    }
+        5 * time.Second
+    })
 }
 ```
 
 Equivalent Go:
 
 ```go
-func Label(code int) string {
-    switch code {
-    case 200:
-        return "ok"
-    case 404:
-        return "missing"
-    default:
-        return "error"
+func WaitBeforeRetry(attempt int) {
+    delay := 5 * time.Second
+    switch attempt {
+    case 0:
+        delay = 100 * time.Millisecond
+    case 1:
+        delay = time.Second
     }
+    time.Sleep(delay)
 }
 ```
 
