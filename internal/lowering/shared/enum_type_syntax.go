@@ -7,14 +7,17 @@ import (
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
-// enumTypeSyntax rewrites constant operands in types and keeps label uses outside the declaration.
+// enumTypeSyntax keeps constant syntax and lowers nested functions and unevaluated native operands.
+// Its only statement output is a reference to an outside label, which belongs before a local declaration.
 func (r *Context) enumTypeSyntax(node ast.Node, before *[]ast.Stmt) ast.Node {
 	if node == nil || !r.Contains(node) {
 		return node
 	}
 	if expression, ok := node.(ast.Expr); ok {
-		if result, handled := r.EnumUnevaluated(expression); handled {
-			*before = append(*before, result.Statements...)
+		if result, handled := r.constantUnevaluated(expression); handled {
+			if len(result.Statements) != 0 {
+				*before = append(*before, result.Statements...)
+			}
 			return result.Expressions()[0]
 		}
 	}
@@ -48,14 +51,14 @@ func (r *Context) enumTypeDeclaration(specification ast.Spec, before *[]ast.Stmt
 }
 
 // constantDeclaration keeps each checked initializer and its original iota position.
-func (r *Context) constantDeclaration(declaration *ast.GenDecl) []ast.Stmt {
-	var before []ast.Stmt
+// Package constants pass nil: only local constants can refer to an outside label.
+func (r *Context) constantDeclaration(declaration *ast.GenDecl, before *[]ast.Stmt) *ast.GenDecl {
 	output := *declaration
 	output.Specs = make([]ast.Spec, len(declaration.Specs))
 	for index, specification := range declaration.Specs {
-		output.Specs[index] = r.constantSpecification(specification.(*ast.ValueSpec), &before)
+		output.Specs[index] = r.constantSpecification(specification.(*ast.ValueSpec), before)
 	}
-	return append(before, &ast.DeclStmt{Decl: &output})
+	return &output
 }
 
 // constantSpecification writes inherited values from their own checked syntax.
@@ -74,9 +77,7 @@ func (r *Context) constantSpecification(specification *ast.ValueSpec, before *[]
 				output.Type = typ
 			}
 		}
-		evaluation := r.Expression(initializer.Value)
-		*before = append(*before, evaluation.Statements...)
-		output.Values = append(output.Values, evaluation.Expressions()...)
+		output.Values = append(output.Values, r.enumTypeSyntax(initializer.Value, before).(ast.Expr))
 	}
 	return &output
 }
@@ -84,8 +85,34 @@ func (r *Context) constantSpecification(specification *ast.ValueSpec, before *[]
 // sourceConstantSpecification retains ordinary Go constants with no private checker record.
 func (r *Context) sourceConstantSpecification(specification *ast.ValueSpec, before *[]ast.Stmt) *ast.ValueSpec {
 	output := *r.enumTypeDeclaration(specification, before).(*ast.ValueSpec)
-	evaluation := r.Operands(specification.Values)
-	*before = append(*before, evaluation.Statements...)
-	output.Values = evaluation.Expressions()
+	output.Values = make([]ast.Expr, len(specification.Values))
+	for index, value := range specification.Values {
+		output.Values[index] = r.enumTypeSyntax(value, before).(ast.Expr)
+	}
 	return &output
+}
+
+// constantUnevaluated removes native operations that a checked constant builtin does not execute.
+func (r *Context) constantUnevaluated(expression ast.Expr) (Result, bool) {
+	call, ok := expression.(*ast.CallExpr)
+	if ok && r.unsafeOperand(call) && r.input.Inventory.Checked.TypesInfo.Types[call].Value != nil &&
+		r.hasDirectNativeExpression(call.Args[0]) {
+		return r.enumUnsafeConstant(call), true
+	}
+	return r.EnumUnevaluated(expression)
+}
+
+// hasDirectNativeExpression excludes function bodies, which keep their own statement lowering.
+func (r *Context) hasDirectNativeExpression(node ast.Node) bool {
+	found := false
+	ast.Inspect(node, func(node ast.Node) bool {
+		if _, function := node.(*ast.FuncLit); function {
+			return false
+		}
+		if expression, ok := node.(ast.Expr); ok && r.isTarget(expression) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

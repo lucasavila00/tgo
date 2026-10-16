@@ -88,7 +88,9 @@ func (r *Context) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 func (r *Context) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 	declaration := s.Decl.(*ast.GenDecl)
 	if declaration.Tok == token.CONST {
-		return r.constantDeclaration(declaration)
+		var before []ast.Stmt
+		output := r.constantDeclaration(declaration, &before)
+		return append(before, &ast.DeclStmt{Decl: output})
 	}
 	var output []ast.Stmt
 	for _, spec := range declaration.Specs {

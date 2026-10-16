@@ -147,8 +147,7 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 	switch fn := node.(type) {
 	case *ast.GenDecl:
 		if fn.Tok == token.CONST {
-			statements := r.constantDeclaration(fn)
-			return statements[len(statements)-1].(*ast.DeclStmt).Decl
+			return r.constantDeclaration(fn, nil)
 		}
 	case *ast.ValueSpec:
 		valueSpec := *fn
