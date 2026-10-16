@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"github.com/lucasavila00/tgo/internal/frontend"
 	"github.com/lucasavila00/tgo/internal/frontend/parser"
 	"github.com/lucasavila00/tgo/internal/sourcefile"
@@ -56,7 +57,7 @@ func (pkg *Package) recordParsedFile(parsed *frontend.Parsed) {
 	}
 }
 
-// prepareSourceImports loads original TGo declarations before compiled wrappers refer to their types.
+// prepareSourceImports checks enums and their Go dependents from source to keep type identity.
 func (loader *Loader) prepareSourceImports(metadata *packages.Package) error {
 	var failure error
 	packages.Visit([]*packages.Package{metadata}, func(dependency *packages.Package) bool {
@@ -67,7 +68,7 @@ func (loader *Loader) prepareSourceImports(metadata *packages.Package) error {
 		}
 		var hasSource bool
 		hasSource, failure = loader.findTGoSources(dependency)
-		if failure == nil && hasSource {
+		if failure == nil && (hasSource || loader.importsEnum(dependency)) {
 			_, failure = loader.Check(dependency)
 		}
 		if failure == nil {
@@ -98,4 +99,25 @@ func (loader *Loader) findTGoSources(metadata *packages.Package) (bool, error) {
 		found = true
 	}
 	return found, nil
+}
+
+// declaresEnum reports whether source checking found a native enum declaration.
+func (pkg *Package) declaresEnum() bool {
+	for _, name := range pkg.Types.Scope().Names() {
+		object, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName)
+		if ok && types.EnumOf(object.Type()) != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// importsEnum reports whether a direct dependency carries source enum type identities.
+func (loader *Loader) importsEnum(metadata *packages.Package) bool {
+	for _, dependency := range metadata.Imports {
+		if loader.enumDependencies[dependency.ID] {
+			return true
+		}
+	}
+	return false
 }

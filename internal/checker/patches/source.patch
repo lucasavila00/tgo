@@ -658,6 +658,16 @@
  )
  
  // A genericType implements access to its type parameters.
+@@ -230,6 +230,9 @@
+ 		if !check.implements(targs[i], bound, true, &cause) {
+ 			return i, errors.New(cause)
+ 		}
++		if cause := check.enumTypeArgument(pos, targs[i], bound); cause != "" {
++			return i, errors.New(cause)
++		}
+ 	}
+ 	return -1, nil
+ }
 --- a/types/interface.go
 +++ b/types/interface.go
 @@ -5,9 +5,9 @@
@@ -854,7 +864,7 @@
  	}
  
  	// We cannot create a literal of an incomplete type; make sure it's complete.
-+	if variant == nil && len(e.Elts) != 0 && check.nativeSource(e.Pos()) && enumStorageOwner(base) != nil {
++	if variant == nil && len(e.Elts) != 0 && check.nativeSource(e.Pos()) && hasEnumStorage(base) {
 +		check.errorf(e, InvalidLit, "enum storage is private; construct a declared variant")
 +		x.invalidate()
 +		return
