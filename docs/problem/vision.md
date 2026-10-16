@@ -70,8 +70,8 @@ account := Account.Personal{Name: "Lucas"}
 ```
 
 An enum lists all allowed forms of a value. An `exhaustive:` switch must handle
-every form. The [sum-type proposal](../adr/sum-types/what.md) adds typed nil and
-defines inline Go storage and payload matching.
+every form. The [sum-type proposal](../adr/sum-types/what.md) makes the first
+variant the zero value and defines inline Go storage and payload matching.
 
 ## Validate values when they are created
 

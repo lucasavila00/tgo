@@ -7,10 +7,11 @@ occurrence count within one variant. Share those slots across variants. Preserve
 named-type and type-parameter identity before instantiation. Indirect recursion
 uses Go references.
 
-Use the smallest `uint8/16/32/64` tag that fits all variants plus zero for nil.
-Order slots by first use; Go supplies alignment. Constructors build zeroed
-structs and fill active slots. Replacement copies whole structs, clearing inactive
-references. Go accessors return `(payload, ok)`, zero/false on mismatch.
+Assign tags in declaration order, starting at zero. For N variants, use the
+smallest `uint8/16/32/64` that holds N−1. Order slots by first use; Go supplies
+alignment. Constructors build zeroed structs, set the tag, and fill active slots.
+Replacement copies whole structs, clearing inactive references. Go accessors
+return `(payload, ok)`, zero/false on mismatch. Go callers must preserve valid tags.
 
 ## Example
 
@@ -19,8 +20,8 @@ type Account struct { tag uint8; text string }
 var label string
 snapshot := account
 switch snapshot.tag {
-case 0: label = "none"
-case 1, 2: label = snapshot.text
+case 0: label = snapshot.text // Personal
+case 1: label = snapshot.text // Business
 }
 ```
 
@@ -34,7 +35,3 @@ Typed slots favor direct operations over minimum size.
 Byte unions hide references; general pointer/scalar reconstruction needs unsafe
 operations. Interfaces can box;
 [escape analysis](https://go.dev/doc/gc-guide#Escape_analysis) decides stack placement.
-
-Universal nil accepts Go zeros with one extra case. Nonzero enums need
-initialization proofs and optional wrappers. An explicit empty default saves
-cases but forces a payload-free domain choice.
