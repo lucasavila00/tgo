@@ -106,7 +106,7 @@ func (check *Checker) enumConstructorType(object Object) bool {
 func (check *Checker) enumType(declaration *ast.EnumType, definition *TypeName) Type {
 	enum := check.tgo.enums[declaration]
 	if enum == nil || definition == nil {
-		check.error(declaration, InvalidSyntaxTree, "enum requires a named package declaration")
+		check.error(declaration, InvalidSyntaxTree, "enum declarations must be at package level")
 		return Typ[Invalid]
 	}
 	named, ok := definition.typ.(*Named)

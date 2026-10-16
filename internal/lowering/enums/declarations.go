@@ -10,7 +10,8 @@ import (
 
 // Declarations replaces one checked enum with its Go storage and public API.
 func Declarations(
-	specification *ast.TypeSpec, enum *types.Enum, payloads []*ast.StructType, fresh func() *ast.Ident,
+	specification *ast.TypeSpec, enum *types.Enum, payloads []*ast.StructType, tagType ast.Expr,
+	fresh func() *ast.Ident,
 ) []ast.Decl {
 	name := specification.Name.Name
 	storage := &ast.StructType{Fields: &ast.FieldList{}}
@@ -23,7 +24,7 @@ func Declarations(
 	specificationCopy.Type = storage
 	declarations := []ast.Decl{
 		typeDeclaration(&specificationCopy),
-		typeDeclaration(&ast.TypeSpec{Name: ast.NewIdent(name + "Tag"), Type: storageTagType(enum)}),
+		typeDeclaration(&ast.TypeSpec{Name: ast.NewIdent(name + "Tag"), Type: tagType}),
 		tagConstants(enum),
 		tagMethod(enum, fresh()),
 	}
@@ -51,12 +52,6 @@ func storageType(typ types.Type) ast.Expr {
 	default:
 		panic("unexpected enum storage field")
 	}
-}
-
-// storageTagType returns the unsigned integer type used by the enum's tag.
-func storageTagType(enum *types.Enum) ast.Expr {
-	tag := enum.Named().Underlying().(*types.Struct).Field(0).Type()
-	return ast.NewIdent(tag.Underlying().(*types.Basic).Name())
 }
 
 // tagConstants gives each declared variant its stable declaration-order number.

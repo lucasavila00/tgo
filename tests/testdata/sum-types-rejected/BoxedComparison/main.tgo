@@ -1,0 +1,11 @@
+package main
+
+type Value enum {
+	Empty struct {}
+	Data struct { Items []int; Padding [128]byte }
+}
+
+func main() {
+	var first, second Value
+	_ = first == second
+}

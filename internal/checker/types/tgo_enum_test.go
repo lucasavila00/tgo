@@ -140,3 +140,41 @@ func TestEnumRecursiveTypes(t *testing.T) {
 		})
 	}
 }
+
+// TestNestedEnumLayout resolves nested storage before choosing the parent's largest payload.
+func TestNestedEnumLayout(t *testing.T) {
+	info, err := checkTGo(t, `type Outer enum {
+ Empty
+ Child struct { Value Inner }
+ Large struct { Data [60]byte }
+ }
+ type Inner enum { Empty; Large struct { Data [100]byte } }
+ type Other Outer
+ `)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects := make(map[string]types.Object)
+	for identifier, object := range info.Defs {
+		objects[identifier.Name] = object
+	}
+	outer := types.EnumOf(objects["Outer"].Type())
+	inner := types.EnumOf(objects["Inner"].Type())
+	if !inner.Variants()[1].Boxed() || outer.Variants()[1].Boxed() || !outer.Variants()[2].Boxed() {
+		t.Fatal("parent layout did not use the finalized nested enum size")
+	}
+	if objects["Other"].Type().Underlying() != outer.Named().Underlying() {
+		t.Fatal("defined type lost the shared finalized storage")
+	}
+	if size := types.SizesFor("gc", "amd64").Sizeof(outer.Named()); size != 48 {
+		t.Fatalf("outer size=%d, want 48", size)
+	}
+}
+
+// TestLocalEnumDeclaration reports the supported declaration scope directly.
+func TestLocalEnumDeclaration(t *testing.T) {
+	_, err := checkTGo(t, `func f() { type Local enum { First }; var value Local; _ = value }`)
+	if err == nil || !strings.Contains(err.Error(), "enum declarations must be at package level") {
+		t.Fatalf("unexpected local enum diagnostic: %v", err)
+	}
+}

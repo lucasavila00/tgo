@@ -39,8 +39,9 @@ func (tgo8 Small) EmptyPayload() SmallEmpty {
 }
 
 type Large struct {
-	tgoTag      LargeTag
-	tgoVariant1 LargeData
+	tgoTag     LargeTag
+	tgoPayload interface {
+	}
 }
 type LargeTag uint8
 
@@ -65,10 +66,10 @@ func (tgo10 Large) EmptyPayload() LargeEmpty {
 type LargeData struct{ Value [256]byte }
 
 func NewLargeData(tgo11 [256]byte) Large {
-	return Large{tgoTag: LargeTagData, tgoVariant1: LargeData{tgo11}}
+	return Large{tgoTag: LargeTagData, tgoPayload: LargeData{tgo11}}
 }
 func (tgo12 Large) DataPayload() LargeData {
-	return tgo12.tgoVariant1
+	return tgo12.tgoPayload.(LargeData)
 }
 
 type smallGo struct {

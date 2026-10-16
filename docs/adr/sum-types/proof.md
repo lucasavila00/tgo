@@ -23,11 +23,13 @@ check that generic operations cannot expose private enum storage.
 
 ```sh
 go test ./tests -run '^TestSumType'
-go test ./internal/checker/types -run '^TestEnum'
+go test ./internal/checker/types -run 'TestEnum|TestNestedEnumLayout|TestLocalEnumDeclaration'
 go -C tests/testdata/sum-types/Allocations test -run '^$' -bench BenchmarkSumTypes -benchmem
 ```
 
-The benchmark runs in the `Allocations` fixture. Compare its results with its
-Go reference after the storage decision. Add checks for the
-chosen 80-byte rule, tag widths, equality, negative zero, map keys, and allocation counts
-before accepting that layout.
+Check both sides of the 80-byte and 256-variant boundaries. Keep large first
+payloads inline. Check largest-first ties, nested sizes, and boxing overhead.
+Compare zero values and constructed values as map keys. Preserve floating-point
+negative zero. Boxed noncomparable payloads must remain noncomparable.
+
+The benchmark compares allocation counts with ordinary Go value boxing.

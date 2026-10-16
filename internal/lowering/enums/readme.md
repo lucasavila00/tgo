@@ -13,7 +13,7 @@ An enum keeps one variant's data. Callers use constructors and payload methods s
 ## func Declarations
 
 ```go
-func Declarations(specification *ast.TypeSpec, enum *types.Enum, payloads []*ast.StructType, fresh func() *ast.Ident) []ast.Decl
+func Declarations(specification *ast.TypeSpec, enum *types.Enum, payloads []*ast.StructType, tagType ast.Expr, fresh func() *ast.Ident) []ast.Decl
 ```
 
 Declarations replaces one checked enum with its Go storage and public API.

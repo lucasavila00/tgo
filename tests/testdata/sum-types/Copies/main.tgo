@@ -1,13 +1,39 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
 type Account enum {
 	Personal struct { Name string; Counter *int }
 	Business struct { Company string }
 }
 
+type Archive enum {
+	Empty struct {}
+	Data struct { Values [128]byte; Counter *int }
+}
+
+func archive() Archive {
+	count := 11
+	return Archive.Data{Values: [128]byte{7}, Counter: &count}
+}
+
+func boxedCopies() {
+	original := archive()
+	copied := original
+	payload := original.DataPayload()
+	original = Archive.Empty{}
+	runtime.GC()
+	*payload.Counter = 23
+	payload.Values[0] = 99
+	fmt.Println(copied.DataPayload().Values[0], payload.Values[0], *copied.DataPayload().Counter)
+	fmt.Println(original.Tag() == ArchiveTagEmpty)
+}
+
 func main() {
+	boxedCopies()
 	count := 1
 	account := Account.Personal{Name: "Ada", Counter: &count}
 	alias := &account

@@ -18,6 +18,9 @@ func (check *Checker) enumSizeType(typ Type, position ast.Node, seen map[Type]bo
 	}
 	seen[typ] = true
 	if named, ok := typ.(*Named); ok {
+		if !isValid(named.rhs()) {
+			return false
+		}
 		if named.rhs() == nil {
 			check.error(position, InvalidConstInit, "enum size depends on an incomplete type declaration")
 			return false
@@ -50,7 +53,7 @@ func (check *Checker) finishEnumLayout(enum *Enum, position ast.Node, seen map[T
 		}
 	}
 	storage := enum.named.Underlying().(*Struct)
-	*storage = *enumStorage(enum)
+	*storage = *enumLayout(enum)
 	enum.layoutReady = true
 	return true
 }

@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"fmt"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/ast"
@@ -32,10 +33,29 @@ func (r *Context) enumDeclarations(file *ast.File) *ast.File {
 					payloads[index] = &ast.StructType{Fields: &ast.FieldList{}}
 				}
 			}
-			output.Decls = append(output.Decls, enums.Declarations(typeSpec, enum, payloads, r.Name)...)
+			output.Decls = append(output.Decls, enums.Declarations(typeSpec, enum, payloads, r.enumTagType(enum), r.Name)...)
 		}
 	}
 	return &output
+}
+
+// enumTagType checks the generated primitive name and its exact predefined alias.
+func (r *Context) enumTagType(enum *types.Enum) ast.Expr {
+	original := enum.Declaration()
+	typ := enum.TagType().Underlying().(*types.Basic)
+	check := r.checkTypeNames(typ, original, original.Pos())
+	if check.problem == "" {
+		return ast.NewIdent(typ.Name())
+	}
+	if typ.Kind() == types.Uint8 && r.VisibleBinding(original, "byte") == types.Universe.Lookup("byte") {
+		return ast.NewIdent("byte")
+	}
+	if r.request.err == nil {
+		position := r.input.Inventory.Checked.Fset.Position(original.Pos())
+		r.request.err = fmt.Errorf("%s: cannot name type %s for enum %s tag: %s", position,
+			typ, enum.Named().Obj().Name(), check.problem)
+	}
+	return ast.NewIdent("invalid")
 }
 
 // hasEnumDeclaration reports whether a type group needs generated declarations.

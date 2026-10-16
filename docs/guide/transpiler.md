@@ -153,7 +153,8 @@ targets the value switch. Breaks in nested loops and ordinary switch statements 
 
 ## Use an enum value
 
-An enum holds one of a fixed set of variants. Each variant can have fields:
+Declare enums at package level. An enum holds one of a fixed set of variants.
+Each variant can have fields:
 
 ```text
 type Account enum {
@@ -206,9 +207,13 @@ returned struct is a copy; pointer fields still refer to the same data.
 These names belong to the enum's package. Import that package and qualify the
 names as usual. TGo callers can also use `accounts.Account.Business{Company:
 "Acme"}`. The compiler keeps storage fields private to the enum.
+Keep dependency `.tgo` inputs with their generated Go files. TGo reads those
+declarations when matching imported enums.
 
-The [storage choice](../adr/sum-types/how.md) and
-[local declaration rule](../adr/sum-types/what.md) remain open decisions.
+The first variant stays inside the enum. Large later variants can use a shared
+interface field. The compiler targets 80 bytes using Go's amd64 layout; the
+first variant can make the enum larger. See the [storage rule](../adr/sum-types/how.md).
+Enums support equality and map keys when all variant fields are comparable.
 
 ## Build a slice or map
 

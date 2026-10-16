@@ -34,10 +34,13 @@ Inventory records sites and their original syntax. Callers must keep this syntax
 
 ```go
 type Inventory struct {
+    ConstantCopies []ast.Expr
+
     Checked     *checker.Package
     Sites       []Site
     Expressions map[Site]ast.Expr
     Parents     map[ast.Node]ast.Node
+    // contains filtered or unexported fields
 }
 ```
 
@@ -48,6 +51,14 @@ func New(checked *checker.Package, dir string) *Inventory
 ```
 
 New records source facts from one checked package.
+
+### func \(\*Inventory\) CallName
+
+```go
+func (s *Inventory) CallName(operation *ast.PropagateExpr) string
+```
+
+CallName returns the same source context for an operation and its inherited constant copies.
 
 ## type Site
 

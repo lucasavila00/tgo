@@ -1,13 +1,39 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
 type personal struct {
 	name    string
 	counter *int
 }
 
+type archive struct {
+	values  [128]byte
+	counter *int
+}
+
+func makeArchive() *archive {
+	count := 11
+	return &archive{values: [128]byte{7}, counter: &count}
+}
+
+func boxedCopies() {
+	original := makeArchive()
+	copied := original
+	payload := *original
+	original = nil
+	runtime.GC()
+	*payload.counter = 23
+	payload.values[0] = 99
+	fmt.Println(copied.values[0], payload.values[0], *copied.counter)
+	fmt.Println(original == nil)
+}
+
 func main() {
+	boxedCopies()
 	count := 1
 	value := personal{name: "Ada", counter: &count}
 	selected := value

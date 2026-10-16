@@ -2,10 +2,7 @@
 
 ## Decision
 
-Generate a Go type with private storage, constructors, and methods. This lets
-Go callers use enums without depending on their fields.
-
-For the [Account example](what.md), Go callers write:
+Generate a Go struct with private fields and public constructors and methods:
 
 ```go
 account := NewAccountBusiness("Acme")
@@ -17,19 +14,22 @@ case AccountTagBusiness:
 }
 ```
 
-Payload methods return copies. Call them after selecting the matching tag.
-Constructors take fields in declaration order and clear other variants' data.
-Tags start at zero and use the smallest unsigned integer that fits.
+Constructors take fields in declaration order and clear inactive data. Payload
+methods return copies; call them after matching the tag. Tags start at zero and
+use the smallest unsigned integer that fits.
 
-The checker identifies each variant by its declaration. It checks construction,
-case fields, and complete coverage before generation. A complete enum switch
-becomes a Go tag switch. Without an explicit `default`, its final case becomes
-`default`, so Go also recognizes when every branch returns.
+The checker compares declared variants with cases. Without an explicit
+`default`, the last case of a complete switch becomes Go's `default`.
 
-## Open storage decision
+Each inline variant has its own typed field. The first variant always stays
+inline, so zero values and constructed values use the same representation.
+Later variants start inline.
 
-Current storage keeps all payloads inside the enum. Automatic boxing would move
-large payloads into an interface field. Decide whether to keep the first payload
-inside the enum and treat 80 bytes as a target. Set the equality and map-key
-rules before enabling boxing: zero values and constructed values must agree,
-without losing floating-point negative zero.
+Measure the complete struct with Go's amd64 layout, including padding. Above
+80 bytes, try boxing the largest later payload first. Equal payload sizes use
+declaration order. Boxing stores payload values in one shared interface field.
+Measure all generated fields again after each change.
+
+Keep the smallest layout tried; equal sizes keep fewer boxes. Stop at 80 bytes
+or after trying all later payloads. The target can be exceeded. Noncomparable
+payloads keep the enum noncomparable. Go decides whether boxes need heap memory.

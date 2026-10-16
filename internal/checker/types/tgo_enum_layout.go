@@ -48,9 +48,9 @@ func enumStorage(enum *Enum) *Struct {
 }
 
 // largestEnumPayload finds the largest remaining inline field, keeping declaration order on ties.
-func largestEnumPayload(enum *Enum, sizes Sizes, first int) *EnumVariant {
+func largestEnumPayload(enum *Enum, sizes Sizes) *EnumVariant {
 	var largest *EnumVariant
-	for _, variant := range enum.variants[first:] {
+	for _, variant := range enum.variants[1:] {
 		if variant.boxed || variant.typ.Underlying().(*Struct).NumFields() == 0 {
 			continue
 		}
@@ -72,4 +72,36 @@ func enumNeedsComparisonMarker(enum *Enum, storage *Struct) bool {
 		}
 	}
 	return false
+}
+
+// enumLayout keeps the first payload inline and selects the smallest largest-first boxing layout.
+func enumLayout(enum *Enum) *Struct {
+	for _, variant := range enum.variants {
+		variant.boxed = false
+	}
+	sizes := SizesFor("gc", "amd64")
+	best := enumStorage(enum)
+	bestSize := sizes.Sizeof(best)
+	var boxed []*EnumVariant
+	bestCount := 0
+	for bestSize > 80 {
+		variant := largestEnumPayload(enum, sizes)
+		if variant == nil {
+			break
+		}
+		variant.boxed = true
+		boxed = append(boxed, variant)
+		candidate := enumStorage(enum)
+		size := sizes.Sizeof(candidate)
+		if size < bestSize {
+			best, bestSize, bestCount = candidate, size, len(boxed)
+		}
+		if size <= 80 {
+			break
+		}
+	}
+	for _, variant := range boxed[bestCount:] {
+		variant.boxed = false
+	}
+	return best
 }

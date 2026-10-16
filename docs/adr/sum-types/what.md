@@ -2,7 +2,8 @@
 
 ## Goal
 
-An enum holds one declared variant and that variant's fields. Use Go's type
+Declare enums at package level. An enum holds one declared variant and its
+fields. Use Go's type
 switch syntax to select a variant and read its fields.
 
 ## Example
@@ -37,7 +38,3 @@ The switch reads its input once. A single-variant case gives `v` a copy of that
 variant's fields. Replacing `account` does not change this copy. Copied pointers
 still refer to the same data. In grouped and default cases, `v` keeps the enum
 type.
-
-## Open decision
-
-Decide whether enum declarations inside functions are supported.
