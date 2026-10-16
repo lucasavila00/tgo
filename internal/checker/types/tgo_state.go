@@ -7,6 +7,7 @@ import "github.com/lucasavila00/tgo/internal/ast"
 // statementContext stays in Go's environment so function entry and exit save
 // it together with the source scope and signature.
 type tgoCheckState struct {
+	enums         map[*ast.EnumType]*Enum
 	packageScopes []*Scope // local TGo scopes checked after closure bodies
 
 	// Facts for source expressions.
