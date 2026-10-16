@@ -21,10 +21,10 @@ Give each variant a private field containing its data. Empty variants
 need none. Assign tags from zero in declaration order, using the smallest
 fitting unsigned integer.
 
+Boxing stores a typed payload value in one shared `interface{}` field.
 Measure the complete struct using Go's amd64 layout for every target. Include
 fields, tag, interface, and padding. While larger than 80 bytes, box the largest
 variant field. Choose the first variant on ties; recalculate size.
-Boxed variants share one `interface{}` field holding a typed payload value.
 Calculate nested enums first.
 
 Construct a fresh value containing only the selected variant. For a boxed first
