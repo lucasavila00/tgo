@@ -1,0 +1,46 @@
+--- a/ast/walk.go
++++ b/ast/walk.go
+@@ -63,6 +63,43 @@
+ 
+ 	case *FieldList:
+ 		walkList(v, n.List)
++
++	// TGo syntax
++	case *PropagateExpr:
++		Walk(v, n.X)
++
++	case *IfExpr:
++		if n.Init != nil {
++			Walk(v, n.Init)
++		}
++		Walk(v, n.Cond)
++		Walk(v, n.Body)
++		if n.Else != nil {
++			Walk(v, n.Else)
++		}
++
++	case *SwitchExpr:
++		Walk(v, n.Switch)
++
++	case *ComprehensionExpr:
++		Walk(v, n.Type)
++		walkList(v, n.Output)
++		walkList(v, n.Clauses)
++
++	case *RangeClause:
++		if n.Key != nil {
++			Walk(v, n.Key)
++		}
++		if n.Value != nil {
++			Walk(v, n.Value)
++		}
++		Walk(v, n.X)
++
++	case *FilterClause:
++		Walk(v, n.Cond)
++
++	case *ShortReturnStmt:
++		walkList(v, n.Results)
+ 
+ 	// Expressions
+ 	case *BadExpr, *Ident, *BasicLit:

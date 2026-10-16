@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
@@ -117,7 +117,7 @@ func (r *Context) initializerJumps(loop *ast.ForStmt) bool {
 	}
 	found := false
 	ast.Inspect(loop.Init, func(node ast.Node) bool {
-		if function, ok := node.(*ast.FuncLit); ok && r.RealFunction(function) {
+		if _, ok := node.(*ast.FuncLit); ok {
 			return false
 		}
 		if branch, ok := node.(*ast.BranchStmt); ok && r.branchTarget(branch) == loop {
@@ -128,50 +128,7 @@ func (r *Context) initializerJumps(loop *ast.ForStmt) bool {
 	return found
 }
 
-// RealFunction distinguishes a source closure from generated comprehension syntax.
-func (r *Context) RealFunction(function *ast.FuncLit) bool {
-	call, _ := r.input.Inventory.Parents[function].(*ast.CallExpr)
-	return r.input.Conditionals[call] == nil && r.input.Comprehensions[call] == nil
-}
-
-// branchTarget uses source parents and checked labels, before statements move.
-func (r *Context) branchTarget(branch *ast.BranchStmt) ast.Stmt {
-	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
-		return nil
-	}
-	for node := r.input.Inventory.Parents[branch]; node != nil; node = r.input.Inventory.Parents[node] {
-		if function, ok := node.(*ast.FuncLit); ok && r.RealFunction(function) {
-			return nil
-		}
-		if branch.Label != nil {
-			if target := r.labeledBranchTarget(node, branch.Label); target != nil {
-				return target
-			}
-			continue
-		}
-		switch node := node.(type) {
-		case *ast.RangeStmt:
-			if r.functionState.comprehensionRanges[node] && contains(node.X, branch) {
-				continue
-			}
-			return node
-		case *ast.ForStmt:
-			return node
-		case *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
-			if branch.Tok == token.BREAK {
-				return node.(ast.Stmt)
-			}
-		}
-	}
-	return nil
-}
-
-// labeledBranchTarget resolves a source label to its control statement by checked binding identity.
-func (r *Context) labeledBranchTarget(node ast.Node, label *ast.Ident) ast.Stmt {
-	if statement, ok := node.(*ast.LabeledStmt); ok &&
-		r.input.Inventory.Checked.TypesInfo.Defs[statement.Label] ==
-			r.input.Inventory.Checked.TypesInfo.Uses[label] {
-		return statement.Stmt
-	}
-	return nil
+// branchTarget reads the checked source target before statements move.
+func (r *Context) branchTarget(branch *ast.BranchStmt) ast.Node {
+	return r.input.Inventory.Checked.TypesInfo.BranchTargets[branch]
 }

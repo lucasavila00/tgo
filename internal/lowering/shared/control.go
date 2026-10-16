@@ -1,8 +1,8 @@
 package shared
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"strconv"

@@ -1,6 +1,6 @@
 package shared
 
-import "go/ast"
+import "github.com/lucasavila00/tgo/internal/ast"
 
 // contains reports whether the child's source position range lies inside the parent's range.
 func contains(parent, child ast.Node) bool {

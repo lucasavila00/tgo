@@ -2,78 +2,50 @@ package frontend
 
 import (
 	"bytes"
-	"go/ast"
-	"go/format"
 	"go/token"
 
-	"github.com/lucasavila00/tgo/internal/frontend/parser"
-
-	"golang.org/x/tools/go/ast/astutil"
+	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/printer"
 )
 
-// Marker records a postfix operation and its original source position.
-type Marker struct {
-	Name     string
-	Wrap     bool
-	CallName string
-	Position token.Position
-}
-
-type postfixBinding struct {
-	name string
-	end  token.Pos
-}
-
-// bindPostfixCalls records source names before any nested operand is replaced.
-func (result *Parsed) bindPostfixCalls(fset *token.FileSet, forms parser.Forms,
-	input []byte, used map[string]bool) map[ast.Expr]postfixBinding {
-	bindings := make(map[ast.Expr]postfixBinding, len(forms.Postfix))
-	containers := syntaxContainers(forms)
-	for _, operation := range forms.Postfix {
-		call := ast.Unparen(operation.Operand).(*ast.CallExpr)
-		name := freshMarkerName(used, "tgoPropagation")
-		result.Propagations[name] = Marker{
-			Name: name, Wrap: operation.Wrap, Position: fset.Position(operation.Start),
-			CallName: sourceCallName(fset, call.Fun, input, containers),
+// sourceCallNames records call text on the same propagation nodes used by checking and lowering.
+func sourceCallNames(fset *token.FileSet, file *ast.File, input []byte) map[*ast.PropagateExpr]string {
+	names := make(map[*ast.PropagateExpr]string)
+	ast.Inspect(file, func(node ast.Node) bool {
+		if operation, ok := node.(*ast.PropagateExpr); ok {
+			operand := ast.Unparen(operation.X)
+			for {
+				nested, ok := operand.(*ast.PropagateExpr)
+				if !ok {
+					break
+				}
+				operand = ast.Unparen(nested.X)
+			}
+			names[operation] = sourceCallName(fset, operand.(*ast.CallExpr).Fun, input)
 		}
-		bindings[operation.Operand] = postfixBinding{name: name, end: operation.End}
-	}
-	return bindings
+		return true
+	})
+	return names
 }
 
-// sourceCallName formats ordinary callees and retains source syntax for added forms.
-func sourceCallName(fset *token.FileSet, expression ast.Expr, input []byte, containers map[ast.Node]bool) string {
-	containsSyntax := false
+// sourceCallName prints a Go callee or retains its source text when it contains a native TGo form.
+func sourceCallName(fset *token.FileSet, expression ast.Expr, input []byte) string {
+	containsTGoForm := false
 	ast.Inspect(expression, func(node ast.Node) bool {
-		containsSyntax = containsSyntax || containers[node]
-		return !containsSyntax
+		switch node.(type) {
+		case *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+			containsTGoForm = true
+		}
+		return !containsTGoForm
 	})
-	if containsSyntax {
+	if containsTGoForm {
 		file := fset.File(expression.Pos())
 		return string(input[file.Offset(expression.Pos()):file.Offset(expression.End())])
 	}
 	var name bytes.Buffer
-	if err := format.Node(&name, fset, expression); err != nil {
+	config := printer.Config{Mode: printer.UseSpaces | printer.TabIndent | printer.CallName, Tabwidth: 8}
+	if err := config.Fprint(&name, fset, expression); err != nil {
 		panic(err)
 	}
 	return name.String()
-}
-
-// normalizePostfix replaces recorded operands with checker calls in one bottom-up walk.
-// Nested replacements are complete before a parent operand is wrapped.
-func normalizePostfix(file *ast.File, bindings map[ast.Expr]postfixBinding) {
-	astutil.Apply(file, nil, func(cursor *astutil.Cursor) bool {
-		operand, isExpression := cursor.Node().(ast.Expr)
-		if !isExpression {
-			return true
-		}
-		binding, found := bindings[operand]
-		if found {
-			cursor.Replace(&ast.CallExpr{
-				Fun:    &ast.Ident{Name: binding.name, NamePos: operand.Pos()},
-				Lparen: operand.Pos(), Args: []ast.Expr{ast.Unparen(operand)}, Rparen: binding.end - 1,
-			})
-		}
-		return true
-	})
 }

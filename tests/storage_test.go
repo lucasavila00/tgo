@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"testing"
 )

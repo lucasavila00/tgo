@@ -1,0 +1,30 @@
+--- a/format/format.go
++++ b/format/format.go
+@@ -17,9 +17,9 @@
+ import (
+ 	"bytes"
+ 	"fmt"
+-	"go/ast"
+-	"go/parser"
+-	"go/printer"
++	"github.com/lucasavila00/tgo/internal/ast"
++	"github.com/lucasavila00/tgo/internal/frontend/parser"
++	"github.com/lucasavila00/tgo/internal/printer"
+ 	"go/token"
+ 	"io"
+ )
+--- a/format/internal.go
++++ b/format/internal.go
+@@ -11,9 +11,9 @@
+ 
+ import (
+ 	"bytes"
+-	"go/ast"
+-	"go/parser"
+-	"go/printer"
++	"github.com/lucasavila00/tgo/internal/ast"
++	"github.com/lucasavila00/tgo/internal/frontend/parser"
++	"github.com/lucasavila00/tgo/internal/printer"
+ 	"go/token"
+ 	"strings"
+ )

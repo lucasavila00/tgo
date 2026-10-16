@@ -9,8 +9,8 @@
 // Shared operations retain checked element and key types, give generator
 // bindings fresh names, and evaluate output operands in source order. Their
 // ordinary range and jump handling keeps filters, nested ranges, returns, and
-// continues at the source execution point. Collection output state belongs to
-// the current function context; nested functions do not inherit that state.
+// continues at the source execution point. Each comprehension passes its own
+// result destination to the operations that store its output.
 //
 // Output expressions can contain other TGo rules. The supplied context returns
 // to the dispatcher for those expressions. This keeps collection decisions

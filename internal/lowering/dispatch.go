@@ -1,11 +1,11 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/lowering/comprehensions"
 	"github.com/lucasavila00/tgo/internal/lowering/propagation"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
 	"github.com/lucasavila00/tgo/internal/lowering/valueexpr"
-	"go/ast"
 	"go/token"
 )
 
@@ -60,23 +60,13 @@ func expression(r *shared.Context, expr ast.Expr) shared.Result {
 
 // specialExpression selects the propagation, comprehension, or value-expression rule from the checked source records.
 func specialExpression(r *shared.Context, expr ast.Expr) (shared.Result, bool) {
-	if operation, ok := r.PropagationAt(expr); ok {
-		return propagation.Expression(r, expr.(*ast.CallExpr), operation, false), true
-	}
-	call, ok := expr.(*ast.CallExpr)
-	if !ok {
-		return shared.Result{}, false
-	}
-	if record := r.ComprehensionAt(call); record != nil {
-		return comprehensions.Expression(r, call, record), true
-	}
-	if identifier, ok := call.Fun.(*ast.Ident); ok {
-		if destination := r.CollectionOutput(identifier.Name); destination != nil {
-			return comprehensions.Output(r, call, destination), true
-		}
-	}
-	if statement := r.ConditionalAt(call); statement != nil {
-		return valueexpr.Expression(r, call, statement), true
+	switch expression := expr.(type) {
+	case *ast.PropagateExpr:
+		return propagation.Expression(r, expression, false), true
+	case *ast.ComprehensionExpr:
+		return comprehensions.Expression(r, expression), true
+	case *ast.IfExpr, *ast.SwitchExpr:
+		return valueexpr.Expression(r, expression), true
 	}
 	return shared.Result{}, false
 }
@@ -90,8 +80,8 @@ func discardedPropagation(r *shared.Context, expression ast.Expr) ([]ast.Stmt, b
 		}
 		expression = parenthesized.X
 	}
-	if operation, ok := r.PropagationAt(expression); ok {
-		evaluation := propagation.Expression(r, expression.(*ast.CallExpr), operation, true)
+	if operation, ok := expression.(*ast.PropagateExpr); ok {
+		evaluation := propagation.Expression(r, operation, true)
 		return evaluation.Statements, true
 	}
 	return nil, false

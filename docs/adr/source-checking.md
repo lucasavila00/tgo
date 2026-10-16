@@ -2,15 +2,15 @@
 
 ## Decision and reason
 
-Use a private copy of Go's type checker and its matching export-data reader.
-Build the matching private parser and scanner from tracked Go patches. Their
-grammar reads all supported TGo syntax directly.
+Build the private checker and export-data reader from pinned Go source and
+tracked patches.
+Build matching AST, parser, scanner, printer, and formatter packages from the
+same Go pin and tracked patches. The parser creates native TGo nodes. Checking
+records types, lexical scopes, and jump targets on those source nodes.
 
-The earlier driver inserted helpers and reloaded packages to discover success
-types. Direct checking resolves `outer(inner()!)!` in one source check. If values
-also need branch types, surrounding types, scope, and jumps checked together.
-Writing a fake Go file remains a possible design, but requires a representation
-of those rules. Writing to disk alone does not supply them.
+Direct checking resolves `outer(inner()!)!` in one source check. Value branches
+need their surrounding types, source scopes, and jump targets. Native nodes
+keep those facts on the source expressions that checking and lowering share.
 
 ## Cost and boundaries
 

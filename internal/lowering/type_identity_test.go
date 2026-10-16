@@ -1,7 +1,8 @@
 package lowering
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
+	stockast "go/ast"
 	stocktypes "go/types"
 	"os"
 	"path/filepath"
@@ -25,22 +26,25 @@ func TestLoadKeepsStockTypeObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source.Package.Fset != source.inventory.Checked.Fset ||
-		source.Package.Syntax[0] != source.inventory.Checked.Syntax[0] {
-		t.Fatal("checks must use the same source syntax and positions")
-	}
-	fn := source.Package.Syntax[0].Decls[0].(*ast.FuncDecl)
+	fn := source.Package.Syntax[0].Decls[0].(*stockast.FuncDecl)
 	errorType := fn.Type.Results.List[0].Type
 	if source.Package.TypesInfo.TypeOf(errorType) != stocktypes.Universe.Lookup("error").Type() {
 		t.Fatal("public Load changed stock Go type identity")
 	}
-	if source.inventory.Checked.TypesInfo.TypeOf(errorType) != types.Universe.Lookup("error").Type() {
+	privateFunction := source.inventory.Checked.Syntax[0].Decls[0].(*ast.FuncDecl)
+	privateErrorType := privateFunction.Type.Results.List[0].Type
+	privateOffset := source.inventory.Checked.Fset.Position(privateErrorType.Pos()).Offset
+	stockOffset := source.Package.Fset.Position(errorType.Pos()).Offset
+	if privateOffset != stockOffset {
+		t.Fatal("private checking changed source offsets")
+	}
+	if source.inventory.Checked.TypesInfo.TypeOf(privateErrorType) != types.Universe.Lookup("error").Type() {
 		t.Fatal("lowering did not use private source type objects")
 	}
 	if source.Package.TypesInfo.Defs[fn.Name].Pkg() != source.Package.Types {
 		t.Fatal("public bindings changed package identity")
 	}
-	if source.inventory.Checked.TypesInfo.Defs[fn.Name].Pkg() != source.inventory.Checked.Types {
+	if source.inventory.Checked.TypesInfo.Defs[privateFunction.Name].Pkg() != source.inventory.Checked.Types {
 		t.Fatal("private bindings changed package identity")
 	}
 }

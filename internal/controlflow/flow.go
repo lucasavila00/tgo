@@ -1,16 +1,14 @@
 package controlflow
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 )
 
-// Syntax identifies statements inside added expressions and Go control-flow rules.
+// Syntax supplies checked facts about calls.
 type Syntax struct {
-	RangeSourceOutside func(*ast.RangeStmt) bool
-	Statements         func(*ast.CallExpr) ast.Stmt
-	Terminates         func(*ast.CallExpr) bool
-	Unevaluated        func(*ast.CallExpr) bool
+	Terminates  func(*ast.CallExpr) bool
+	Unevaluated func(*ast.CallExpr) bool
 }
 
 // Result reports whether a branch can reach its last statement or its end.
@@ -136,6 +134,8 @@ func (builder *branchBuilder) statementInner(
 		return builder.branchStatement(statement, continuation, targets)
 	case *ast.ReturnStmt:
 		return builder.expressions(statement.Results, link(), targets)
+	case *ast.ShortReturnStmt:
+		return builder.expressions(statement.Results, link(), targets)
 	case *ast.ExprStmt:
 		return builder.expression(statement.X, continuation, targets)
 	case *ast.AssignStmt:
@@ -220,6 +220,16 @@ func (builder *branchBuilder) expression(expr ast.Expr, continuation *flowPoint,
 		return continuation
 	}
 	switch expression := expr.(type) {
+	case *ast.PropagateExpr:
+		return builder.expression(expression.X, continuation, targets)
+	case *ast.IfExpr:
+		choice := link(builder.statement(expression.Body, continuation, targets, ""),
+			builder.ifAlternative(expression.Else, continuation, targets))
+		return builder.statement(expression.Init, builder.expression(expression.Cond, choice, targets), targets, "")
+	case *ast.SwitchExpr:
+		return builder.statement(expression.Switch, continuation, targets, "")
+	case *ast.ComprehensionExpr:
+		return builder.comprehension(expression.Clauses, expression.Output, continuation, targets)
 	case *ast.CallExpr:
 		return builder.callExpression(expression, continuation, targets)
 	case *ast.BinaryExpr:
@@ -262,11 +272,6 @@ func (builder *branchBuilder) callExpression(
 ) *flowPoint {
 	if builder.syntax.Unevaluated != nil && builder.syntax.Unevaluated(expression) {
 		return continuation
-	}
-	if builder.syntax.Statements != nil {
-		if body := builder.syntax.Statements(expression); body != nil {
-			return builder.statement(body, continuation, targets, "")
-		}
 	}
 	if builder.syntax.Terminates != nil && builder.syntax.Terminates(expression) {
 		continuation = link()
@@ -337,9 +342,6 @@ func (builder *branchBuilder) rangeStatement(
 	bodyEntry := builder.statement(statement.Body, step, bodyTargets, "")
 	assignmentEntry := builder.expressions([]ast.Expr{statement.Key, statement.Value}, bodyEntry, bodyTargets)
 	step.successors = []*flowPoint{assignmentEntry, continuation}
-	if builder.syntax.RangeSourceOutside != nil && builder.syntax.RangeSourceOutside(statement) {
-		bodyTargets = targets
-	}
 	return builder.expression(statement.X, step, bodyTargets)
 }
 
@@ -431,4 +433,36 @@ func (builder *branchBuilder) selectStatement(
 		choice.successors = append(choice.successors, body)
 	}
 	return builder.expressions(operands, choice, bodyTargets)
+}
+
+// ifAlternative follows either a branch block or another value-producing if.
+func (builder *branchBuilder) ifAlternative(node ast.Node, continuation *flowPoint, targets jumpTargets) *flowPoint {
+	switch node := node.(type) {
+	case *ast.IfExpr:
+		return builder.expression(node, continuation, targets)
+	case *ast.BlockStmt:
+		return builder.statement(node, continuation, targets, "")
+	}
+	return continuation
+}
+
+// comprehension follows range sources before the corresponding loop targets exist.
+func (builder *branchBuilder) comprehension(clauses []ast.ComprehensionClause, outputs []ast.Expr,
+	continuation *flowPoint, targets jumpTargets) *flowPoint {
+	if len(clauses) == 0 {
+		return builder.expressions(outputs, continuation, targets)
+	}
+	switch clause := clauses[0].(type) {
+	case *ast.RangeClause:
+		step := &flowPoint{}
+		inner := jumpTargets{breakTarget: continuation, continueTarget: step,
+			fallthroughTarget: targets.fallthroughTarget}
+		body := builder.comprehension(clauses[1:], outputs, step, inner)
+		step.successors = []*flowPoint{body, continuation}
+		return builder.expression(clause.X, step, targets)
+	case *ast.FilterClause:
+		body := builder.comprehension(clauses[1:], outputs, continuation, targets)
+		return builder.expression(clause.Cond, link(body, continuation), targets)
+	}
+	panic("invalid comprehension clause")
 }

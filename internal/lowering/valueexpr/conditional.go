@@ -1,21 +1,47 @@
 package valueexpr
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/lowering/shared"
-	"go/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
 )
 
 // Expression produces a checked value from the reached branch.
-func Expression(r *shared.Context, call *ast.CallExpr, statement ast.Stmt) shared.Result {
+func Expression(r *shared.Context, expression ast.Expr) shared.Result {
 	resultVariable := r.Name()
-	resultType := types.Default(r.TypeOf(call))
-	declaration := r.ResultStorage(resultVariable, resultType, call, nil)
-	branchStatements := valueStatement(r, statement, resultVariable)
-	r.CompleteExpression(call)
+	resultType := types.Default(r.TypeOf(expression))
+	declaration := r.ResultStorage(resultVariable, resultType, expression, nil)
+	var branchStatements []ast.Stmt
+	switch expression := expression.(type) {
+	case *ast.IfExpr:
+		branchStatements = conditionalExpression(r, expression, resultVariable)
+	case *ast.SwitchExpr:
+		branchStatements = valueStatement(r, expression.Switch, resultVariable)
+	}
+	r.CompleteExpression(expression)
 	return r.ResultOf(append([]ast.Stmt{declaration}, branchStatements...), []ast.Expr{resultVariable})
+}
+
+// conditionalExpression builds Go branches from a value-producing if.
+func conditionalExpression(r *shared.Context, expression *ast.IfExpr, result *ast.Ident) []ast.Stmt {
+	body := conditionalBlock(r, expression.Body, result)
+	var alternative ast.Stmt
+	switch branch := expression.Else.(type) {
+	case *ast.BlockStmt:
+		alternative = conditionalBlock(r, branch, result)
+	case *ast.IfExpr:
+		statements := conditionalExpression(r, branch, result)
+		r.CompleteExpression(branch)
+		if len(statements) == 1 {
+			alternative = statements[0]
+		} else {
+			alternative = &ast.BlockStmt{List: statements}
+		}
+	}
+	source := &ast.IfStmt{If: expression.If, Init: expression.Init, Cond: expression.Cond}
+	return r.IfStatement(source, body, alternative)
 }
 
 // conditionalStatement lowers if branches so each reached value tail writes the shared result local.

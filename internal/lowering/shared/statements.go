@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 )
 
@@ -72,10 +72,9 @@ func (r *Context) StatementSyntax(statement ast.Stmt) []ast.Stmt {
 		return append(statements, &output)
 	case *ast.ExprStmt:
 		return r.expressionStatement(s)
+	case *ast.ShortReturnStmt:
+		return r.shortReturnStatement(s)
 	case *ast.ReturnStmt:
-		if record, found := r.input.ShortReturns[s]; found {
-			return r.shortReturnStatement(s, record)
-		}
 		output := *s
 		statementsEvaluation := r.Operands(s.Results)
 		statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
@@ -127,10 +126,7 @@ func (r *Context) hasLabelBranch(node ast.Node, label string) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
-			call, _ := r.input.Inventory.Parents[n].(*ast.CallExpr)
-			if r.input.Conditionals[call] == nil && r.input.Comprehensions[call] == nil {
-				return false
-			}
+			return false
 		}
 		if branch, ok := n.(*ast.BranchStmt); ok && branch.Label != nil && branch.Tok != token.GOTO &&
 			branch.Label.Name == label {
@@ -209,7 +205,7 @@ func Boolean(value bool) ast.Expr {
 func (r *Context) functionHasGoto(body *ast.BlockStmt) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
-		if function, ok := node.(*ast.FuncLit); ok && r.RealFunction(function) {
+		if _, ok := node.(*ast.FuncLit); ok {
 			return false
 		}
 		if branch, ok := node.(*ast.BranchStmt); ok && branch.Tok == token.GOTO {

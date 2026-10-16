@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
@@ -40,9 +40,11 @@ func (r *Context) Save(value Value) Result {
 func (r *Context) SaveResults(value Value, discardSuccess, errorResult bool) Result {
 	expr := value.Expression
 	original := value.Original
-	count := r.resultCount(original)
-	if value.Temporary {
-		count = 1
+	count := 1
+	if tuple, ok := value.Type.(*types.Tuple); ok {
+		count = tuple.Len()
+	} else if !value.Temporary && r.input.Inventory.Checked.TypesInfo.Types[original].HasOk() {
+		count = r.resultCount(original)
 	}
 	if literal := r.implicitMapKey(value); literal != nil {
 		return r.materializeKey(expr.(*ast.CompositeLit), literal)

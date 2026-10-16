@@ -1,8 +1,8 @@
 package shared
 
 import (
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"go/ast"
 )
 
 // Value keeps a Go expression with its checked type and source identity.

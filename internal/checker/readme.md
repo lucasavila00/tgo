@@ -6,17 +6,13 @@
 import "github.com/lucasavila00/tgo/internal/checker"
 ```
 
-Package checker decides whether TGo source is valid before code generation.
+Package checker decides whether source is valid before code generation.
 
-It checks types, names, and jumps in the source program. For example, fetch\(\)\! must have a final error result, and the source function must accept that error. An if expression checks each completing branch against the required type. A branch that returns from the function does not supply a value.
+It checks types, names, and jumps on the native source nodes. For example, fetch\(\)\! must have a final error result that the source function can return. An if expression checks each completing branch against the required type. A branch that returns from the function does not supply a value.
 
-### Keep the source function's rules
+Each expression records its lexical scope. Each jump records its source target. The lowerer uses these facts when it moves evaluations into Go statements. A comprehension checks its range source before adding that range's bindings; later clauses and output see those bindings.
 
-Frontend markers represent added syntax. The checker checks their statements in the enclosing source scope. Returns, defers, and jumps keep their source targets. The shared control\-flow analysis tells checking and lowering which paths can produce a value.
-
-TGo checking uses a patched Go checker. The pinned version and patch make its source reproducible; see [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>). Its type objects stay separate from stock go/types objects. The driver checks generated Go with stock Go.
-
-A loader owns imported types and completed checks for each package and test variant. Its constructor receives the target architecture's type sizes. Each package supplies syntax and TGo records together; checking registers the records before type analysis. Each checker owns its TGo state. Go's environment owns the current function, scope, and statement context.
+The loader shares private type objects across packages and test variants. Ordinary Go loading retains the caller's stock syntax and type objects. Private checking reads its own syntax, while generated output is checked with stock Go. See [checker maintenance](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/upstream.md>) for the shared version pin and patches.
 
 ## func TargetSizes
 
@@ -39,7 +35,7 @@ type Loader struct {
 ### func NewLoader
 
 ```go
-func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool, sizes types.Sizes) *Loader
+func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, sizes types.Sizes) *Loader
 ```
 
 NewLoader creates one owner for source checks and imported types. sizes must describe the module's selected Go target architecture.
@@ -58,16 +54,13 @@ Package keeps checked syntax and private type objects together.
 
 ```go
 type Package struct {
-    Fset           *token.FileSet
-    Syntax         []*ast.File
-    Types          *types.Package
-    TypesInfo      *types.Info
-    GoFiles        []string
-    Errors         []error
-    Operations     map[string]types.TGoOperation
-    Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-    Conditionals   map[*ast.CallExpr]ast.Stmt
-    ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+    Fset      *token.FileSet
+    Syntax    []*ast.File
+    Types     *types.Package
+    TypesInfo *types.Info
+    GoFiles   []string
+    Errors    []error
+    CallNames map[*ast.PropagateExpr]string
 }
 ```
 

@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	stock "go/parser"
 	"go/token"
 	"reflect"
@@ -24,8 +24,9 @@ func TestComprehensionGrammar(t *testing.T) {
 		t.Run(expression, func(t *testing.T) {
 			input := "package p\nvar result = " + expression
 			positions := token.NewFileSet()
-			file, forms, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
+			file, err := ParseTGoFile(positions, "main_tgo.go", "main.tgo", input,
 				ParseComments|AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || file == nil || len(forms.Comprehensions) == 0 {
 				t.Fatalf("collections: %d; error: %v", len(forms.Comprehensions), err)
 			}
@@ -54,8 +55,8 @@ func TestLiteralGrammarMatchesGo(t *testing.T) {
 			mode := ParseComments | AllErrors | SkipObjectResolution
 			got, gotError := ParseFile(token.NewFileSet(), "main.go", input, mode)
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.go", input, stock.Mode(mode))
-			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(gotError, wantError) {
-				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !reflect.DeepEqual(got, want),
+			if !sameGoTree(got, want) || !reflect.DeepEqual(gotError, wantError) {
+				t.Fatalf("AST differs: %t; diagnostics: %v, want %v", !sameGoTree(got, want),
 					gotError, wantError)
 			}
 		})
@@ -63,33 +64,19 @@ func TestLiteralGrammarMatchesGo(t *testing.T) {
 }
 
 // checkComprehensionContainer checks the nested ranges, filters, and output identity.
-func checkComprehensionContainer(t *testing.T, positions *token.FileSet, form Comprehension) {
+func checkComprehensionContainer(t *testing.T, positions *token.FileSet, form *ast.ComprehensionExpr) {
 	t.Helper()
-	if len(form.Call.Args) != 2 || len(form.Ranges) == 0 || positions.Position(form.Position).Filename != "main.tgo" {
-		t.Fatal("incomplete comprehension record")
+	if len(form.Clauses) == 0 || positions.Position(form.Pos()).Filename != "main.tgo" {
+		t.Fatal("incomplete comprehension")
 	}
-	body := form.Call.Args[1].(*ast.FuncLit).Body
-	rangeIndex := 0
-	for len(body.List) == 1 {
-		switch statement := body.List[0].(type) {
-		case *ast.RangeStmt:
-			if form.Ranges[rangeIndex] != statement {
-				t.Fatal("range order differs from syntax order")
-			}
-			rangeIndex++
-			body = statement.Body
-		case *ast.IfStmt:
-			body = statement.Body
-		case *ast.ExprStmt:
-			if statement.X != form.Output || rangeIndex != len(form.Ranges) {
-				t.Fatal("output or range identity changed")
-			}
-			return
-		default:
-			t.Fatalf("unexpected clause: %T", statement)
+	if _, rangeFirst := form.Clauses[0].(*ast.RangeClause); !rangeFirst {
+		t.Fatal("first clause is not a range")
+	}
+	for _, clause := range form.Clauses {
+		if clause.Pos() < form.Lbrace || clause.End() > form.End() {
+			t.Fatal("clause is outside source span")
 		}
 	}
-	t.Fatal("missing output")
 }
 
 // TestComprehensionGrammarRejectsMalformedClauses checks syntax errors before checking types.
@@ -102,7 +89,7 @@ func TestComprehensionGrammarRejectsMalformedClauses(t *testing.T) {
 		`[]int{x for _, x := range xs`,
 	} {
 		t.Run(expression, func(t *testing.T) {
-			_, _, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
+			_, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
 				"package p\nvar result = "+expression, AllErrors|SkipObjectResolution)
 			if err == nil {
 				t.Fatal("invalid comprehension parsed")
@@ -132,8 +119,9 @@ func TestNamedComprehensionHeaders(t *testing.T) {
 	} {
 		t.Run(body, func(t *testing.T) {
 			input := "package p; func f() { " + body + " }"
-			_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
+			file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input,
 				AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.Comprehensions) != 1 {
 				t.Fatalf("collections: %d; error: %v", len(forms.Comprehensions), err)
 			}
@@ -159,12 +147,13 @@ func TestNamedHeaderKeepsOrdinaryBlocks(t *testing.T) {
 		t.Run(body, func(t *testing.T) {
 			input := "package p; func f() { " + body + " }"
 			mode := AllErrors | SkipObjectResolution
-			file, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, mode)
+			file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo", input, mode)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.Comprehensions) != 0 {
 				t.Fatalf("collections: %d; error: %v", len(forms.Comprehensions), err)
 			}
 			want, wantError := stock.ParseFile(token.NewFileSet(), "main.tgo", input, stock.Mode(mode))
-			if !reflect.DeepEqual(file, want) || !reflect.DeepEqual(err, wantError) {
+			if !sameGoTree(file, want) || !reflect.DeepEqual(err, wantError) {
 				t.Fatalf("ordinary statement tree or diagnostic changed: %v, want %v", err, wantError)
 			}
 		})
@@ -187,37 +176,49 @@ func TestComprehensionOutputFacts(t *testing.T) {
 		{"map[int]int{x:x*2, 1:2 for x := range 3}", 4},
 	} {
 		t.Run(test.expression, func(t *testing.T) {
-			_, forms, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
+			file, err := ParseTGoFile(token.NewFileSet(), "main.tgo", "main.tgo",
 				"package p; var values="+test.expression, AllErrors|SkipObjectResolution)
+			forms := syntaxNodes(file)
 			if err != nil || len(forms.Comprehensions) != 1 {
-				t.Fatalf("records: %+v; error: %v", forms.Comprehensions, err)
+				t.Fatalf("source collections: %+v; error: %v", forms.Comprehensions, err)
 			}
-			if got := len(forms.Comprehensions[0].Output.Args); got != test.count {
+			if got := outputCount(forms.Comprehensions[0].Output); got != test.count {
 				t.Fatalf("output count: %d; want %d", got, test.count)
 			}
 		})
 	}
 }
 
-// TestClauseOperandShape checks the shared parenthesized form and original postfix-inclusive spans.
+// TestClauseOperandShape checks real range and filter operands with complete postfix spans.
 func TestClauseOperandShape(t *testing.T) {
 	input := "package p; var result=[]int{x for x := range source()!! if keep(x)!}"
 	positions := token.NewFileSet()
-	_, forms, err := ParseTGoFile(positions, "main.tgo", "main.tgo", input, AllErrors|SkipObjectResolution)
+	file, err := ParseTGoFile(positions, "main.tgo", "main.tgo", input, AllErrors|SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := forms.Comprehensions[0].Call.Args[1].(*ast.FuncLit).Body
-	rangeClause := body.List[0].(*ast.RangeStmt)
-	filter := rangeClause.Body.List[0].(*ast.IfStmt)
+	collection := syntaxNodes(file).Comprehensions[0]
+	rangeClause := collection.Clauses[0].(*ast.RangeClause)
+	filter := collection.Clauses[1].(*ast.FilterClause)
 	for _, expression := range []ast.Expr{rangeClause.X, filter.Cond} {
-		operand, ok := expression.(*ast.ParenExpr)
-		if !ok {
-			t.Fatalf("clause operand: %T", expression)
+		if _, ok := expression.(*ast.PropagateExpr); !ok {
+			t.Fatalf("source operand: %T", expression)
 		}
-		end := positions.Position(operand.End()).Offset
+		end := positions.Position(expression.End()).Offset
 		if input[end-1] != '!' {
-			t.Fatalf("operand span excludes suffix: %v", operand)
+			t.Fatalf("operand span excludes suffix: %v", expression)
 		}
 	}
+}
+
+// outputCount counts the written output values without changing key-value source nodes.
+func outputCount(output []ast.Expr) int {
+	count := 0
+	for _, expression := range output {
+		count++
+		if _, keyValue := expression.(*ast.KeyValueExpr); keyValue {
+			count++
+		}
+	}
+	return count
 }

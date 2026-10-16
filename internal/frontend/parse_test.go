@@ -1,7 +1,7 @@
 package frontend
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/scanner"
 	"go/token"
 	"strings"
@@ -31,23 +31,23 @@ func TestParsePropagationPositions(t *testing.T) {
 // TestParseErrorKeepsOriginalPosition checks a parser error position after a postfix operator.
 func TestParseErrorKeepsOriginalPosition(t *testing.T) {
 	input := "package p\nfunc f() { _ = call()! + }\n"
-	_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+	_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
 	if err == nil || !strings.Contains(err.Error(), "main.tgo:2:26:") {
 		t.Fatalf("diagnostic: %v", err)
 	}
 }
 
-// checkPropagationPositions checks each parsed marker and requires one marker per propagation record.
+// checkPropagationPositions checks each propagation node and its source call name.
 func checkPropagationPositions(t *testing.T, input string) {
 	t.Helper()
 	fset := token.NewFileSet()
 	checkPropagationPositionsInFileSet(t, fset, input)
 }
 
-// checkPropagationPositionsInFileSet checks marker spans with the existing file-set base.
+// checkPropagationPositionsInFileSet checks propagation spans with the existing file-set base.
 func checkPropagationPositionsInFileSet(t *testing.T, fset *token.FileSet, input string) {
 	t.Helper()
-	parsed, err := ParseFile(fset, "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+	parsed, err := ParseFile(fset, "main_tgo.go", "main.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,49 +56,45 @@ func checkPropagationPositionsInFileSet(t *testing.T, fset *token.FileSet, input
 		found += checkPropagationCallPosition(t, input, fset, parsed, node)
 		return true
 	})
-	if found != len(parsed.Propagations) {
-		t.Fatalf("markers: %d; operations: %d", found, len(parsed.Propagations))
+	if found != len(parsed.CallNames) {
+		t.Fatalf("nodes: %d; call names: %d", found, len(parsed.CallNames))
 	}
 }
 
-// checkPropagationCallPosition checks one marker span and its physical and adjusted source positions.
-// It returns one for a checked marker and zero for other nodes.
+// checkPropagationCallPosition checks one propagation span and its physical and adjusted source positions.
+// It returns one for a checked propagation and zero for other nodes.
 func checkPropagationCallPosition(t *testing.T, input string, fset *token.FileSet, parsed *Parsed, node ast.Node) int {
 	t.Helper()
-	call, ok := node.(*ast.CallExpr)
+	operation, ok := node.(*ast.PropagateExpr)
 	if !ok {
 		return 0
 	}
-	file := fset.File(call.Pos())
+	file := fset.File(operation.Pos())
 	if file == nil {
-		t.Fatalf("call has no source file: %#v", call)
+		t.Fatalf("propagation has no source file: %#v", operation)
 	}
-	id, ok := call.Fun.(*ast.Ident)
-	if !ok {
-		return 0
+	if _, found := parsed.CallNames[operation]; !found {
+		t.Fatal("propagation has no source call name")
 	}
-	op, ok := parsed.Propagations[id.Name]
-	if !ok {
-		return 0
-	}
+	position := fset.Position(operation.OpPos)
 
 	width := 1
-	if op.Wrap {
+	if operation.Wrap {
 		width = 2
 	}
-	if input[op.Position.Offset:op.Position.Offset+width] != strings.Repeat("!", width) {
-		t.Fatalf("operator offset: %v", op.Position)
+	if input[position.Offset:position.Offset+width] != strings.Repeat("!", width) {
+		t.Fatalf("operator offset: %v", position)
 	}
-	if file.Offset(call.End()) != op.Position.Offset+width {
-		t.Fatalf("marker end: %d; operator end: %d", file.Offset(call.End()), op.Position.Offset+width)
+	if file.Offset(operation.End()) != position.Offset+width {
+		t.Fatalf("node end: %d; operator end: %d", file.Offset(operation.End()), position.Offset+width)
 	}
-	physical := fset.PositionFor(call.End()-token.Pos(width), false)
-	adjusted := fset.Position(call.End() - token.Pos(width))
-	if physical.Filename != "main_tgo.go" || adjusted != op.Position {
-		t.Fatalf("operator position: %v; want %v; physical: %v", adjusted, op.Position, physical)
+	physical := fset.PositionFor(operation.End()-token.Pos(width), false)
+	adjusted := fset.Position(operation.End() - token.Pos(width))
+	if physical.Filename != "main_tgo.go" || adjusted != position {
+		t.Fatalf("operator position: %v; want %v; physical: %v", adjusted, position, physical)
 	}
-	if call.Args[0].Pos() < call.Pos() || call.Args[0].End() > call.End() {
-		t.Fatal("operand is outside marker span")
+	if operation.X.Pos() < operation.Pos() || operation.X.End() > operation.End() {
+		t.Fatal("operand is outside propagation span")
 	}
 	return 1
 }
@@ -119,8 +115,7 @@ func TestParseMalformedPostfix(t *testing.T) {
 	for _, suffix := range []string{"!!!", "! !", "!/* split */!"} {
 		t.Run(suffix, func(t *testing.T) {
 			input := "package p\nfunc f() { call()" + suffix + "; return }"
-			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input),
-				make(map[string]bool))
+			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
 			if err == nil || !strings.Contains(err.Error(), "main.tgo:2:") {
 				t.Fatalf("diagnostic: %v", err)
 			}
@@ -136,7 +131,7 @@ func TestParseMalformedPostfix(t *testing.T) {
 func TestParseMalformedGo(t *testing.T) {
 	for _, input := range []string{"", "package", "func f() {}", "package p\nvar x = "} {
 		t.Run(input, func(t *testing.T) {
-			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input), make(map[string]bool))
+			_, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte(input))
 			if err == nil {
 				t.Fatalf("source diagnostic: %v", err)
 			}

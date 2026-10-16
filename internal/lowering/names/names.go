@@ -4,7 +4,7 @@ package names
 
 import (
 	"fmt"
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 )
 
 // Allocator keeps source names and previously generated names.

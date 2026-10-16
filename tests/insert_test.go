@@ -2,7 +2,7 @@ package tests
 
 import (
 	"bytes"
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/format"
 	"os"
 	"os/exec"

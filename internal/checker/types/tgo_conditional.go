@@ -1,7 +1,7 @@
 package types
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
@@ -9,20 +9,20 @@ import (
 
 // conditionalExpr checks reachable branch values against a supplied type or finds their common type.
 // It records branch operands for later conversion and generic inference.
-func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
+func (check *Checker) conditionalExpr(target *target, x *operand, call ast.Expr, hint Type) exprKind {
+	defer check.recordRuntimeExpression()
 	// Branch statements can change state even without a call or receive.
 	// Array len, cap, and range must therefore evaluate a conditional value.
-	check.hasCallOrRecv = true
 	x.expr = call
 	x.typ_ = Typ[Invalid]
-	body := call.Args[0].(*ast.FuncLit).Body.List[0]
+	body := call
 	context := hint
 	if target != nil {
 		context = target.typ
 	}
-	values := check.conditionalStatement(body, context)
+	values := check.conditionalValue(body, context)
 	if check.tgo.conditionalValues == nil {
-		check.tgo.conditionalValues = make(map[*ast.CallExpr][]*operand)
+		check.tgo.conditionalValues = make(map[ast.Expr][]*operand)
 	}
 	check.tgo.conditionalValues[call] = values
 	for _, branch := range values {
@@ -76,12 +76,24 @@ func (check *Checker) conditionalContext(context Type, values []*operand) Type {
 }
 
 // convertConditional assigns a chosen type to the saved branch operands.
-func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
+func (check *Checker) convertConditional(call ast.Expr, typ Type) {
 	check.assignConditionalBranches(check.tgo.conditionalValues[call], typ)
 }
 
 // conditionalBranches checks the initializer, Boolean condition, and both branches in an if-expression scope.
-func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) []*operand {
+func (check *Checker) conditionalBranches(statement *ast.IfExpr, context Type) []*operand {
+	check.recordExpressionScope(statement)
+	return check.ifBranchValues(statement, statement.Init, statement.Cond, statement.Body, statement.Else, context)
+}
+
+// statementBranchValues checks an ordinary if used as a branch's final value.
+func (check *Checker) statementBranchValues(statement *ast.IfStmt, context Type) []*operand {
+	return check.ifBranchValues(statement, statement.Init, statement.Cond, statement.Body, statement.Else, context)
+}
+
+// ifBranchValues checks the source scope, condition, and alternatives.
+func (check *Checker) ifBranchValues(statement ast.Node, init ast.Stmt, cond ast.Expr,
+	body *ast.BlockStmt, alternative ast.Node, context Type) []*operand {
 	previous := check.statementContext
 	check.statementContext &^= fallthroughOk | finalSwitchCase | inTypeSwitch
 	defer func() { check.statementContext = previous }()
@@ -89,25 +101,27 @@ func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) [
 	check.openScope(statement, "if expression")
 	defer check.closeScope()
 	if packageBranch {
-		defer check.usage(check.scope)
+		check.queuePackageUsage(check.scope)
 	}
-	if statement.Init != nil {
-		check.stmt(check.statementContext, statement.Init)
+	if init != nil {
+		check.stmt(check.statementContext, init)
 	}
 	var condition operand
-	check.expr(nil, &condition, statement.Cond)
+	check.expr(nil, &condition, cond)
 	if condition.isValid() && !allBoolean(condition.typ()) {
-		check.error(statement.Cond, InvalidCond, "if expression condition must be Boolean")
+		check.error(cond, InvalidCond, "if expression condition must be Boolean")
 	}
-	values := check.conditionalBlock(statement.Body, context)
-	switch alternative := statement.Else.(type) {
+	values := check.conditionalBlock(body, context)
+	switch alternative := alternative.(type) {
 	case *ast.BlockStmt:
 		values = append(values, check.conditionalBlock(alternative, context)...)
-	case *ast.IfStmt:
+	case *ast.IfExpr:
 		values = append(values, check.conditionalBranches(alternative, context)...)
+	case *ast.IfStmt:
+		values = append(values, check.statementBranchValues(alternative, context)...)
 	default:
 		check.error(statement, InvalidSyntaxTree, "if expression requires else")
-		values = append(values, &operand{expr: statement.Cond, typ_: Typ[Invalid]})
+		values = append(values, &operand{expr: cond, typ_: Typ[Invalid]})
 	}
 	return values
 }
@@ -157,8 +171,10 @@ func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable
 		check.hasLabel = true
 		last = labelled.Stmt
 	}
-	switch last.(type) {
-	case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+	switch last := last.(type) {
+	case *ast.IfStmt:
+		return check.statementBranchValues(last, context)
+	case *ast.SwitchStmt, *ast.TypeSwitchStmt:
 		return check.conditionalStatement(last, context)
 	}
 	if statement, ok := last.(*ast.ExprStmt); ok {
@@ -194,9 +210,6 @@ type conditionalCase struct {
 // conditionalStatement checks an if or switch value and collects its branch operands.
 // For switches, it requires a default and prevents break from targeting the value switch.
 func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*operand {
-	if statement, ok := statement.(*ast.IfStmt); ok {
-		return check.conditionalBranches(statement, context)
-	}
 	var switchBody *ast.BlockStmt
 	switch statement := statement.(type) {
 	case *ast.SwitchStmt:
@@ -250,7 +263,7 @@ func (check *Checker) conditionalCase(clause *ast.CaseClause, context Type) []*o
 
 // conditionalResultType finds a common branch type and checks assignments to it.
 // It requires an annotation when typed branches conflict or no result type is available.
-func (check *Checker) conditionalResultType(call *ast.CallExpr, values []*operand) Type {
+func (check *Checker) conditionalResultType(call ast.Expr, values []*operand) Type {
 	var typ Type
 	for _, branch := range values {
 		candidate := branch.typ()
@@ -285,4 +298,15 @@ func (check *Checker) assignConditionalBranches(values []*operand, typ Type) {
 	for _, branch := range values {
 		check.assignment(branch, typ, "conditional expression branch")
 	}
+}
+
+// conditionalValue checks the branches of a native value expression.
+func (check *Checker) conditionalValue(expression ast.Expr, context Type) []*operand {
+	switch expression := expression.(type) {
+	case *ast.IfExpr:
+		return check.conditionalBranches(expression, context)
+	case *ast.SwitchExpr:
+		return check.conditionalStatement(expression.Switch, context)
+	}
+	panic("invalid conditional expression")
 }

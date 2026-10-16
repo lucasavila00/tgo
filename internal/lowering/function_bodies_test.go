@@ -2,8 +2,8 @@ package lowering
 
 import (
 	"bytes"
-	"go/ast"
-	"go/format"
+	"github.com/lucasavila00/tgo/internal/ast"
+	"github.com/lucasavila00/tgo/internal/format"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -33,9 +33,9 @@ var functions = []func() int{func() int { return next() }}
 	if err != nil {
 		t.Fatal(err)
 	}
-	file := source.Package.Syntax[0]
+	file := source.inventory.Checked.Syntax[0]
 	var before bytes.Buffer
-	if err := format.Node(&before, source.Package.Fset, file); err != nil {
+	if err := format.Node(&before, source.inventory.Checked.Fset, file); err != nil {
 		t.Fatal(err)
 	}
 	var target Site
@@ -63,7 +63,7 @@ var functions = []func() int{func() int { return next() }}
 		t.Fatalf("insertion changed across calls:\n%s\n%s", first[name], second[name])
 	}
 	var after bytes.Buffer
-	if err := format.Node(&after, source.Package.Fset, file); err != nil {
+	if err := format.Node(&after, source.inventory.Checked.Fset, file); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(before.Bytes(), after.Bytes()) {
@@ -94,7 +94,7 @@ var functions = []func() error{func() error { next()!; return nil }}
 		t.Fatal(err)
 	}
 	loader := checker.NewLoader(dir, []*packages.Package{metadata},
-		map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool), sizes)
+		map[string]string{"main_tgo.go": "main.tgo"}, sizes)
 	checked, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
@@ -104,18 +104,14 @@ var functions = []func() error{func() error { next()!; return nil }}
 		t.Fatal(err)
 	}
 	var before bytes.Buffer
-	if err := format.Node(&before, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0]); err != nil {
+	if err := ast.Fprint(&before, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0], nil); err != nil {
 		t.Fatal(err)
 	}
-	operations := make(map[string]Propagation)
-	for name, operation := range checked.Operations {
-		operations[name] = Propagation{CallName: operation.CallName}
-	}
-	first, err := source.LowerPropagations(operations)
+	first, err := source.LowerPropagations()
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := source.LowerPropagations(operations)
+	second, err := source.LowerPropagations()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +120,7 @@ var functions = []func() error{func() error { next()!; return nil }}
 		t.Fatalf("propagation changed across calls:\n%s\n%s", first[name], second[name])
 	}
 	var after bytes.Buffer
-	if err := format.Node(&after, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0]); err != nil {
+	if err := ast.Fprint(&after, source.inventory.Checked.Fset, source.inventory.Checked.Syntax[0], nil); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(before.Bytes(), after.Bytes()) {

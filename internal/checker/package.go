@@ -2,7 +2,7 @@ package checker
 
 import (
 	"fmt"
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"io"
 	"os"
@@ -11,22 +11,18 @@ import (
 
 	"github.com/lucasavila00/tgo/internal/checker/gcimporter"
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"github.com/lucasavila00/tgo/internal/frontend"
 	"golang.org/x/tools/go/packages"
 )
 
 // Package keeps checked syntax and private type objects together.
 type Package struct {
-	Fset           *token.FileSet
-	Syntax         []*ast.File
-	Types          *types.Package
-	TypesInfo      *types.Info
-	GoFiles        []string
-	Errors         []error
-	Operations     map[string]types.TGoOperation
-	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-	Conditionals   map[*ast.CallExpr]ast.Stmt
-	ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+	Fset      *token.FileSet
+	Syntax    []*ast.File
+	Types     *types.Package
+	TypesInfo *types.Info
+	GoFiles   []string
+	Errors    []error
+	CallNames map[*ast.PropagateExpr]string
 }
 
 // Loader checks source packages and reads compiled dependency types.
@@ -34,7 +30,6 @@ type Package struct {
 type Loader struct {
 	root     string
 	tgoFiles map[string]string
-	used     map[string]bool
 	packages map[string]*Package
 	checking map[string]bool
 	imports  map[string]*types.Package
@@ -49,17 +44,16 @@ func NewLoader(
 	root string,
 	roots []*packages.Package,
 	tgoFiles map[string]string,
-	used map[string]bool,
 	sizes types.Sizes,
 ) *Loader {
-	return newLoader(root, roots, tgoFiles, used, sizes, token.NewFileSet())
+	return newLoader(root, roots, tgoFiles, sizes, token.NewFileSet())
 }
 
 // newLoader creates package and import caches and records dependency export files.
 // It uses the supplied position set and target sizes for all checks.
 func newLoader(root string, roots []*packages.Package, tgoFiles map[string]string,
-	used map[string]bool, sizes types.Sizes, fset *token.FileSet) *Loader {
-	loader := &Loader{root: root, tgoFiles: tgoFiles, used: used,
+	sizes types.Sizes, fset *token.FileSet) *Loader {
+	loader := &Loader{root: root, tgoFiles: tgoFiles,
 		packages: make(map[string]*Package), checking: make(map[string]bool),
 		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: fset, sizes: sizes}
 	packages.Visit(roots, nil, func(pkg *packages.Package) {
@@ -92,13 +86,10 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	loader.checking[metadata.ID] = true
 	defer delete(loader.checking, metadata.ID)
 	pkg := &Package{
-		Fset:           loader.fset,
-		TypesInfo:      newInfo(),
-		GoFiles:        metadata.GoFiles,
-		Operations:     make(map[string]types.TGoOperation),
-		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
-		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
-		ShortReturns:   make(map[*ast.ReturnStmt]frontend.ShortReturn),
+		Fset:      loader.fset,
+		TypesInfo: newInfo(),
+		GoFiles:   metadata.GoFiles,
+		CallNames: make(map[*ast.PropagateExpr]string),
 	}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
@@ -117,11 +108,10 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	return loader.check(metadata, pkg)
 }
 
-// check checks package syntax, records conditional nodes, and caches the successful package.
+// check checks source syntax and caches the successful package.
 // Its importer shares type objects with dependencies checked by the same loader.
 func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package, error) {
 	config := types.Config{
-		TGo:      pkg.Operations,
 		Importer: packageImporter{loader, metadata},
 		Sizes:    loader.sizes,
 		Error:    func(err error) { pkg.Errors = append(pkg.Errors, err) },
@@ -133,16 +123,6 @@ func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package,
 	pkg.Types = checkedTypes
 	if err != nil {
 		return nil, err
-	}
-	for _, file := range pkg.Syntax {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok && pkg.Operations[id.Name].Conditional {
-					pkg.Conditionals[call] = call.Args[0].(*ast.FuncLit).Body.List[0]
-				}
-			}
-			return true
-		})
 	}
 	loader.packages[metadata.ID] = pkg
 	return pkg, nil
@@ -202,16 +182,23 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	loader := newLoader(dir, []*packages.Package{metadata}, nil, nil, sizes, metadata.Fset)
+	loader := newLoader(dir, []*packages.Package{metadata}, nil, sizes, metadata.Fset)
 	pkg := &Package{
-		Fset:           metadata.Fset,
-		Syntax:         metadata.Syntax,
-		GoFiles:        metadata.GoFiles,
-		TypesInfo:      newInfo(),
-		Operations:     make(map[string]types.TGoOperation),
-		Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension),
-		Conditionals:   make(map[*ast.CallExpr]ast.Stmt),
-		ShortReturns:   make(map[*ast.ReturnStmt]frontend.ShortReturn),
+		Fset:      metadata.Fset,
+		GoFiles:   metadata.GoFiles,
+		TypesInfo: newInfo(),
+		CallNames: make(map[*ast.PropagateExpr]string),
+	}
+	filenames := metadata.CompiledGoFiles
+	if len(filenames) == 0 {
+		filenames = metadata.GoFiles
+	}
+	for _, filename := range filenames {
+		source, err := loader.parseFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		pkg.Syntax = append(pkg.Syntax, source.file)
 	}
 	return loader.check(metadata, pkg)
 }

@@ -1,6 +1,6 @@
 package types
 
-import "go/ast"
+import "github.com/lucasavila00/tgo/internal/ast"
 
 // builtinArguments supplies declared parameter types to added expressions.
 func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*operand {
@@ -60,10 +60,8 @@ func (check *Checker) numericBuiltinArguments(call *ast.CallExpr) []*operand {
 	args := make([]*operand, len(call.Args))
 	var context Type
 	for i, expression := range call.Args {
-		if marker, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
-			if operation, found := check.tgoOperation(marker); found && operation.Conditional {
-				continue
-			}
+		if conditionalExpression(ast.Unparen(expression)) {
+			continue
 		}
 		args[i] = new(operand)
 		check.expr(nil, args[i], expression)
@@ -97,15 +95,11 @@ func deleteKeyType(typ Type) Type {
 	return key
 }
 
-// hasConditionalArgument reports whether a direct call argument is a conditional marker.
+// hasConditionalArgument reports whether a direct call argument is a conditional value.
 func (check *Checker) hasConditionalArgument(call *ast.CallExpr) bool {
 	conditional := false
 	for _, expression := range call.Args {
-		if marker, ok := ast.Unparen(expression).(*ast.CallExpr); ok {
-			if operation, found := check.tgoOperation(marker); found && operation.Conditional {
-				conditional = true
-			}
-		}
+		conditional = conditional || conditionalExpression(ast.Unparen(expression))
 	}
 	return conditional
 }

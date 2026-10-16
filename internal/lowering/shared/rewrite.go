@@ -1,10 +1,9 @@
 package shared
 
 import (
-	"go/ast"
+	"github.com/lucasavila00/tgo/internal/ast"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
-	"github.com/lucasavila00/tgo/internal/frontend"
 	"github.com/lucasavila00/tgo/internal/lowering/names"
 	"github.com/lucasavila00/tgo/internal/lowering/source"
 )
@@ -25,13 +24,10 @@ type Context struct {
 
 // Input holds source facts and the selected operations. Build it before emission.
 type Input struct {
-	Inventory      *source.Inventory
-	Target         ast.Expr
-	After          After
-	Propagations   map[ast.Expr]Propagation
-	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-	Conditionals   map[*ast.CallExpr]ast.Stmt
-	ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
+	Inventory *source.Inventory
+	Target    ast.Expr
+	After     After
+	TGo       bool
 }
 
 // requestState owns progress and fresh names for the complete output request.
@@ -39,21 +35,19 @@ type requestState struct {
 	names          names.Allocator
 	inserted       bool
 	lowered        map[ast.Expr]bool
-	loweredReturns map[*ast.ReturnStmt]bool
+	loweredReturns map[*ast.ShortReturnStmt]bool
 	err            error
 }
 
 // functionState owns evaluation and control flow within one function.
 type functionState struct {
-	hasGoto             bool
-	labels              map[string]string
-	breakExits          map[*ast.BranchStmt]*ast.Ident
-	controlTargets      map[ast.Stmt]ast.Stmt
-	comprehensionRanges map[*ast.RangeStmt]bool
-	collectionOutputs   map[string]*CollectionDestination
-	frame               *returnFrame
-	deferredBases       map[ast.Expr]bool
-	values              map[ast.Expr]Value
+	hasGoto        bool
+	labels         map[string]string
+	breakExits     map[*ast.BranchStmt]*ast.Ident
+	controlTargets map[ast.Node]ast.Stmt
+	frame          *returnFrame
+	deferredBases  map[ast.Expr]bool
+	values         map[ast.Expr]Value
 }
 
 // Name allocates a fresh output identifier.
@@ -91,7 +85,7 @@ func New(input Input, dispatch Dispatch) *Context {
 		dispatch: dispatch,
 		request: &requestState{
 			lowered:        make(map[ast.Expr]bool),
-			loweredReturns: make(map[*ast.ReturnStmt]bool),
+			loweredReturns: make(map[*ast.ShortReturnStmt]bool),
 		},
 		file:          &fileState{},
 		functionState: &functionState{},

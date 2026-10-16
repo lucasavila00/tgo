@@ -15,8 +15,7 @@ func BenchmarkConditionalParsing(b *testing.B) {
 			b.Run(name, func(b *testing.B) {
 				b.ReportAllocs()
 				for b.Loop() {
-					if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source),
-						make(map[string]bool)); err != nil {
+					if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source)); err != nil {
 						b.Fatal(err)
 					}
 				}
