@@ -72,7 +72,7 @@ func propagatedError(r *shared.Context, callError ast.Expr, returnErrorType type
 		panic("wrapped errors do not fit the function return type")
 	}
 	formatPackage := r.FormatPackage(call)
-	message := strings.ReplaceAll(r.Inventory().Checked.CallNames[operation], "%", "%%") + ": %w"
+	message := strings.ReplaceAll(r.Inventory().CallName(operation), "%", "%%") + ": %w"
 	return &ast.CallExpr{
 		Fun:  &ast.SelectorExpr{X: formatPackage, Sel: ast.NewIdent("Errorf")},
 		Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(message)}, callError},

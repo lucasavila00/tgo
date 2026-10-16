@@ -59,10 +59,12 @@
  	_ "unsafe" // for linkname
  )
  
-@@ -200,6 +200,25 @@
+@@ -200,6 +200,27 @@
  // If the package has type errors, the collected information may
  // be incomplete.
  type Info struct {
++	// ConstInitializers records the separate syntax checked for each TGo constant.
++	ConstInitializers map[*Const]ConstInitializer
 +	// EnumConstructors identifies each checked variant literal.
 +	EnumConstructors map[*ast.CompositeLit]*EnumVariant
 +	// EnumSwitches identifies type switches over declared enum values.
@@ -413,6 +415,14 @@
  	if tracePos {
  		check.pushPos(atPos(obj.Pos()))
  		defer func() {
+@@ -386,6 +389,7 @@
+ 
+ func (check *Checker) constDecl(obj *Const, typ, init ast.Expr, inherited bool) {
+ 	assert(obj.typ == nil)
++	typ, init = check.constInitializer(obj, typ, init, inherited)
+ 
+ 	// use the correct value of iota
+ 	defer func(iota constant.Value, errpos positioner) {
 --- a/types/errors.go
 +++ b/types/errors.go
 @@ -8,9 +8,9 @@

@@ -16,7 +16,7 @@ func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	exit := r.prepareBreakExit(s, s.X)
 	output := *s
 	output.Body = r.Block(s.Body)
-	statementsEvaluation := r.Expression(s.X)
+	statementsEvaluation := r.RangeOperand(s.X, s.Value)
 	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.Contains(s.Key) || r.Contains(s.Value)) {

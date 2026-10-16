@@ -33,18 +33,24 @@ type Site struct {
 
 // Inventory records sites and their original syntax. Callers must keep this syntax unchanged.
 type Inventory struct {
-	Checked     *checker.Package
-	Sites       []Site
-	Expressions map[Site]ast.Expr
-	Parents     map[ast.Node]ast.Node
+	ConstantCopies []ast.Expr
+	callNames      map[token.Pos]string
+	Checked        *checker.Package
+	Sites          []Site
+	Expressions    map[Site]ast.Expr
+	Parents        map[ast.Node]ast.Node
 }
 
 // New records source facts from one checked package.
 func New(checked *checker.Package, dir string) *Inventory {
 	inventory := &Inventory{Checked: checked, Expressions: make(map[Site]ast.Expr),
-		Parents: make(map[ast.Node]ast.Node)}
+		Parents: make(map[ast.Node]ast.Node), callNames: make(map[token.Pos]string)}
+	for operation, name := range checked.CallNames {
+		inventory.callNames[operation.OpPos] = name
+	}
 	for _, file := range checked.Syntax {
 		inventory.inventory(file, dir)
+		inventory.constantParents(file)
 	}
 	return inventory
 }

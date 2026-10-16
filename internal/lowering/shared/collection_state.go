@@ -87,9 +87,10 @@ func (r *Context) ComprehensionOperand(expression ast.Expr, capture bool) Result
 // ComprehensionRange emits a range for one source clause with its prepared body.
 func (r *Context) ComprehensionRange(clause *ast.RangeClause, body *ast.BlockStmt) []ast.Stmt {
 	exit := r.prepareBreakExit(clause, clause.X)
-	evaluation := r.ComprehensionOperand(clause.X, false)
+	evaluation := r.RangeOperand(clause.X, clause.Value)
+	operand := &ast.ParenExpr{Lparen: clause.X.Pos(), X: evaluation.Expressions()[0], Rparen: clause.X.End() - 1}
 	output := &ast.RangeStmt{For: clause.For, Key: clause.Key, Value: clause.Value, TokPos: clause.TokPos,
-		Tok: clause.Tok, Range: clause.Range, X: evaluation.Expressions()[0], Body: body}
+		Tok: clause.Tok, Range: clause.Range, X: operand, Body: body}
 	return r.ComprehensionStatements(r.withBreakExit(clause, output, append(evaluation.Statements, output), exit))
 }
 

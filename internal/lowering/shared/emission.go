@@ -12,8 +12,8 @@ import (
 // CheckLoweredOperations reports any selected operation that was not emitted.
 func (r *Context) CheckLoweredOperations() error {
 	var missing error
-	for _, file := range r.input.Inventory.Checked.Syntax {
-		ast.Inspect(file, func(node ast.Node) bool {
+	for _, root := range r.operationRoots() {
+		ast.Inspect(root, func(node ast.Node) bool {
 			if missing != nil {
 				return false
 			}
@@ -36,6 +36,18 @@ func (r *Context) CheckLoweredOperations() error {
 		})
 	}
 	return missing
+}
+
+// operationRoots includes source files and separately checked inherited constant expressions.
+func (r *Context) operationRoots() []ast.Node {
+	roots := make([]ast.Node, 0, len(r.input.Inventory.Checked.Syntax)+len(r.input.Inventory.ConstantCopies))
+	for _, file := range r.input.Inventory.Checked.Syntax {
+		roots = append(roots, file)
+	}
+	for _, expression := range r.input.Inventory.ConstantCopies {
+		roots = append(roots, expression)
+	}
+	return roots
 }
 
 // Contains reports whether a node contains selected lowering work.
@@ -127,9 +139,22 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 	if node == nil || !r.Contains(node) {
 		return node
 	}
+	if expression, ok := node.(ast.Expr); ok {
+		if result, handled := r.EnumUnevaluated(expression); handled {
+			return result.Expressions()[0]
+		}
+	}
 	switch fn := node.(type) {
+	case *ast.GenDecl:
+		if fn.Tok == token.CONST {
+			statements := r.constantDeclaration(fn)
+			return statements[len(statements)-1].(*ast.DeclStmt).Decl
+		}
 	case *ast.ValueSpec:
 		valueSpec := *fn
+		if fn.Type != nil {
+			valueSpec.Type = r.functionBodies(fn.Type).(ast.Expr)
+		}
 		valueSpec.Values = append([]ast.Expr(nil), fn.Values...)
 		for i, value := range fn.Values {
 			if r.packageConditional(value) {
@@ -141,10 +166,12 @@ func (r *Context) functionBodies(node ast.Node) ast.Node {
 		return &valueSpec
 	case *ast.FuncDecl:
 		function := *fn
+		function.Type = r.functionBodies(fn.Type).(*ast.FuncType)
 		function.Body = r.functionBody(fn, fn.Type, fn.Body)
 		return &function
 	case *ast.FuncLit:
 		function := *fn
+		function.Type = r.functionBodies(fn.Type).(*ast.FuncType)
 		function.Body = r.functionBody(fn, fn.Type, fn.Body)
 		return &function
 	}

@@ -42,6 +42,9 @@ func (r *Context) enumCaseImports(file *ast.File) map[*types.PkgName]bool {
 			dots[imported.Imported()] = imported
 		}
 	}
+	for _, expression := range r.file.discardedEnumOperands {
+		r.collectEnumImports(expression, dots, imports)
+	}
 	ast.Inspect(file, func(node ast.Node) bool {
 		clause, ok := node.(*ast.CaseClause)
 		if !ok || len(r.input.Inventory.Checked.TypesInfo.EnumCases[clause]) == 0 {
