@@ -81,7 +81,17 @@
  
  	p.top = true
  	p.mode = mode
-@@ -1459,9 +1473,10 @@
+@@ -518,6 +532,9 @@
+ // Types
+ 
+ func (p *parser) parseType() ast.Expr {
++	if p.tgo && p.tok == token.IDENT && p.lit == "enum" {
++		return p.parseEnumType()
++	}
+ 	if p.trace {
+ 		defer un(trace(p, "Type"))
+ 	}
+@@ -1459,9 +1476,10 @@
  		return typ
  	}
  
@@ -94,7 +104,7 @@
  
  	return &ast.FuncLit{Type: typ, Body: body}
  }
-@@ -1473,6 +1488,9 @@
+@@ -1473,6 +1491,9 @@
  		defer un(trace(p, "Operand"))
  	}
  
@@ -104,7 +114,7 @@
  	switch p.tok {
  	case token.IDENT:
  		x := p.parseIdent()
-@@ -1700,6 +1718,9 @@
+@@ -1700,6 +1721,9 @@
  		defer un(trace(p, "LiteralValue"))
  	}
  
@@ -114,7 +124,7 @@
  	lbrace := p.expect(token.LBRACE)
  	var elts []ast.Expr
  	p.exprLev++
-@@ -1727,6 +1748,11 @@
+@@ -1727,6 +1751,11 @@
  	for n = 1; ; n++ {
  		incNestLev(p)
  		switch p.tok {
@@ -126,7 +136,7 @@
  		case token.PERIOD:
  			p.next()
  			switch p.tok {
-@@ -1759,12 +1785,12 @@
+@@ -1759,12 +1788,12 @@
  			// determine if '{' belongs to a composite literal or a block statement
  			switch t.(type) {
  			case *ast.BadExpr, *ast.Ident, *ast.SelectorExpr:
@@ -141,7 +151,7 @@
  					return x
  				}
  				// x is possibly a composite literal type
-@@ -1940,6 +1966,8 @@
+@@ -1940,6 +1969,8 @@
  		pos, tok := p.pos, p.tok
  		p.next()
  		var y []ast.Expr
@@ -150,7 +160,7 @@
  		isRange := false
  		if mode == rangeOk && p.tok == token.RANGE && (tok == token.DEFINE || tok == token.ASSIGN) {
  			pos := p.pos
-@@ -1947,8 +1975,10 @@
+@@ -1947,8 +1978,10 @@
  			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRhs()}}
  			isRange = true
  		} else {
@@ -161,7 +171,7 @@
  		return &ast.AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}, isRange
  	}
  
-@@ -2042,11 +2072,14 @@
+@@ -2042,11 +2075,14 @@
  	return &ast.DeferStmt{Defer: pos, Call: call}
  }
  
@@ -177,7 +187,7 @@
  	pos := p.pos
  	p.expect(token.RETURN)
  	var x []ast.Expr
-@@ -2152,6 +2185,10 @@
+@@ -2152,6 +2188,10 @@
  }
  
  func (p *parser) parseIfStmt() *ast.IfStmt {
@@ -188,7 +198,7 @@
  	defer decNestLev(incNestLev(p))
  
  	if p.trace {
-@@ -2168,16 +2205,20 @@
+@@ -2168,16 +2208,20 @@
  		p.next()
  		switch p.tok {
  		case token.IF:
@@ -212,7 +222,32 @@
  	}
  
  	return &ast.IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
-@@ -2230,6 +2271,10 @@
+@@ -2190,7 +2234,10 @@
+ 
+ 	pos := p.pos
+ 	var list []ast.Expr
+-	if p.tok == token.CASE {
++	exhaustive := p.startsExhaustiveClause()
++	if exhaustive {
++		p.next()
++	} else if p.tok == token.CASE {
+ 		p.next()
+ 		list = p.parseList(true)
+ 	} else {
+@@ -2198,9 +2245,9 @@
+ 	}
+ 
+ 	colon := p.expect(token.COLON)
+-	body := p.parseStmtList()
+-
+-	return &ast.CaseClause{Case: pos, List: list, Colon: colon, Body: body}
++	body := p.parseCaseStatements()
++
++	return &ast.CaseClause{Case: pos, List: list, Colon: colon, Body: body, Exhaustive: exhaustive}
+ }
+ 
+ func isTypeSwitchAssert(x ast.Expr) bool {
+@@ -2230,6 +2277,10 @@
  }
  
  func (p *parser) parseSwitchStmt() ast.Stmt {
@@ -223,7 +258,12 @@
  	if p.trace {
  		defer un(trace(p, "SwitchStmt"))
  	}
-@@ -2273,7 +2318,9 @@
+@@ -2269,11 +2320,13 @@
+ 	typeSwitch := p.isTypeSwitchGuard(s2)
+ 	lbrace := p.expect(token.LBRACE)
+ 	var list []ast.Stmt
+-	for p.tok == token.CASE || p.tok == token.DEFAULT {
++	for p.tok == token.CASE || p.tok == token.DEFAULT || p.startsExhaustiveClause() {
  		list = append(list, p.parseCaseClause())
  	}
  	rbrace := p.expect(token.RBRACE)

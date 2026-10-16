@@ -1,11 +1,30 @@
+--- a/ast/ast.go
++++ b/ast/ast.go
+@@ -726,6 +726,7 @@
+ 
+ 	// A CaseClause represents a case of an expression or type switch statement.
+ 	CaseClause struct {
++		Exhaustive bool // TGo exhaustive clause; no runtime case
+ 		Case  token.Pos // position of "case" or "default" keyword
+ 		List  []Expr    // list of expressions or types; nil means default case
+ 		Colon token.Pos // position of ":"
 --- a/ast/walk.go
 +++ b/ast/walk.go
-@@ -63,6 +63,43 @@
+@@ -63,6 +63,52 @@
  
  	case *FieldList:
  		walkList(v, n.List)
 +
 +	// TGo syntax
++	case *EnumType:
++		walkList(v, n.Variants)
++
++	case *EnumVariant:
++		Walk(v, n.Name)
++		if n.Type != nil {
++			Walk(v, n.Type)
++		}
++
 +	case *PropagateExpr:
 +		Walk(v, n.X)
 +
