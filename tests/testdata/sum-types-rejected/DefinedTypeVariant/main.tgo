@@ -1,0 +1,11 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+type Other Account
+func main() {
+	_ = Other.Personal{Name: "Ada"}
+}

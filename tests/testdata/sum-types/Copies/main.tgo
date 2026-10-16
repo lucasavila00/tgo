@@ -1,0 +1,56 @@
+package main
+
+import (
+	"fmt"
+	"runtime"
+)
+
+type Account enum {
+	Personal struct { Name string; Counter *int }
+	Business struct { Company string }
+}
+
+type Archive enum {
+	Empty struct {}
+	Data struct { Values [128]byte; Counter *int }
+}
+
+func archive() Archive {
+	count := 11
+	return Archive.Data{Values: [128]byte{7}, Counter: &count}
+}
+
+func boxedCopies() {
+	original := archive()
+	copied := original
+	payload := original.DataPayload()
+	original = Archive.Empty{}
+	runtime.GC()
+	*payload.Counter = 23
+	payload.Values[0] = 99
+	fmt.Println(copied.DataPayload().Values[0], payload.Values[0], *copied.DataPayload().Counter)
+	fmt.Println(original.Tag() == ArchiveTagEmpty)
+}
+
+func main() {
+	boxedCopies()
+	count := 1
+	account := Account.Personal{Name: "Ada", Counter: &count}
+	alias := &account
+	var saved func() string
+	switch v := account.(type) {
+	case Account.Personal:
+		*alias = Account.Business{Company: "Acme"}
+		*v.Counter = 9
+		saved = func() string { return v.Name }
+		fmt.Println(v.Name, *v.Counter)
+	case Account.Business:
+		panic(v.Company)
+	exhaustive:
+	}
+	fmt.Println(saved(), count, account.BusinessPayload().Company)
+	copy := Account.Personal{Name: "Grace", Counter: &count}
+	payload := copy.PersonalPayload()
+	payload.Name = "changed"
+	fmt.Println(copy.PersonalPayload().Name, payload.Name)
+}

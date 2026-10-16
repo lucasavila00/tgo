@@ -1,0 +1,9 @@
+package main
+
+type Value enum {
+	Empty struct {}
+	Data struct { Items []int; Padding [128]byte }
+}
+
+var values map[Value]int
+func main() {}

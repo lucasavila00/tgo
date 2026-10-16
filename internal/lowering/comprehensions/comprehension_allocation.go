@@ -35,10 +35,7 @@ func exactComprehension(r *shared.Context, expression *ast.ComprehensionExpr,
 	var before []ast.Stmt
 	var count ast.Expr
 	if source.RangeOperandElided(r.Inventory().Checked, loop.X, loop.Value) {
-		evaluation := r.ComprehensionOperand(loop.X, false)
-		if len(evaluation.Statements) != 0 {
-			panic("elided range operand must not add evaluation statements")
-		}
+		evaluation := r.RangeOperand(loop.X, loop.Value)
 		before, output.X = evaluation.Statements, evaluation.Expressions()[0]
 		count = &ast.BasicLit{Kind: token.INT, Value: strconv.FormatInt(sourceType.(*types.Array).Len(), 10)}
 	} else {

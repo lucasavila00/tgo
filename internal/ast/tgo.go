@@ -2,6 +2,38 @@ package ast
 
 import "go/token"
 
+// EnumType lists the variants declared by one enum type.
+type EnumType struct {
+	Enum, Lbrace, Rbrace token.Pos
+	Variants             []*EnumVariant
+}
+
+// EnumVariant declares a variant name and its optional struct fields.
+type EnumVariant struct {
+	Name *Ident
+	Type *StructType
+}
+
+// Pos returns the enum keyword position.
+func (declaration *EnumType) Pos() token.Pos { return declaration.Enum }
+
+// End returns the position after the enum's closing brace.
+func (declaration *EnumType) End() token.Pos { return declaration.Rbrace + 1 }
+
+// exprNode makes an enum declaration a type expression.
+func (*EnumType) exprNode() {}
+
+// Pos returns the variant name position.
+func (variant *EnumVariant) Pos() token.Pos { return variant.Name.Pos() }
+
+// End returns the end of the variant's fields or name.
+func (variant *EnumVariant) End() token.Pos {
+	if variant.Type != nil {
+		return variant.Type.End()
+	}
+	return variant.Name.End()
+}
+
 // PropagateExpr propagates the final error from X; Wrap adds source call context.
 type PropagateExpr struct {
 	X            Expr

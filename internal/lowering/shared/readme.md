@@ -189,6 +189,14 @@ func (r *Context) Emit() (Output, error)
 
 Emit returns formatted files without changing the checked input.
 
+### func \(\*Context\) EnumUnevaluated
+
+```go
+func (r *Context) EnumUnevaluated(expression ast.Expr) (Result, bool)
+```
+
+EnumUnevaluated keeps source operations that Go does not evaluate out of generated execution.
+
 ### func \(\*Context\) ErrorReturnType
 
 ```go
@@ -292,6 +300,14 @@ func (r *Context) PrepareSliceImport()
 ```
 
 PrepareSliceImport reserves a slices import for collection output.
+
+### func \(\*Context\) RangeOperand
+
+```go
+func (r *Context) RangeOperand(expression, value ast.Expr) Result
+```
+
+RangeOperand preserves skipped array evaluation before the generated constructor calls exist.
 
 ### func \(\*Context\) RangeStatement
 

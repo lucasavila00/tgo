@@ -1,0 +1,16 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+func main() {
+	var account Account
+	switch value := account.(type) {
+	case Account.Business:
+		println(value.Company)
+	default:
+		println(value.Name)
+	}
+}

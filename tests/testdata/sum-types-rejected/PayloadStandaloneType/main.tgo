@@ -1,0 +1,9 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+var value Account.Personal
+func main() {}

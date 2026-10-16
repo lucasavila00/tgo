@@ -11,6 +11,17 @@ import (
 func (r *Context) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if r.hasEnumConstruction(call) &&
+				(r.unsafeOperand(call) || r.input.Inventory.Checked.TypesInfo.Types[call].Value != nil) {
+				return false
+			}
+		}
+		if literal, ok := node.(*ast.CompositeLit); ok &&
+			r.input.Inventory.Checked.TypesInfo.EnumConstructors[literal] != nil {
+			found = true
+			return false
+		}
 		switch node.(type) {
 		case *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
 			found = true

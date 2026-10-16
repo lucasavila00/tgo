@@ -1,0 +1,1 @@
+main.tgo:12:7: variant Personal belongs to Other, not Account

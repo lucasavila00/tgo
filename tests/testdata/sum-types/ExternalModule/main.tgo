@@ -1,0 +1,19 @@
+package main
+
+import (
+	"fmt"
+	"example.com/accounts"
+	"example.com/accounts/bridge"
+)
+
+func main() {
+	var account accounts.Account = bridge.Personal("dependency")
+	switch value := account.(type) {
+	case accounts.Account.Personal:
+		fmt.Println(value.Name)
+	case accounts.Account.Business:
+		fmt.Println(value.Company)
+	exhaustive:
+	}
+	fmt.Println(accounts.Account.Business{Company: "local"}.BusinessPayload().Company)
+}

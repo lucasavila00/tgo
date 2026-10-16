@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"reflect"
 	"sort"
 
 	"github.com/lucasavila00/tgo/internal/ast"
@@ -45,11 +46,19 @@ func syntaxNodes(file ast.Node) testSyntax {
 	return result
 }
 
-// sameGoTree compares complete Go node structure despite the private and stock package identities.
+// sameGoTree compares Go syntax and requires ordinary case clauses despite private AST metadata.
 func sameGoTree(first, second any) bool {
 	var firstTree, secondTree bytes.Buffer
-	if ast.Fprint(&firstTree, nil, first, nil) != nil || ast.Fprint(&secondTree, nil, second, nil) != nil {
+	ordinaryCases := true
+	fields := func(name string, value reflect.Value) bool {
+		if name == "Exhaustive" {
+			ordinaryCases = ordinaryCases && !value.Bool()
+			return false
+		}
+		return name != "TGo"
+	}
+	if ast.Fprint(&firstTree, nil, first, fields) != nil || ast.Fprint(&secondTree, nil, second, fields) != nil {
 		return false
 	}
-	return bytes.Equal(firstTree.Bytes(), secondTree.Bytes())
+	return ordinaryCases && bytes.Equal(firstTree.Bytes(), secondTree.Bytes())
 }

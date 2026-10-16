@@ -16,7 +16,7 @@ func (r *Context) RangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	exit := r.prepareBreakExit(s, s.X)
 	output := *s
 	output.Body = r.Block(s.Body)
-	statementsEvaluation := r.Expression(s.X)
+	statementsEvaluation := r.RangeOperand(s.X, s.Value)
 	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
 	output.X = values[0]
 	if s.Tok == token.ASSIGN && (r.Contains(s.Key) || r.Contains(s.Value)) {
@@ -222,6 +222,9 @@ func (r *Context) typeSwitchStatementResult(
 	resultVariable *ast.Ident,
 	transform ValueBlock,
 ) []ast.Stmt {
+	if enum := r.input.Inventory.Checked.TypesInfo.EnumSwitches[statement]; enum != nil {
+		return r.enumSwitchStatement(statement, enum, resultVariable, transform)
+	}
 	exit := r.prepareBreakExit(statement, statement.Init, statement.Assign)
 	rewrittenSwitch := *statement
 	var headerStatements []ast.Stmt

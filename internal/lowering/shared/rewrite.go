@@ -63,18 +63,20 @@ func (r *Context) NameFor(sourceName string) *ast.Ident {
 // fileState owns output imports, declarations, and binding changes.
 // Binding changes and type aliases stay available to closures in the file.
 type fileState struct {
-	bindings          map[types.Object]string
-	parameterAliases  map[*types.TypeParam]*ast.Ident
-	aliasStatements   map[ast.Node][]ast.Stmt
-	formatAlias       *ast.Ident
-	extraImports      []*ast.ImportSpec
-	extraDeclarations []ast.Decl
-	zeroSequence      *ast.Ident
-	iterAlias         *ast.Ident
-	mapAlias          *ast.Ident
-	sliceAlias        *ast.Ident
-	reflectAlias      *ast.Ident
-	typeImports       map[*types.Package]*ast.Ident
+	discardedEnumOperands []ast.Expr
+	enumUnsafeAlias       *ast.Ident
+	bindings              map[types.Object]string
+	parameterAliases      map[*types.TypeParam]*ast.Ident
+	aliasStatements       map[ast.Node][]ast.Stmt
+	formatAlias           *ast.Ident
+	extraImports          []*ast.ImportSpec
+	extraDeclarations     []ast.Decl
+	zeroSequence          *ast.Ident
+	iterAlias             *ast.Ident
+	mapAlias              *ast.Ident
+	sliceAlias            *ast.Ident
+	reflectAlias          *ast.Ident
+	typeImports           map[*types.Package]*ast.Ident
 }
 
 // New starts a rewrite from complete source facts and selected operations.

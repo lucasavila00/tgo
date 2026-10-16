@@ -147,6 +147,9 @@ func (r *Context) sliceExpression(e *ast.SliceExpr) ([]ast.Stmt, ast.Expr) {
 func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr) {
 	var statements []ast.Stmt
 	output := *e
+	if e.Type != nil {
+		output.Type = r.enumTypeSyntax(e.Type, &statements).(ast.Expr)
+	}
 	var input []ast.Expr
 	for _, element := range e.Elts {
 		if pair, ok := element.(*ast.KeyValueExpr); ok {
@@ -159,7 +162,8 @@ func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 		}
 	}
 	statementsEvaluation := r.Operands(input)
-	statements, values := statementsEvaluation.Statements, statementsEvaluation.Expressions()
+	statements = append(statements, statementsEvaluation.Statements...)
+	values := statementsEvaluation.Expressions()
 	output.Elts = make([]ast.Expr, len(e.Elts))
 	operandIndex := 0
 	for elementIndex, element := range e.Elts {
@@ -176,6 +180,10 @@ func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 			output.Elts[elementIndex] = values[operandIndex]
 			operandIndex++
 		}
+	}
+	if variant := r.input.Inventory.Checked.TypesInfo.EnumConstructors[e]; variant != nil {
+		result := r.enumLiteral(e, &output, variant)
+		return append(statements, result.Statements...), result.Expressions()[0]
 	}
 	return statements, &output
 }

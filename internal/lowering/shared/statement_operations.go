@@ -87,8 +87,16 @@ func (r *Context) assignmentStatement(s *ast.AssignStmt) []ast.Stmt {
 // declarationStatement lowers declaration initializers in order and keeps their statements before each declaration.
 func (r *Context) declarationStatement(s *ast.DeclStmt) []ast.Stmt {
 	declaration := s.Decl.(*ast.GenDecl)
+	if declaration.Tok == token.CONST {
+		var before []ast.Stmt
+		output := r.constantDeclaration(declaration, &before)
+		return append(before, &ast.DeclStmt{Decl: output})
+	}
 	var output []ast.Stmt
 	for _, spec := range declaration.Specs {
+		var typeStatements []ast.Stmt
+		spec = r.enumTypeDeclaration(spec, &typeStatements)
+		output = append(output, typeStatements...)
 		value, ok := spec.(*ast.ValueSpec)
 		if !ok {
 			output = append(output, &ast.DeclStmt{Decl: &ast.GenDecl{Tok: declaration.Tok, Specs: []ast.Spec{spec}}})

@@ -1,11 +1,56 @@
+--- a/ast/ast.go
++++ b/ast/ast.go
+@@ -726,10 +726,11 @@
+ 
+ 	// A CaseClause represents a case of an expression or type switch statement.
+ 	CaseClause struct {
+-		Case  token.Pos // position of "case" or "default" keyword
+-		List  []Expr    // list of expressions or types; nil means default case
+-		Colon token.Pos // position of ":"
+-		Body  []Stmt    // statement list; or nil
++		Exhaustive bool      // TGo exhaustive clause; no runtime case
++		Case       token.Pos // position of "case" or "default" keyword
++		List       []Expr    // list of expressions or types; nil means default case
++		Colon      token.Pos // position of ":"
++		Body       []Stmt    // statement list; or nil
+ 	}
+ 
+ 	// A SwitchStmt node represents an expression switch statement.
+@@ -1062,6 +1063,7 @@
+ // [#18593]: https://go.dev/issue/18593
+ // [#20744]: https://go.dev/issue/20744
+ type File struct {
++	TGo     bool          // parsed with the TGo grammar
+ 	Doc     *CommentGroup // associated documentation; or nil
+ 	Package token.Pos     // position of "package" keyword
+ 	Name    *Ident        // package name
+--- a/ast/filter.go
++++ b/ast/filter.go
+@@ -505,5 +505,5 @@
+ 	}
+ 
+ 	// TODO(gri) need to compute unresolved identifiers!
+-	return &File{doc, pos, NewIdent(pkg.Name), decls, minPos, maxPos, pkg.Scope, imports, nil, comments, ""}
+-}
++	return &File{false, doc, pos, NewIdent(pkg.Name), decls, minPos, maxPos, pkg.Scope, imports, nil, comments, ""}
++}
 --- a/ast/walk.go
 +++ b/ast/walk.go
-@@ -63,6 +63,43 @@
+@@ -63,6 +63,52 @@
  
  	case *FieldList:
  		walkList(v, n.List)
 +
 +	// TGo syntax
++	case *EnumType:
++		walkList(v, n.Variants)
++
++	case *EnumVariant:
++		Walk(v, n.Name)
++		if n.Type != nil {
++			Walk(v, n.Type)
++		}
++
 +	case *PropagateExpr:
 +		Walk(v, n.X)
 +

@@ -1,0 +1,1 @@
+main.tgo:11:7: enum case must name a declared variant

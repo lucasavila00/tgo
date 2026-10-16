@@ -1,0 +1,52 @@
+package main
+
+import (
+	"fmt"
+	"testing"
+)
+
+type Small enum {
+	Number struct { Value int }
+	Empty struct {}
+}
+
+type Large enum {
+	Empty struct {}
+	Data struct { Value [256]byte }
+}
+
+type smallGo struct { value int; tag uint8 }
+type largeGo struct { payload any; tag uint8 }
+type dataGo struct { value [256]byte }
+
+var smallSink Small
+var largeSink Large
+var smallGoSink smallGo
+var largeGoSink largeGo
+var result int
+
+func makeSmallTGo(value int) int {
+	smallSink = Small.Number{Value: value}
+	return smallSink.NumberPayload().Value
+}
+func makeSmallGo(value int) int {
+	smallGoSink = smallGo{value: value}
+	return smallGoSink.value
+}
+func makeLargeTGo(value [256]byte) byte {
+	largeSink = Large.Data{Value: value}
+	return largeSink.DataPayload().Value[0]
+}
+func makeLargeGo(value [256]byte) byte {
+	largeGoSink = largeGo{payload: dataGo{value: value}, tag: 1}
+	return largeGoSink.payload.(dataGo).value[0]
+}
+func main() {
+	value := [256]byte{9}
+	fmt.Println(makeSmallTGo(17), makeLargeTGo(value))
+	inline := testing.AllocsPerRun(100, func() { result = makeSmallTGo(17) })
+	inlineGo := testing.AllocsPerRun(100, func() { result = makeSmallGo(17) })
+	boxed := testing.AllocsPerRun(100, func() { result = int(makeLargeTGo(value)) })
+	boxedGo := testing.AllocsPerRun(100, func() { result = int(makeLargeGo(value)) })
+	fmt.Println(inline == 0, inline == inlineGo, boxed == boxedGo)
+}

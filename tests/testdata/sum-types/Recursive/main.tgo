@@ -1,0 +1,27 @@
+package main
+
+import "fmt"
+
+type Tree enum {
+	Leaf struct { Value int }
+	Branch struct { Children []Tree; Parent *Tree }
+}
+
+func total(tree Tree) int {
+	return switch value := tree.(type) {
+	case Tree.Leaf:
+		value.Value
+	case Tree.Branch:
+		sum := 0
+		for _, child := range value.Children { sum += total(child) }
+		sum
+	exhaustive:
+	}
+}
+func main() {
+	leaf := Tree.Leaf{Value: 3}
+	tree := Tree.Branch{Children: []Tree{leaf, Tree.Leaf{Value: 4}}, Parent: &leaf}
+	fmt.Println(total(tree), tree.BranchPayload().Parent.LeafPayload().Value)
+	*tree.BranchPayload().Parent = Tree.Leaf{Value: 9}
+	fmt.Println(total(tree), leaf.LeafPayload().Value)
+}

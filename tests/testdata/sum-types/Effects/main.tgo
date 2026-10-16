@@ -1,0 +1,61 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var trace []string
+var failure = errors.New("failed")
+
+type Pair enum {
+	Values struct { Left int; Right int }
+	Empty struct {}
+}
+
+func mark(name string, value int) int { trace = append(trace, name); return value }
+func read(fail bool) (int, error) {
+	trace = append(trace, "read")
+	if fail { return 0, failure }
+	return 4, nil
+}
+func pick(value Pair) Pair { trace = append(trace, "pick"); return value }
+func build(fail bool) (Pair, error) {
+	return Pair.Values{Right: mark("right", 2), Left: read(fail)!}, nil
+}
+func main() {
+	value := Pair.Values{Right: mark("right", 2), Left: mark("left", 1)}
+	fmt.Println(value.ValuesPayload(), trace)
+	trace = nil
+	pointer := &Pair.Values{Right: mark("address-right", 3), Left: mark("address-left", 2)}
+	fmt.Println(pointer.ValuesPayload(), trace)
+	trace = nil
+	value = Pair.Values{
+		Left: if true {
+			mark("if", 5)
+		} else {
+			0
+		},
+		Right: switch 1 {
+		case 1:
+			mark("switch", 6)
+		default:
+			0
+		},
+	}
+	fmt.Println(value.ValuesPayload(), trace)
+	trace = nil
+	switch v := pick(value).(type) {
+	case Pair.Values:
+		fmt.Println(v.Left, v.Right, trace)
+	case Pair.Empty:
+		panic("empty")
+	exhaustive:
+	}
+	trace = nil
+	good, err := build(false)
+	fmt.Println(good.ValuesPayload(), err, trace)
+	trace = nil
+	_, err = build(true)
+	fmt.Println(err == failure, trace)
+}

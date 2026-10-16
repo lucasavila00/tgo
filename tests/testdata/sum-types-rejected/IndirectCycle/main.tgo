@@ -1,0 +1,6 @@
+package main
+
+type Left enum { Next struct { Value Right } }
+type Right enum { Next struct { Value Left } }
+
+func main() {}

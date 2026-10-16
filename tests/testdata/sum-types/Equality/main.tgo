@@ -1,0 +1,39 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"unsafe"
+)
+
+type Number enum {
+	Inline struct { Float float64; Complex complex128 }
+	Boxed struct { Float float64; Complex complex128; Padding [128]byte }
+}
+
+type LargeFirst enum {
+	Data struct { Bytes [128]byte }
+	Empty struct {}
+}
+
+func signs(value float64, pair complex128) {
+	fmt.Println(math.Signbit(value), math.Signbit(real(pair)), math.Signbit(imag(pair)))
+}
+
+func main() {
+	var zero Number
+	first := Number.Inline{}
+	fmt.Println(zero == first, map[Number]string{first: "zero"}[zero])
+	negative := math.Copysign(0, -1)
+	pair := complex(negative, negative)
+	inline := Number.Inline{Float: negative, Complex: pair}
+	signs(inline.InlinePayload().Float, inline.InlinePayload().Complex)
+	fmt.Println(inline == zero, map[Number]string{inline: "inline"}[zero])
+	boxed := Number.Boxed{Float: negative, Complex: pair}
+	other := Number.Boxed{Float: negative, Complex: pair}
+	signs(boxed.BoxedPayload().Float, boxed.BoxedPayload().Complex)
+	fmt.Println(boxed == other, map[Number]string{boxed: "boxed"}[other])
+	fmt.Println(boxed == Number.Boxed{}, map[Number]string{boxed: "positive"}[Number.Boxed{}])
+	var large LargeFirst
+	fmt.Println(unsafe.Sizeof(large) > 80, large == LargeFirst.Data{})
+}

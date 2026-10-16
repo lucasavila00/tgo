@@ -1,5 +1,7 @@
 /internal/checker/types/*.go
 !/internal/checker/types/tgo.go
+!/internal/checker/types/tgo_enum*.go
+!/internal/checker/types/tgo_constant*.go
 !/internal/checker/types/tgo_builtin.go
 !/internal/checker/types/tgo_test.go
 !/internal/checker/types/tgo_comprehension.go

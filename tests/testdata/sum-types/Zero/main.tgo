@@ -1,0 +1,51 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+ "unsafe"
+)
+
+type Account enum {
+	Personal struct { Name string; Count int; Pointer *int }
+	Business struct { Company string }
+}
+
+type Alias = Account
+
+func zero[T any]() T { var value T; return value }
+
+func failed() (Account, error) { return ..., errors.New("failed") }
+
+func label(account Account) string {
+	return switch v := account.(type) {
+	case Account.Personal:
+		fmt.Sprintf("personal:%q:%d:%t", v.Name, v.Count, v.Pointer == nil)
+	case Account.Business:
+		"business:" + v.Company
+	exhaustive:
+	}
+}
+
+func main() {
+	var account Account
+ if (*Account)(unsafe.Pointer(&account)) != &account { panic("pointer changed") }
+	var alias Alias
+	closed := make(chan Account)
+	close(closed)
+	failure, _ := failed()
+	values := []Account{
+		failure,
+		[1]Account{}[0],
+		account,
+		alias,
+		*new(Account),
+		make([]Account, 1)[0],
+		map[string]Account{}["missing"],
+		<-closed,
+		zero[Account](),
+	}
+	for _, value := range values { fmt.Println(label(value)) }
+	fmt.Println(label(Account.Business{Company: "Acme"}))
+	fmt.Println(label(Account.Personal{Name: "Lucas"}))
+}

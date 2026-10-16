@@ -11,9 +11,14 @@ import (
 func (r *Context) ExpressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
+	if r.input.Inventory.Checked.TypesInfo.Types[expr].IsType() {
+		result = r.enumTypeSyntax(expr, &before).(ast.Expr)
+		return before, result
+	}
 	switch e := expr.(type) {
 	case *ast.FuncLit:
 		function := *e
+		function.Type = r.enumTypeSyntax(e.Type, &before).(*ast.FuncType)
 		function.Body = r.functionBody(e, e.Type, e.Body)
 		result = &function
 	case *ast.CallExpr:
@@ -55,16 +60,25 @@ func (r *Context) ExpressionSyntax(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &dereference
 	case *ast.TypeAssertExpr:
 		assertion := *e
+		if e.Type != nil {
+			assertion.Type = r.enumTypeSyntax(e.Type, &before).(ast.Expr)
+		}
 		var values []ast.Expr
 		beforeEvaluation := r.Expression(e.X)
-		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
+		before = append(before, beforeEvaluation.Statements...)
+		values = beforeEvaluation.Expressions()
 		assertion.X = values[0]
 		result = &assertion
 	case *ast.IndexListExpr:
 		indexList := *e
+		indexList.Indices = make([]ast.Expr, len(e.Indices))
+		for index, typ := range e.Indices {
+			indexList.Indices[index] = r.enumTypeSyntax(typ, &before).(ast.Expr)
+		}
 		var values []ast.Expr
 		beforeEvaluation := r.Expression(e.X)
-		before, values = beforeEvaluation.Statements, beforeEvaluation.Expressions()
+		before = append(before, beforeEvaluation.Statements...)
+		values = beforeEvaluation.Expressions()
 		indexList.X = values[0]
 		result = &indexList
 	case *ast.SliceExpr:

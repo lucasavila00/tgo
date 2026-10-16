@@ -1,0 +1,6 @@
+package accounts
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}

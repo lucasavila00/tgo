@@ -42,6 +42,9 @@ func expression(r *shared.Context, expr ast.Expr) shared.Result {
 	if !r.Contains(expr) {
 		return r.ResultOf(nil, []ast.Expr{expr})
 	}
+	if result, handled := r.EnumUnevaluated(expr); handled {
+		return result
+	}
 	if result, special := specialExpression(r, expr); special {
 		return result
 	}

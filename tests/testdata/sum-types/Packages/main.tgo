@@ -1,0 +1,26 @@
+package main
+
+import (
+	"fmt"
+	model "example.com/sumtypes/accounts"
+	"example.com/sumtypes/bridge"
+)
+
+func label(account model.Account) string {
+	return switch value := account.(type) {
+	case model.Account.Personal:
+		value.Name
+	case model.Account.Business:
+		value.Company
+	exhaustive:
+	}
+}
+func main() {
+	fmt.Println(caseOnly())
+	fmt.Println(label(bridge.Personal("Go")))
+	fmt.Println(label(model.Account.Business{Company: "TGo"}))
+	value := bridge.Personal("API")
+	fmt.Println(value.Tag() == model.AccountTagPersonal, value.PersonalPayload().Name)
+	var zero model.Account
+	fmt.Printf("%q\n", label(zero))
+}

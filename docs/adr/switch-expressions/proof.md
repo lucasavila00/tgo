@@ -38,6 +38,6 @@ The source checker tests accepted forms and rejected inputs, including source
 positions. The parser tests nested switches and source positions. Existing
 if-expression and lowering tests check regression behavior.
 
-Switch expressions with `default` are implemented. Enum declarations are not
-implemented. Verified enum coverage with `exhaustive:` remains a dependency;
-this implementation requires `default`.
+The [sum-type fixtures](../../../tests/testdata/sum-types/) check enum switches
+with `default:` and `exhaustive:`. Diagnostic fixtures check missing variants
+and duplicate cases.

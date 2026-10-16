@@ -1,0 +1,87 @@
+package main
+
+import "fmt"
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+	Closed struct {}
+}
+
+type Alias = Account
+type Other Account
+
+func label(value Account) string {
+	switch v := value.(type) {
+	case Account.Personal:
+		return v.Name
+	case Account.Business:
+		return v.Company
+	case Account.Closed:
+		return "closed"
+	exhaustive:
+	}
+}
+
+func grouped(value Alias) string {
+	switch v := value.(type) {
+	case Account.Personal, Alias.Business:
+		var same Account = v
+		return label(same)
+	default:
+		var same Account = v
+		return label(same)
+	}
+}
+
+func shadowed() {
+	NewAccountPersonal := "constructor"
+	AccountPersonal := "payload"
+	AccountTagPersonal := "tag"
+	value := Account.Personal{Name: "native"}
+	alias := Alias.Personal{Name: "alias"}
+	switch payload := value.(type) {
+	case Account.Personal:
+		fmt.Println(payload.Name, label(alias))
+	case Account.Business:
+		panic("wrong business variant")
+	case Account.Closed:
+		panic("wrong closed variant")
+	exhaustive:
+	}
+	fmt.Println(NewAccountPersonal, AccountPersonal, AccountTagPersonal)
+}
+
+func generic[T Account](value T) string {
+	switch payload := value.(type) {
+	case T.Personal:
+		return payload.Name
+	case T.Business:
+		return payload.Company
+	case T.Closed:
+		return "closed"
+	exhaustive:
+	}
+}
+
+func genericLiteral[T Account]() Account {
+	return T.Personal{Name: "generic literal"}
+}
+
+func main() {
+	shadowed()
+	fmt.Println(generic(Account.Personal{Name: "generic switch"}))
+	fmt.Println(label(genericLiteral[Account]()))
+	for _, value := range []Account{Alias.Personal{"Ada"}, Account.Business{"Acme"}, Account.Closed{}} {
+		fmt.Println(label(value), grouped(value))
+	}
+	other := Other(Account.Personal{"Grace"})
+	fmt.Println(label(Account(other)))
+	var ordinary any = "Go"
+	switch value := ordinary.(type) {
+	case string:
+		fmt.Println(value)
+	default:
+		panic("wrong Go type")
+	}
+}

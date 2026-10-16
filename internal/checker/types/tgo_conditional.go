@@ -208,7 +208,7 @@ type conditionalCase struct {
 }
 
 // conditionalStatement checks an if or switch value and collects its branch operands.
-// For switches, it requires a default and prevents break from targeting the value switch.
+// Switch values require complete cases and cannot break out before supplying a value.
 func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*operand {
 	var switchBody *ast.BlockStmt
 	switch statement := statement.(type) {
@@ -224,10 +224,13 @@ func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*
 	for _, caseStatement := range switchBody.List {
 		clause := caseStatement.(*ast.CaseClause)
 		hasDefaultCase = hasDefaultCase || clause.List == nil
+		if clause.Exhaustive {
+			continue
+		}
 		check.tgo.conditionalCases[clause] = &conditionalCase{context: context}
 	}
 	if !hasDefaultCase {
-		check.error(statement, InvalidSyntaxTree, "switch expression requires default")
+		check.error(statement, InvalidSyntaxTree, "switch expression requires default or exhaustive")
 	}
 	// The first visited switch is the value switch, not a permitted break target.
 	ast.Walk(valueSwitchBreakVisitor{check: check, nestedBreakTargets: -1}, statement)
@@ -235,6 +238,9 @@ func (check *Checker) conditionalStatement(statement ast.Stmt, context Type) []*
 	var branchValues []*operand
 	for _, caseStatement := range switchBody.List {
 		clause := caseStatement.(*ast.CaseClause)
+		if clause.Exhaustive {
+			continue
+		}
 		branchValues = append(branchValues, check.tgo.conditionalCases[clause].values...)
 		delete(check.tgo.conditionalCases, clause)
 	}
