@@ -1,0 +1,15 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+func label(account Account) string {
+	return switch value := account.(type) {
+	case Account.Personal:
+		value.Name
+	exhaustive:
+	}
+}
+func main() {}

@@ -1,0 +1,8 @@
+package main
+
+type Tree enum {
+	Branch struct { Child Tree }
+	Leaf struct {}
+}
+
+func main() {}

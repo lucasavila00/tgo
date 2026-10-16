@@ -227,3 +227,110 @@ func TestEnumImportsUseSelectedFiles(t *testing.T) {
 		t.Fatal("selected TGo input and ordinary Go file were not checked together")
 	}
 }
+
+// TestEnumImportsInTestVariants checks original sources and separate identities in dependency test variants.
+func TestEnumImportsInTestVariants(t *testing.T) {
+	root := enumImportTestModule(t)
+	roots, testPackage, ordinary := loadEnumImportTestVariants(t, root)
+	variant := testPackage.Imports[ordinary.PkgPath]
+	sizes, err := TargetSizes(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, order := range []string{"variant-first", "ordinary-first"} {
+		t.Run(order, func(t *testing.T) {
+			loader := NewLoader(root, roots, map[string]string{
+				"main_tgo.go": "main.tgo", "external_tgo_test.go": "external_test.tgo",
+			}, sizes)
+			if order == "ordinary-first" {
+				if err := loader.prepareSourceImports(ordinary); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := loader.Check(testPackage); err != nil {
+				t.Fatal(err)
+			}
+			if order == "variant-first" && loader.imports[ordinary.PkgPath] != nil {
+				t.Fatal("test variant replaced the ordinary import")
+			}
+			if err := loader.prepareSourceImports(ordinary); err != nil {
+				t.Fatal(err)
+			}
+			checkEnumImportTestIdentities(t, loader, ordinary, variant)
+		})
+	}
+}
+
+// enumImportTestModule adds a test that imports a dependency test variant.
+func enumImportTestModule(t *testing.T) string {
+	t.Helper()
+	root, external := enumImportModule(t, "", "type Root struct{}\n")
+	for name, source := range map[string]string{
+		filepath.Join(root, "main_test.go"): "package root\nvar TestValue Root\n",
+		filepath.Join(external, "accounts", "root.go"): "package accounts\n" +
+			"import \"example.com/root\"\nvar RootValue root.Root\n",
+		filepath.Join(root, "external_tgo_test.go"): `package root_test
+import "example.com/external/accounts"
+import "example.com/external/wrapper"
+func Read() string {
+	switch value := wrapper.Get().(type) {
+	case accounts.Account.Personal: return value.Name
+	case accounts.Account.Business: return value.Company
+	exhaustive:
+	}
+}
+`,
+	} {
+		if err := os.WriteFile(name, []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// loadEnumImportTestVariants selects the ordinary dependency and its test variant.
+func loadEnumImportTestVariants(t *testing.T, root string) ([]*packages.Package, *packages.Package, *packages.Package) {
+	t.Helper()
+	roots, err := packages.Load(&packages.Config{Dir: root, Tests: true, Mode: packages.NeedName |
+		packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps |
+		packages.NeedExportFile | packages.NeedModule}, ".", "example.com/external/accounts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var testPackage, ordinary *packages.Package
+	for _, metadata := range roots {
+		switch metadata.PkgPath {
+		case "example.com/root_test":
+			testPackage = metadata
+		case "example.com/external/accounts":
+			if metadata.ID == metadata.PkgPath {
+				ordinary = metadata
+			}
+		}
+	}
+	if testPackage == nil || ordinary == nil {
+		t.Fatalf("missing test or ordinary package: %v", roots)
+	}
+	variant := testPackage.Imports[ordinary.PkgPath]
+	if variant == nil || variant.ID == ordinary.ID {
+		t.Fatal("Go did not select a dependency test variant")
+	}
+	return roots, testPackage, ordinary
+}
+
+// checkEnumImportTestIdentities checks both enum identities and the ordinary import.
+func checkEnumImportTestIdentities(t *testing.T, loader *Loader, ordinary, variant *packages.Package) {
+	t.Helper()
+	first, second := loader.packages[ordinary.ID], loader.packages[variant.ID]
+	if first == nil || second == nil || first.Types == second.Types {
+		t.Fatal("ordinary package and test variant do not have separate identities")
+	}
+	if loader.imports[ordinary.PkgPath] != first.Types {
+		t.Fatal("ordinary import does not use the ordinary package identity")
+	}
+	for _, pkg := range []*Package{first, second} {
+		if types.EnumOf(pkg.Types.Scope().Lookup("Account").Type()) == nil {
+			t.Fatal("enum metadata is missing from a package identity")
+		}
+	}
+}

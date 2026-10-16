@@ -1,0 +1,87 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+var failure = errors.New("failed")
+
+func read(value string) (int, error) {
+	if value == "fail" { return 0, failure }
+	return len(value), nil
+}
+
+func number(account Account) (int, error) {
+	result := switch value := account.(type) {
+	case Account.Personal:
+		if value.Name == "return" { return -1, nil }
+		read(value.Name)!
+	case Account.Business:
+		read(value.Company)!!
+	exhaustive:
+	}
+	return result, nil
+}
+
+func nestedReturn(account Account, active bool) string {
+	return if active {
+		switch value := account.(type) {
+		case Account.Personal:
+			return "personal:" + value.Name
+		case Account.Business:
+			return "business:" + value.Company
+		exhaustive:
+		}
+	} else {
+		"inactive"
+	}
+}
+
+func jumps() {
+	values := []Account{
+		Account.Personal{"continue"},
+		Account.Personal{"break"},
+		Account.Business{"ordinary"},
+		Account.Business{"goto"},
+	}
+	var trace []string
+outer:
+	for _, account := range values {
+selected:
+		switch value := account.(type) {
+		case Account.Personal:
+			if value.Name == "continue" { continue outer }
+			trace = append(trace, value.Name)
+			break selected
+		case Account.Business:
+			trace = append(trace, value.Company)
+			if value.Company == "goto" { goto done }
+			break
+		exhaustive:
+		}
+		trace = append(trace, "tail")
+	}
+done:
+	fmt.Println(trace)
+}
+
+func main() {
+	fmt.Println(nestedReturn(Account.Personal{"Ada"}, true))
+	fmt.Println(nestedReturn(Account.Business{"Acme"}, true))
+	fmt.Println(nestedReturn(Account.Personal{"skip"}, false))
+	jumps()
+	value, err := number(Account.Personal{"return"})
+	fmt.Println(value, err)
+	value, err = number(Account.Personal{"fail"})
+	fmt.Println(value, err == failure)
+	value, err = number(Account.Business{"fail"})
+	fmt.Println(value, err != failure, errors.Is(err, failure))
+	value, err = number(Account.Business{"ok"})
+	fmt.Println(value, err)
+}

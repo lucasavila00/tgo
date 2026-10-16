@@ -1,0 +1,12 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+type Other Account
+func main() {
+	var value Other
+	_ = value.Tag()
+}

@@ -1,0 +1,15 @@
+package main
+
+import (
+	model "example.com/sumtypes/accounts"
+	"example.com/sumtypes/bridge"
+)
+
+func caseOnly() string {
+	value := bridge.Ready()
+	return switch value.(type) {
+	case model.Flag.Ready:
+		"ready"
+	exhaustive:
+	}
+}

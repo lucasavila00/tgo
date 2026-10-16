@@ -48,20 +48,9 @@ func (r *Context) enumCaseImports(file *ast.File) map[*types.PkgName]bool {
 			return true
 		}
 		for _, expression := range clause.List {
-			ast.Inspect(expression, func(child ast.Node) bool {
-				if identifier, ok := child.(*ast.Ident); ok {
-					if imported, ok := r.input.Inventory.Checked.TypesInfo.Uses[identifier].(*types.PkgName); ok {
-						imports[imported] = true
-					}
-					if object := r.input.Inventory.Checked.TypesInfo.Uses[identifier]; object != nil {
-						if imported := dots[object.Pkg()]; imported != nil {
-							imports[imported] = true
-						}
-					}
-				}
-				return true
-			})
+			r.collectEnumImports(expression, dots, imports)
 		}
+
 		return true
 	})
 	return imports
@@ -126,6 +115,29 @@ func (r *Context) retainEnumImports(output *ast.File, removed map[*types.PkgName
 					}
 				}
 			}
+		}
+		return true
+	})
+}
+
+// collectEnumImports records qualified and dot-imported bindings within one case name.
+func (r *Context) collectEnumImports(
+	expression ast.Expr, dots map[*types.Package]*types.PkgName, imports map[*types.PkgName]bool,
+) {
+	ast.Inspect(expression, func(node ast.Node) bool {
+		identifier, ok := node.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		object := r.input.Inventory.Checked.TypesInfo.Uses[identifier]
+		if object == nil {
+			return true
+		}
+		if imported, ok := object.(*types.PkgName); ok {
+			imports[imported] = true
+		}
+		if imported := dots[object.Pkg()]; imported != nil {
+			imports[imported] = true
 		}
 		return true
 	})

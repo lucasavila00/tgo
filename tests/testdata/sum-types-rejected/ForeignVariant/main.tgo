@@ -1,0 +1,15 @@
+package main
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+type Other enum { Personal struct {} }
+func main() {
+	var account Account
+	switch account.(type) {
+	case Other.Personal:
+	default:
+	}
+}

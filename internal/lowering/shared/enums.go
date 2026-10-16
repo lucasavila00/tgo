@@ -27,7 +27,7 @@ func (r *Context) enumDeclarations(file *ast.File) *ast.File {
 			enum := types.EnumOf(r.input.Inventory.Checked.TypesInfo.Defs[typeSpec.Name].Type())
 			payloads := make([]*ast.StructType, len(enum.Variants()))
 			for index, variant := range enum.Variants() {
-				payloads[index] = variant.Declaration().Type
+				payloads[index] = typeSpec.Type.(*ast.EnumType).Variants[variant.Index()].Type
 				if payloads[index] == nil {
 					payloads[index] = &ast.StructType{Fields: &ast.FieldList{}}
 				}
@@ -77,6 +77,9 @@ func (r *Context) enumLiteral(source *ast.CompositeLit, payload *ast.CompositeLi
 	}
 	result := r.NameFor("enum")
 	typeName := ast.Unparen(source.Type).(*ast.SelectorExpr).X
+	if _, parameter := types.Unalias(r.TypeOf(typeName)).(*types.TypeParam); parameter {
+		typeName = r.TemporaryType(variant.Enum().Named(), source)
+	}
 	before = append(before, Variable(result, typeName, call))
 	r.recordTemporary(result, variant.Enum().Named(), source)
 	r.CompleteExpression(source)
@@ -107,7 +110,11 @@ func (r *Context) enumMember(variant *types.EnumVariant, source, selected ast.Ex
 		r.file.extraDeclarations = append(r.file.extraDeclarations, &ast.GenDecl{Tok: token.TYPE,
 			Specs: []ast.Spec{&ast.TypeSpec{Name: alias, Assign: token.Pos(1), Type: ast.NewIdent(name)}}})
 	} else {
-		r.file.extraDeclarations = append(r.file.extraDeclarations, &ast.GenDecl{Tok: token.VAR,
+		kind := token.VAR
+		if _, constant := object.(*types.Const); constant {
+			kind = token.CONST
+		}
+		r.file.extraDeclarations = append(r.file.extraDeclarations, &ast.GenDecl{Tok: kind,
 			Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{alias}, Values: []ast.Expr{ast.NewIdent(name)}}}})
 	}
 	return alias

@@ -32,16 +32,17 @@ func (r *Context) enumSwitchStatement(
 		r.functionState.controlTargets = make(map[ast.Node]ast.Stmt)
 	}
 	r.functionState.controlTargets[statement] = output
-	exhaustive := false
+	exhaustive, hasDefault := false, false
 	for _, node := range statement.Body.List {
 		clause := node.(*ast.CaseClause)
 		if clause.Exhaustive {
 			exhaustive = true
 			continue
 		}
+		hasDefault = hasDefault || clause.List == nil
 		output.Body.List = append(output.Body.List, r.enumSwitchCase(clause, enum, snapshot, payloadInput, result, transform))
 	}
-	if exhaustive {
+	if exhaustive && !hasDefault {
 		last := output.Body.List[len(output.Body.List)-1].(*ast.CaseClause)
 		last.List = nil
 	}

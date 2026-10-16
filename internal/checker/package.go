@@ -164,6 +164,11 @@ func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode)
 	dependency := importer.metadata.Imports[path]
 	if dependency != nil && dependency.Module != nil &&
 		(dependency.Module.Main || strings.HasPrefix(dependency.ID, dependency.PkgPath+" [")) {
+		if !dependency.Module.Main {
+			if _, err := importer.loader.findTGoSources(dependency); err != nil {
+				return nil, err
+			}
+		}
 		pkg, err := importer.loader.Check(dependency)
 		if err != nil {
 			return nil, err

@@ -1,0 +1,29 @@
+package main
+
+import "fmt"
+
+type Choice enum {
+	Number struct { Value int }
+	Text struct { Value string }
+}
+
+var calls int
+var first = Choice.Number{Value: next()}
+var selected = switch value := first.(type) {
+case Choice.Number:
+	value.Value
+case Choice.Text:
+	len(value.Value)
+exhaustive:
+}
+var callback = func() string {
+	switch value := (Choice.Text{Value: "ready"}).(type) {
+	case Choice.Number:
+		return fmt.Sprint(value.Value)
+	case Choice.Text:
+		return value.Value
+	exhaustive:
+	}
+}
+func next() int { calls++; return 7 }
+func main() { fmt.Println(selected, callback(), calls) }

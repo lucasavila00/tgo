@@ -1,0 +1,30 @@
+package main
+
+import "fmt"
+
+type Account enum {
+	Personal struct { Name string; Counter *int }
+	Business struct { Company string }
+}
+
+func main() {
+	count := 1
+	account := Account.Personal{Name: "Ada", Counter: &count}
+	alias := &account
+	var saved func() string
+	switch v := account.(type) {
+	case Account.Personal:
+		*alias = Account.Business{Company: "Acme"}
+		*v.Counter = 9
+		saved = func() string { return v.Name }
+		fmt.Println(v.Name, *v.Counter)
+	case Account.Business:
+		panic(v.Company)
+	exhaustive:
+	}
+	fmt.Println(saved(), count, account.BusinessPayload().Company)
+	copy := Account.Personal{Name: "Grace", Counter: &count}
+	payload := copy.PersonalPayload()
+	payload.Name = "changed"
+	fmt.Println(copy.PersonalPayload().Name, payload.Name)
+}

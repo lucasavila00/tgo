@@ -1,0 +1,1 @@
+main.tgo:12:7: duplicate enum case Personal

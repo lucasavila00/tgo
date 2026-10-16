@@ -1,0 +1,6 @@
+{1 2} [right left]
+{2 3} [address-right address-left]
+{5 6} [if switch]
+5 6 [pick]
+{4 2} <nil> [right read]
+true [right read]
