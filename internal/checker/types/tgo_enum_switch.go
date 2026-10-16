@@ -12,7 +12,7 @@ func (check *Checker) enumSwitch(
 	statement *ast.TypeSwitchStmt, context stmtContext, binding *ast.Ident, input *operand, delayedTop int,
 ) bool {
 	enum := EnumOf(input.typ())
-	if enum == nil {
+	if enum == nil || !check.nativeSource(statement.Pos()) {
 		return false
 	}
 	if check.EnumSwitches == nil {
@@ -43,7 +43,7 @@ func (check *Checker) enumSwitch(
 		}
 	}
 	if exhaustive != nil {
-		check.enumCoverage(enum, exhaustive, defaultCase, seen)
+		check.enumCoverage(enum, exhaustive, seen)
 	}
 	check.enumSwitchUsage(binding, variables, delayedTop)
 	return true
@@ -116,11 +116,8 @@ func (check *Checker) enumCaseBody(
 
 // enumCoverage reports missing cases in declaration order.
 func (check *Checker) enumCoverage(
-	enum *Enum, exhaustive, defaultCase *ast.CaseClause, seen map[*EnumVariant]ast.Expr,
+	enum *Enum, exhaustive *ast.CaseClause, seen map[*EnumVariant]ast.Expr,
 ) {
-	if defaultCase != nil {
-		check.error(exhaustive, InvalidTypeSwitch, "enum switch cannot use both default and exhaustive")
-	}
 	var missing []string
 	for _, variant := range enum.variants {
 		if seen[variant] == nil {

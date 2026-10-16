@@ -396,6 +396,9 @@ func (builder *branchBuilder) typeSwitch(
 	for _, stmt := range statement.Body.List {
 		clause := stmt.(*ast.CaseClause)
 		hasDefault = hasDefault || clause.List == nil
+		if clause.Exhaustive {
+			continue
+		}
 		choice.successors = append(choice.successors, builder.statements(clause.Body, continuation, bodyTargets))
 	}
 	if !hasDefault {

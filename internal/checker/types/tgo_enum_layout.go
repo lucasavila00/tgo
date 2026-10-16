@@ -22,14 +22,10 @@ func enumStorage(enum *Enum) *Struct {
 	pkg := enum.named.Obj().Pkg()
 	fields := []*Var{NewVar(0, pkg, "tgoTag", enum.tag)}
 	boxed := false
-	noncomparable := false
 	for _, variant := range enum.variants {
 		payload := variant.typ.Underlying().(*Struct)
 		if payload.NumFields() == 0 {
 			continue
-		}
-		if !Comparable(payload) {
-			noncomparable = true
 		}
 		if variant.boxed {
 			boxed = true
@@ -42,7 +38,7 @@ func enumStorage(enum *Enum) *Struct {
 		fields = append(fields, NewVar(0, pkg, "tgoPayload", NewInterfaceType(nil, nil).Complete()))
 	}
 	storage := NewStruct(fields, nil)
-	if noncomparable && Comparable(storage) {
+	if boxed && enumNeedsComparisonMarker(enum, storage) {
 		marker := NewArray(NewSignatureType(nil, nil, nil, nil, nil, false), 0)
 		fields = append(fields, NewVar(0, pkg, "_", marker))
 		storage = NewStruct(fields, nil)
@@ -63,4 +59,17 @@ func largestEnumPayload(enum *Enum, sizes Sizes, first int) *EnumVariant {
 		}
 	}
 	return largest
+}
+
+// enumNeedsComparisonMarker keeps boxed noncomparable fields out of Go comparisons.
+func enumNeedsComparisonMarker(enum *Enum, storage *Struct) bool {
+	if !Comparable(storage) {
+		return false
+	}
+	for _, variant := range enum.variants {
+		if !Comparable(variant.typ) {
+			return true
+		}
+	}
+	return false
 }

@@ -97,3 +97,21 @@ func TestNativeBranchPaths(t *testing.T) {
 		})
 	}
 }
+
+// TestExhaustiveSwitchPaths treats coverage labels as checks, not executable branches.
+func TestExhaustiveSwitchPaths(t *testing.T) {
+	source := `package p; func f() { switch account.(type) {
+ case Account.Personal: return
+ case Account.Business: return
+ exhaustive:
+ }; value() }`
+	file, err := parser.ParseTGoFile(token.NewFileSet(), "source.tgo", "source.tgo", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := file.Decls[0].(*ast.FuncDecl).Body
+	result := controlflow.Branch(body, controlflow.Syntax{})
+	if result.Tail || result.End {
+		t.Fatalf("exhaustive return reached continuation: %+v", result)
+	}
+}

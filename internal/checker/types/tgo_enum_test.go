@@ -61,11 +61,14 @@ func TestEnumSwitch(t *testing.T) {
 		case Account.Business: v.Company
 		exhaustive:
 		} }`, ""},
-		{"missing", `func label(a Account) { switch a.(type) { case Account.Personal: exhaustive: } }`, "Business"},
-		{"duplicate", `func label(a Account) { switch a.(type) { case Account.Personal: case Account.Personal: } }`, "duplicate"},
+		{"missing", `func label(a Account) { switch a.(type) {
+ case Account.Personal: exhaustive: } }`, "Business"},
+		{"duplicate", `func label(a Account) { switch a.(type) {
+ case Account.Personal: case Account.Personal: } }`, "duplicate"},
 		{"wrong_enum", `type Other enum { Personal }
 		func label(a Account) { switch a.(type) { case Other.Personal: } }`, "Account"},
-		{"grouped_field", `func label(a Account) { switch v := a.(type) { case Account.Personal, Account.Business: _ = v.Name } }`, "Name"},
+		{"grouped_field", `func label(a Account) { switch v := a.(type) {
+ case Account.Personal, Account.Business: _ = v.Name } }`, "Name"},
 		{"default_field", `func label(a Account) { switch v := a.(type) { default: _ = v.Name } }`, "Name"},
 		{"standalone_variant", `var p Account.Personal`, "Personal"},
 		{"marker_body", `func label(a Account) { switch a.(type) { exhaustive: println(1) } }`, "exhaustive"},
@@ -95,17 +98,42 @@ func TestEnumPrivateStorage(t *testing.T) {
 		{"zero", `var a = Account{}`, true},
 		{"derived", `type Other Account; var a = Account(Other(Account.Personal{Name:"x"}))`, true},
 		{"interface", `var a = any(Account{})`, true},
+		{"recursive_pointer", `type P *P; func f(p P) *P { return (*P)(p) }`, true},
 		{"nil_pointer", `var a = (*Account)(nil)`, true},
 		{"field", `var a = Account{}.tgoTag`, false},
 		{"key", `var a = Account{tgoTag: 1}`, false},
 		{"derived_field", `type Other Account; var a = Other{}.tgoTag`, false},
 		{"embedded", `type Outer struct { Account }; var a = Outer{}.tgoTag`, false},
-		{"conversion", `type Raw struct { tgoTag AccountTag; tgoVariant0 AccountPersonal }; var a = Account(Raw{})`, false},
-		{"pointer_conversion", `type Raw struct { tgoTag AccountTag; tgoVariant0 AccountPersonal }; var a = (*Account)(new(Raw))`, false},
+		{"assignment", `var a Account = struct { tgoTag AccountTag; tgoVariant0 AccountPersonal }{}`, false},
+		{"conversion", `type Raw struct { tgoTag AccountTag; tgoVariant0 AccountPersonal }
+ var a = Account(Raw{})`, false},
+		{"pointer_conversion", `type Raw struct { tgoTag AccountTag; tgoVariant0 AccountPersonal }
+ var a = (*Account)(new(Raw))`, false},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := checkTGo(t, declaration+test.source)
+			if (err == nil) != test.valid {
+				t.Fatalf("valid=%v, error=%v", test.valid, err)
+			}
+		})
+	}
+}
+
+// TestEnumRecursiveTypes checks source cycles before storage choices can change their size.
+func TestEnumRecursiveTypes(t *testing.T) {
+	for _, test := range []struct {
+		name, source string
+		valid        bool
+	}{
+		{"pointer", `type Node enum { Link struct { Next *Node }; End }`, true},
+		{"slice", `type Node enum { List struct { Children []Node }; End }`, true},
+		{"mutual_pointer", `type A enum { First struct { B *B } }; type B enum { First struct { A A } }`, true},
+		{"direct", `type Node enum { Link struct { Next Node }; End }`, false},
+		{"array", `type Node enum { Link struct { Next [1]Node }; End }`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := checkTGo(t, test.source)
 			if (err == nil) != test.valid {
 				t.Fatalf("valid=%v, error=%v", test.valid, err)
 			}

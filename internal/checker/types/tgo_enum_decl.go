@@ -65,26 +65,41 @@ func (check *Checker) declareEnumPayload(variant *EnumVariant, scope *Scope) {
 	check.recordDef(variant.declaration.Name, variant.object)
 }
 
-// declareEnumConstructor gives ordinary Go callers a checked function with one argument per field.
-func (check *Checker) declareEnumConstructor(variant *EnumVariant, scope *Scope) {
-	position := variant.declaration.Pos()
-	identifier := &ast.Ident{Name: "New" + variant.enum.object.Name() + variant.name, NamePos: position}
-	parameters := &ast.FieldList{Opening: position, Closing: position}
-	if structure := variant.declaration.Type; structure != nil {
-		for _, field := range structure.Fields.List {
-			for range max(1, len(field.Names)) {
-				name := "tgoField" + strconv.Itoa(len(parameters.List))
-				parameters.List = append(parameters.List, &ast.Field{
-					Names: []*ast.Ident{{Name: name, NamePos: field.Pos()}}, Type: field.Type})
-			}
-		}
+// declareEnumConstructor reserves the public function before its payload is checked.
+func (check *Checker) declareEnumConstructor(variant *EnumVariant, _ *Scope) {
+	name := "New" + variant.enum.object.Name() + variant.name
+	object := NewFunc(variant.declaration.Pos(), check.pkg, name, nil)
+	variant.constructor = object
+	if check.tgo.enumConstructors == nil {
+		check.tgo.enumConstructors = make(map[Object]*EnumVariant)
 	}
-	result := &ast.Ident{Name: variant.enum.object.Name(), NamePos: position}
-	signature := &ast.FuncType{Func: position, Params: parameters,
-		Results: &ast.FieldList{Opening: position, List: []*ast.Field{{Type: result}}, Closing: position}}
-	declaration := &ast.FuncDecl{Name: identifier, Type: signature}
-	object := NewFunc(position, check.pkg, identifier.Name, nil)
-	check.declarePkgObj(identifier, object, &declInfo{file: scope, version: check.version, fdecl: declaration})
+	check.tgo.enumConstructors[object] = variant
+	check.declare(check.pkg.scope, nil, object, nopos)
+}
+
+// enumConstructorType builds its signature from checked fields without checking source syntax twice.
+func (check *Checker) enumConstructorType(object Object) bool {
+	variant := check.tgo.enumConstructors[object]
+	if variant == nil {
+		return false
+	}
+	if object.Type() != nil {
+		return true
+	}
+	check.objDecl(variant.enum.object)
+	check.objDecl(variant.object)
+	payload, ok := variant.object.Type().Underlying().(*Struct)
+	if !ok {
+		object.setType(NewSignatureType(nil, nil, nil, nil, nil, false))
+		return true
+	}
+	parameters := make([]*Var, payload.NumFields())
+	for index, field := range payload.fields {
+		parameters[index] = NewVar(field.Pos(), check.pkg, "tgoField"+strconv.Itoa(index), field.Type())
+	}
+	result := NewTuple(NewVar(object.Pos(), check.pkg, "", variant.enum.object.Type()))
+	object.setType(NewSignatureType(nil, nil, nil, NewTuple(parameters...), result, false))
+	return true
 }
 
 // enumType checks payload types and connects their identities to the parent enum.
@@ -135,8 +150,26 @@ func (check *Checker) addEnumMethod(enum *Enum, name string, result Type) {
 	enum.named.AddMethod(method)
 }
 
-// checkEnums resolves source declarations before ordinary initializers use the generated API.
+// checkEnums resolves source declarations and public functions before ordinary initializers.
 func (check *Checker) checkEnums() {
+	enums := check.sourceEnums()
+	for _, enum := range enums {
+		check.objDecl(enum.object)
+	}
+	for _, enum := range enums {
+		if enum.named == nil || !isValid(enum.named.Underlying()) {
+			continue
+		}
+		check.enumSizes(enum.named, enum.declaration)
+		for _, variant := range enum.variants {
+			check.enumConstructorType(variant.constructor)
+		}
+	}
+}
+
+// sourceEnums returns package enum declarations in source order.
+func (check *Checker) sourceEnums() []*Enum {
+	var enums []*Enum
 	for _, file := range check.files {
 		for _, declaration := range file.Decls {
 			group, ok := declaration.(*ast.GenDecl)
@@ -146,9 +179,10 @@ func (check *Checker) checkEnums() {
 			for _, specification := range group.Specs {
 				spec := specification.(*ast.TypeSpec)
 				if source, ok := spec.Type.(*ast.EnumType); ok {
-					check.objDecl(check.tgo.enums[source].object)
+					enums = append(enums, check.tgo.enums[source])
 				}
 			}
 		}
 	}
+	return enums
 }

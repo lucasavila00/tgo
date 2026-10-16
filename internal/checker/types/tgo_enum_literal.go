@@ -9,6 +9,9 @@ import (
 
 // enumVariant resolves a qualified variant in a constructor or enum case.
 func (check *Checker) enumVariant(expression ast.Expr) (*EnumVariant, bool) {
+	if expression == nil || !check.nativeSource(expression.Pos()) {
+		return nil, false
+	}
 	selector, ok := ast.Unparen(expression).(*ast.SelectorExpr)
 	if !ok {
 		return nil, false

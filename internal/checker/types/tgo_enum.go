@@ -4,6 +4,7 @@ import "github.com/lucasavila00/tgo/internal/ast"
 
 // Enum records a declared enum and the variants that belong to that declaration.
 type Enum struct {
+	layoutReady bool
 	named       *Named
 	tag         *Named
 	variants    []*EnumVariant
@@ -13,6 +14,7 @@ type Enum struct {
 
 // EnumVariant identifies one variant and its generated Go payload type.
 type EnumVariant struct {
+	constructor *Func
 	enum        *Enum
 	name        string
 	typ         *Named
