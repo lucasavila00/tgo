@@ -1,39 +1,35 @@
 # Sum types: HOW
 
-## Approach
+## Decision
 
-Hide storage behind Go constructors and methods. Lower TGo construction and type
-switches to these calls, so storage can change without changing callers.
+Generate a Go type with private storage, constructors, and methods. This lets
+Go callers use enums without depending on their fields.
 
-## Example
+For the [Account example](what.md), Go callers write:
 
 ```go
 account := NewAccountBusiness("Acme")
 switch account.Tag() {
+case AccountTagPersonal:
+    fmt.Println(account.PersonalPayload().Name)
 case AccountTagBusiness:
     fmt.Println(account.BusinessPayload().Company)
 }
 ```
 
-Call a payload method only after selecting its variant. It returns a copy.
+Payload methods return copies. Call them after selecting the matching tag.
+Constructors take fields in declaration order and clear other variants' data.
+Tags start at zero and use the smallest unsigned integer that fits.
 
-Give each variant a private field containing its data. Empty variants
-need none. Assign tags from zero in declaration order, using the smallest
-fitting unsigned integer.
+The checker identifies each variant by its declaration. It checks construction,
+case fields, and complete coverage before generation. A complete enum switch
+becomes a Go tag switch. Without an explicit `default`, its final case becomes
+`default`, so Go also recognizes when every branch returns.
 
-Boxing stores a typed payload value in one shared `interface{}` field.
-Measure the complete struct using Go's amd64 layout for every target. Include
-fields, tag, interface, and padding. While larger than 80 bytes, box the largest
-variant field. Choose the first variant on ties; recalculate size.
-Calculate nested enums first.
+## Open storage decision
 
-Construct a fresh value containing only the selected variant. For a boxed first
-variant, its method returns zero values when the tag is zero and the box is nil.
-
-The checker compares declared variant types with case types for `exhaustive:`.
-Lower matches to tag switches and payload methods.
-
-## Tradeoffs
-
-Unboxed payloads stay inside the enum. Boxing reduces enum copying; Go decides
-whether the box needs heap allocation.
+Current storage keeps all payloads inside the enum. Automatic boxing would move
+large payloads into an interface field. Decide whether to keep the first payload
+inside the enum and treat 80 bytes as a target. Set the equality and map-key
+rules before enabling boxing: zero values and constructed values must agree,
+without losing floating-point negative zero.

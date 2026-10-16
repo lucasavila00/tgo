@@ -71,8 +71,9 @@ account := Account.Personal{Name: "Lucas"}
 
 An enum lists all allowed forms of a value. A type switch selects a variant
 and gives access to its fields. Use `default:` to handle remaining variants,
-or `exhaustive:` to require a case for each variant. The [sum-type proposal](../adr/sum-types/what.md) makes the first
-variant the zero value and defines Go storage and payload matching.
+or `exhaustive:` to require a case for each variant. The first variant is the
+zero value, with ordinary Go zero values in its fields. See the
+[enum guide](../guide/transpiler.md#use-an-enum-value) for construction and matching.
 
 ## Validate values when they are created
 

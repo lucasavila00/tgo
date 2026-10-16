@@ -2,8 +2,8 @@
 
 ## Goal
 
-An enum holds one of its declared variants. Each variant can carry fields.
-Extend Go's type switch to enum values.
+An enum holds one declared variant and that variant's fields. Use Go's type
+switch syntax to select a variant and read its fields.
 
 ## Example
 
@@ -13,7 +13,7 @@ type Account enum {
     Business struct { Company string }
 }
 
-var account Account
+account := Account.Business{Company: "Acme"}
 label := switch v := account.(type) {
 case Account.Personal:
     v.Name
@@ -23,20 +23,21 @@ exhaustive:
 }
 ```
 
-Here, `account` is `Personal{Name: ""}`, so `label` is `""`.
-Assigning `Account.Business{Company: "Acme"}` makes the same switch produce
-`"Acme"`. See [generated Go](how.md) and [tests](proof.md).
+`label` is `"Acme"`. A zero `Account` is `Personal{Name: ""}`.
 
 ## Rules
 
-The first declared variant is the zero value. Its fields use ordinary Go zero
-values, including nil pointers. It can have any Go field type. An enum needs at
-least one variant. Changing declaration order changes its zero value.
+The first variant is the zero value. Its fields have Go zero values. An enum
+needs at least one variant. Changing variant order changes the zero value.
 
-Use `default:` to handle remaining variants, or `exhaustive:` to require each
-variant exactly once. [Value switches](../switch-expressions/what.md) require
-one of these labels.
+Use `default:` for remaining variants, or an empty `exhaustive:` clause to
+require every variant exactly once. Value switches require one of these clauses.
 
-Evaluate the input once. Each single-variant case gives `v` that variant's type
-and a copy of its fields. Changing `account` does not change this copy. Copied pointers still
-point to the same data. In grouped and default cases, `v` keeps the enum type.
+The switch reads its input once. A single-variant case gives `v` a copy of that
+variant's fields. Replacing `account` does not change this copy. Copied pointers
+still refer to the same data. In grouped and default cases, `v` keeps the enum
+type.
+
+## Open decision
+
+Decide whether enum declarations inside functions are supported.

@@ -146,10 +146,69 @@ with Go's rules for untyped constants. `nil` cannot establish a type on its own.
 If every branch exits, context or conversion must supply the type. A switch value is
 not a constant and cannot be a `const` initializer or an array length.
 
-A switch value currently requires `default`. Verified enum coverage with
-`exhaustive:` depends on enum declarations, which are not yet implemented.
+A switch value requires `default`, or `exhaustive:` with a case for every enum
+variant. See [enum values](#use-an-enum-value).
 A value switch cannot use `fallthrough` between its branches or `break` that
 targets the value switch. Breaks in nested loops and ordinary switch statements keep Go behavior.
+
+## Use an enum value
+
+An enum holds one of a fixed set of variants. Each variant can have fields:
+
+```text
+type Account enum {
+    Personal struct { Name string }
+    Business struct { Company string }
+}
+
+account := Account.Business{Company: "Acme"}
+label := switch value := account.(type) {
+case Account.Personal:
+    value.Name
+case Account.Business:
+    value.Company
+exhaustive:
+}
+```
+
+`label` is `"Acme"`. The first variant is the zero value: `var account Account`
+creates `Personal` with an empty `Name`. A variant without fields can be written
+as `Closed struct {}` and constructed as `Account.Closed{}`.
+
+A single-variant case gets a copy of that variant's fields. In a grouped case
+such as `case Account.Personal, Account.Business:`, the binding keeps type
+`Account`. A `default` binding also keeps type `Account`.
+
+Use an empty `exhaustive:` clause to require every variant exactly once. Adding
+a variant then makes incomplete switches fail to compile. Use `default:` when
+one branch should handle all remaining variants. This works in both switch
+statements and switch values.
+
+### Use the generated enum from Go
+
+For the declaration above, a Go caller can write:
+
+```go
+account := NewAccountBusiness("Acme")
+switch account.Tag() {
+case AccountTagPersonal:
+    fmt.Println(account.PersonalPayload().Name)
+case AccountTagBusiness:
+    fmt.Println(account.BusinessPayload().Company)
+}
+```
+
+`NewAccountBusiness` takes the fields in declaration order and returns an
+`Account`. `BusinessPayload` returns an `AccountBusiness` struct with the
+`Company` field. Call a payload method after selecting its matching tag. The
+returned struct is a copy; pointer fields still refer to the same data.
+
+These names belong to the enum's package. Import that package and qualify the
+names as usual. TGo callers can also use `accounts.Account.Business{Company:
+"Acme"}`. The compiler keeps storage fields private to the enum.
+
+The [storage choice](../adr/sum-types/how.md) and
+[local declaration rule](../adr/sum-types/what.md) remain open decisions.
 
 ## Build a slice or map
 

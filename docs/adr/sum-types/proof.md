@@ -1,34 +1,33 @@
 # Sum types: PROOF
 
-## Behavior checks
+## Behavior
 
-Add `tests/testdata/sum-types/` fixtures and snapshots. Compare results and call
-order with handwritten Go.
+[Fixtures](../../../tests/testdata/sum-types/) contain TGo inputs, generated Go,
+expected output, and independent Go programs. Compare values and call order.
 
-- Zero `Account` produces `Personal{Name: ""}`. `Account.Business{Company: "Acme"}` produces
-  `"Acme"`. Reordering changes zero.
-- Missing map keys, closed channels, generic zeros, and error returns select
-  the first variant. Check pointer and struct fields.
-- A zero boxed first variant returns zero fields without a panic.
-- Payload copies survive enum replacement. Copied pointers share data.
-- Constructors clear inactive storage; live references survive garbage collection.
-- Go constructors, `Tag()`, and payload methods work across packages.
-- Partial matches with `default:` and complete matches with `exhaustive:` pass.
+Check first-variant zeros from declarations, maps, channels, generics, and error
+returns. Check payload copies, shared pointers, replacement, nested enums, and
+constructors called from Go and other TGo packages.
 
-## Rejected inputs
+Check complete matches, default cases, grouped cases, aliases, and one input
+evaluation. Preserve returns, defers, jumps, and error identity inside cases.
 
-An incomplete exhaustive match must name missing variants, such as `Business`. Added
-variants must make incomplete exhaustive matches fail. Reject empty enums,
-duplicate cases, value switches with neither label, payload fields in
-grouped/default cases, and direct infinite-size recursion. Report source positions.
+## Invalid inputs
 
-## Regression checks
+[Diagnostic fixtures](../../../tests/testdata/sum-types-rejected/) check missing
+variants, duplicate cases, empty enums, invalid payload fields, and recursive
+values with infinite size. Errors must point to the source. Checker tests also
+check that generic operations cannot expose private enum storage.
 
-Preserve ordinary switches, Go interface type switches, and error identity.
+## Commands
 
-## Evidence
+```sh
+go test ./tests -run '^TestSumType'
+go test ./internal/checker/types -run '^TestEnum'
+go -C tests/testdata/sum-types/Allocations test -run '^$' -bench BenchmarkSumTypes -benchmem
+```
 
-Run `go test ./tests -run TestSumTypes -bench BenchmarkSumTypes -benchmem`.
-Compare allocations with references. On amd64, `[79]byte` stays inline at
-80 bytes; `[80]byte` boxes to 24. Test size ties, nested enums, and 256/257
-variants selecting `uint8`/`uint16`.
+The benchmark runs in the `Allocations` fixture. Compare its results with its
+Go reference after the storage decision. Add checks for the
+chosen 80-byte rule, tag widths, equality, negative zero, map keys, and allocation counts
+before accepting that layout.
