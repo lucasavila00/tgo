@@ -222,6 +222,9 @@ func (r *Context) typeSwitchStatementResult(
 	resultVariable *ast.Ident,
 	transform ValueBlock,
 ) []ast.Stmt {
+	if enum := r.input.Inventory.Checked.TypesInfo.EnumSwitches[statement]; enum != nil {
+		return r.enumSwitchStatement(statement, enum, resultVariable, transform)
+	}
 	exit := r.prepareBreakExit(statement, statement.Init, statement.Assign)
 	rewrittenSwitch := *statement
 	var headerStatements []ast.Stmt

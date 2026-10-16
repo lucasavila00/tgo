@@ -177,5 +177,9 @@ func (r *Context) compositeExpression(e *ast.CompositeLit) ([]ast.Stmt, ast.Expr
 			operandIndex++
 		}
 	}
+	if variant := r.input.Inventory.Checked.TypesInfo.EnumConstructors[e]; variant != nil {
+		result := r.enumLiteral(e, &output, variant)
+		return append(statements, result.Statements...), result.Expressions()[0]
+	}
 	return statements, &output
 }

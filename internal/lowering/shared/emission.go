@@ -26,6 +26,11 @@ func (r *Context) CheckLoweredOperations() error {
 				if !r.request.loweredReturns[node] {
 					missing = fmt.Errorf("%s: short return was not lowered", r.input.Inventory.Checked.Fset.Position(node.Pos()))
 				}
+			case *ast.CompositeLit:
+				if r.input.Inventory.Checked.TypesInfo.EnumConstructors[node] != nil && !r.request.lowered[node] {
+					position := r.input.Inventory.Checked.Fset.Position(node.Pos())
+					missing = fmt.Errorf("%s: enum construction was not lowered", position)
+				}
 			}
 			return missing == nil
 		})
@@ -47,7 +52,15 @@ func (r *Context) Contains(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(child ast.Node) bool {
 		switch child.(type) {
-		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt, *ast.EnumType:
+			found = true
+		}
+		if literal, ok := child.(*ast.CompositeLit); ok &&
+			r.input.Inventory.Checked.TypesInfo.EnumConstructors[literal] != nil {
+			found = true
+		}
+		if statement, ok := child.(*ast.TypeSwitchStmt); ok &&
+			r.input.Inventory.Checked.TypesInfo.EnumSwitches[statement] != nil {
 			found = true
 		}
 		return !found
@@ -63,6 +76,10 @@ func (r *Context) isTarget(expression ast.Expr) bool {
 	if !r.input.TGo {
 		return false
 	}
+	if literal, ok := expression.(*ast.CompositeLit); ok &&
+		r.input.Inventory.Checked.TypesInfo.EnumConstructors[literal] != nil {
+		return true
+	}
 	switch expression.(type) {
 	case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr:
 		return true
@@ -73,11 +90,13 @@ func (r *Context) isTarget(expression ast.Expr) bool {
 // Emit returns formatted files without changing the checked input.
 func (r *Context) Emit() (Output, error) {
 	r.request.names.ReserveSyntax(r.input.Inventory.Checked.Syntax)
+	r.request.names.Reserve(r.input.Inventory.Checked.Types.Scope().Names()...)
 	output := make(map[string][]byte)
 	for _, file := range r.input.Inventory.Checked.Syntax {
 		fileRewrite := &Context{input: r.input, dispatch: r.dispatch, request: r.request,
 			file: &fileState{}, functionState: &functionState{}}
 		outputFile := fileRewrite.functionBodies(file).(*ast.File)
+		outputFile = fileRewrite.enumDeclarations(outputFile)
 		if r.request.err != nil {
 			return Output{}, r.request.err
 		}
@@ -87,6 +106,7 @@ func (r *Context) Emit() (Output, error) {
 			declaration := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}
 			outputFile.Decls = append([]ast.Decl{declaration}, outputFile.Decls...)
 		}
+		fileRewrite.enumImports(outputFile, file)
 		if err := ordinaryOutput(outputFile); err != nil {
 			return Output{}, err
 		}
@@ -140,7 +160,7 @@ func ordinaryOutput(node ast.Node) error {
 	var invalid error
 	ast.Inspect(node, func(child ast.Node) bool {
 		switch child.(type) {
-		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt:
+		case *ast.PropagateExpr, *ast.IfExpr, *ast.SwitchExpr, *ast.ComprehensionExpr, *ast.ShortReturnStmt, *ast.EnumType:
 			invalid = fmt.Errorf("TGo syntax remains in generated Go: %T", child)
 		}
 		return invalid == nil

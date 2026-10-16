@@ -2,13 +2,13 @@ package checker
 
 import (
 	"fmt"
-	"github.com/lucasavila00/tgo/internal/ast"
 	"go/token"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/lucasavila00/tgo/internal/ast"
 	"github.com/lucasavila00/tgo/internal/checker/gcimporter"
 	"github.com/lucasavila00/tgo/internal/checker/types"
 	"golang.org/x/tools/go/packages"
@@ -28,14 +28,16 @@ type Package struct {
 // Loader checks source packages and reads compiled dependency types.
 // It shares private type objects across those checks and imports.
 type Loader struct {
-	root     string
-	tgoFiles map[string]string
-	packages map[string]*Package
-	checking map[string]bool
-	imports  map[string]*types.Package
-	exports  map[string]string
-	fset     *token.FileSet
-	sizes    types.Sizes
+	root            string
+	tgoFiles        map[string]string
+	packages        map[string]*Package
+	checking        map[string]bool
+	imports         map[string]*types.Package
+	exports         map[string]string
+	originalSources map[string]string
+	preparedImports map[string]bool
+	fset            *token.FileSet
+	sizes           types.Sizes
 }
 
 // NewLoader creates one owner for source checks and imported types.
@@ -55,7 +57,9 @@ func newLoader(root string, roots []*packages.Package, tgoFiles map[string]strin
 	sizes types.Sizes, fset *token.FileSet) *Loader {
 	loader := &Loader{root: root, tgoFiles: tgoFiles,
 		packages: make(map[string]*Package), checking: make(map[string]bool),
-		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: fset, sizes: sizes}
+		imports:         make(map[string]*types.Package),
+		originalSources: make(map[string]string),
+		preparedImports: make(map[string]bool), exports: make(map[string]string), fset: fset, sizes: sizes}
 	packages.Visit(roots, nil, func(pkg *packages.Package) {
 		if pkg.ExportFile != "" {
 			loader.exports[pkg.PkgPath] = pkg.ExportFile
@@ -125,6 +129,11 @@ func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package,
 		return nil, err
 	}
 	loader.packages[metadata.ID] = pkg
+	// Compiled wrappers must reuse these source types when their export data refers to them.
+	// Test variants have separate package identities and must not replace the ordinary import.
+	if metadata.ID == metadata.PkgPath {
+		loader.imports[metadata.PkgPath] = pkg.Types
+	}
 	return pkg, nil
 }
 
@@ -160,6 +169,11 @@ func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode)
 			return nil, err
 		}
 		return pkg.Types, nil
+	}
+	if dependency != nil {
+		if err := importer.loader.prepareSourceImports(dependency); err != nil {
+			return nil, err
+		}
 	}
 	return gcimporter.Import(
 		importer.loader.fset,
