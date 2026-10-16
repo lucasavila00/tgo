@@ -69,9 +69,10 @@ type Account enum {
 account := Account.Personal{Name: "Lucas"}
 ```
 
-An enum lists all allowed forms of a value. An `exhaustive:` switch must handle
-every form. The [sum-type proposal](../adr/sum-types/what.md) makes the first
-variant the zero value and defines inline Go storage and payload matching.
+An enum lists all allowed forms of a value. A type switch selects a variant
+and gives access to its fields. Use `default:` to handle remaining variants,
+or `exhaustive:` to require a case for each variant. The [sum-type proposal](../adr/sum-types/what.md) makes the first
+variant the zero value and defines Go storage and payload matching.
 
 ## Validate values when they are created
 

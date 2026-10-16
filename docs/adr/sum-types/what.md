@@ -2,7 +2,8 @@
 
 ## Goal
 
-Store payloads inline and match every form.
+An enum holds one of its declared variants. Each variant can carry fields.
+Extend Go's type switch to enum values.
 
 ## Example
 
@@ -11,32 +12,31 @@ type Account enum {
     Personal struct { Name string }
     Business struct { Company string }
 }
+
 var account Account
-label := switch v := account {
-case Account.Personal: v.Name
-case Account.Business: v.Company
+label := switch v := account.(type) {
+case Account.Personal:
+    v.Name
+case Account.Business:
+    v.Company
 exhaustive:
 }
 ```
 
-This produces `""`: zero selects `Personal`, with an empty `Name`.
-`Account.Personal{Name: "Lucas"}` produces `"Lucas"`.
-See [generated storage](how.md) and [checks](proof.md).
+Here, `account` is `Personal{Name: ""}`, so `label` is `""`.
+Assigning `Account.Business{Company: "Acme"}` makes the same switch produce
+`"Acme"`. See [generated Go](how.md) and [tests](proof.md).
 
 ## Rules
 
-Enums declare at least one variant. The first has tag zero. Its
-payload fields have their ordinary Go zero values: numbers are zero, strings
-are empty, and pointers are nil. The payload can contain any Go field type.
-Declaration order determines the zero value.
+The first declared variant is the zero value. Its fields use ordinary Go zero
+values, including nil pointers. It can have any Go field type. An enum needs at
+least one variant. Changing declaration order changes its zero value.
 
-`var`, `new`, arrays, `make`, map misses, closed channels, generic `var T`, and
-error-return zeros all produce this first variant with zero fields.
+Use `default:` to handle remaining variants, or `exhaustive:` to require each
+variant exactly once. [Value switches](../switch-expressions/what.md) require
+one of these labels.
 
-Use `default:` to handle remaining variants, or `exhaustive:` to require a case
-for every declared variant. [Switch expressions](../switch-expressions/what.md)
-require one of these labels.
-
-Evaluate the input once. Each single-variant clause binds `v` to a payload copy.
-Grouped and default clauses have no `v`. Only that copy permits payload
-access. Mutating the source cannot invalidate it. Copies retain Go reference sharing.
+Evaluate the input once. Each single-variant case gives `v` that variant's type
+and a copy of its fields. Changing `account` does not change this copy. Copied pointers still
+point to the same data. In grouped and default cases, `v` keeps the enum type.
