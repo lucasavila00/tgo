@@ -89,8 +89,9 @@ func TestCompileStagesUseVendorSelection(t *testing.T) {
 
 		"vendor/modules.txt": []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
 
-		"vendor/example.com/value/value.tgo":    []byte("invalid TGo inside a dependency"),
-		"vendor/example.com/value/value_tgo.go": []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
+		"vendor/example.com/value/value.tgo":      []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
+		"vendor/example.com/value/unselected.tgo": []byte("invalid unselected TGo inside a dependency"),
+		"vendor/example.com/value/value_tgo.go":   []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
 		"main.tgo": []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc " +
 			"run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if " +
 			"err:=run();err!=nil{panic(err)}}\n"),
@@ -111,6 +112,65 @@ func TestCompileStagesUseVendorSelection(t *testing.T) {
 	got, err := command.CombinedOutput()
 	if err != nil || string(got) != "9\n" {
 		t.Fatalf("vendor output: %v, %s", err, got)
+	}
+}
+
+// TestCompileStagesUseVendorEnum checks selected enum source without changing vendored files.
+func TestCompileStagesUseVendorEnum(t *testing.T) {
+	dependency := t.TempDir()
+	source := []byte(`package value
+
+type Value enum {
+	Number struct { N int }
+	Empty struct {}
+}
+`)
+	writeFiles(t, dependency, map[string][]byte{
+		"go.mod":    []byte("module example.com/value\n\ngo 1.27.1\n"),
+		"value.tgo": source,
+	})
+	transpiler.Compile(dependency)
+	generated, err := os.ReadFile(filepath.Join(dependency, "value_tgo.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	files := map[string][]byte{
+		"go.mod": []byte("module example.com/vendorenum\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
+
+		"vendor/modules.txt": []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
+
+		"vendor/example.com/value/value.tgo":      source,
+		"vendor/example.com/value/value_tgo.go":   generated,
+		"vendor/example.com/value/unselected.tgo": []byte("invalid unselected TGo inside a dependency"),
+		"main.tgo": []byte(`package main
+import "fmt"
+import "example.com/value"
+func number(input value.Value) int {
+	switch payload := input.(type) {
+	case value.Value.Number:
+		return payload.N
+	case value.Value.Empty:
+		return -1
+	exhaustive:
+	}
+}
+func main() {
+	fmt.Println(number(value.Value.Number{N: 17}))
+	fmt.Println(number(value.Value.Empty{}))
+	var zero value.Value
+	fmt.Println(number(zero))
+}
+`),
+	}
+	writeFiles(t, root, files)
+	transpiler.Compile(root)
+	assertInputFiles(t, root, files)
+	command := exec.Command("go", "run", ".")
+	command.Dir = root
+	got, err := command.CombinedOutput()
+	if err != nil || string(got) != "17\n-1\n0\n" {
+		t.Fatalf("vendor enum output: %v, %s", err, got)
 	}
 }
 

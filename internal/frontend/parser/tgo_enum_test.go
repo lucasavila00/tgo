@@ -1,6 +1,7 @@
 package parser
 
 import (
+	stock "go/parser"
 	"go/token"
 	"strings"
 	"testing"
@@ -85,4 +86,51 @@ func f(x any) {
 		}
 		return true
 	})
+}
+
+// TestParserSourceMetadata checks parser entry points independently of filenames and Go syntax.
+func TestParserSourceMetadata(t *testing.T) {
+	input := `package p
+func f(value any) {
+	switch value.(type) {
+	case int:
+	default:
+	}
+}`
+	for _, test := range []struct {
+		name     string
+		filename string
+		native   bool
+	}{
+		{"Go/go", "main.go", false},
+		{"Go/tgo", "main.tgo", false},
+		{"TGo/go", "main.go", true},
+		{"TGo/tgo", "main.tgo", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			filename, native := test.filename, test.native
+			mode := AllErrors | SkipObjectResolution
+			var file *ast.File
+			var err error
+			if native {
+				file, err = ParseTGoFile(token.NewFileSet(), filename, filename, input, mode)
+			} else {
+				file, err = ParseFile(token.NewFileSet(), filename, input, mode)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if file.TGo != native {
+				t.Fatalf("file %s: TGo = %t, want %t", filename, file.TGo, native)
+			}
+			want, err := stock.ParseFile(token.NewFileSet(), filename, input, stock.Mode(mode))
+			if err != nil || !sameGoTree(file, want) {
+				t.Fatalf("ordinary Go tree differs: %v", err)
+			}
+			file.Name.Name = "changed"
+			if sameGoTree(file, want) {
+				t.Fatal("different package names have equal Go trees")
+			}
+		})
+	}
 }
