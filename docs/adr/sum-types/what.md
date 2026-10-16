@@ -19,22 +19,23 @@ exhaustive:
 }
 ```
 
-This produces `""`: zero selects `Personal`, whose `Name` is an empty string.
+This produces `""`: zero selects `Personal`, with an empty `Name`.
 `Account.Personal{Name: "Lucas"}` produces `"Lucas"`.
 See [generated storage](how.md) and [checks](proof.md).
 
 ## Rules
 
-An enum declares at least one variant. The first variant has tag zero. Its
+Enums declare at least one variant. The first has tag zero. Its
 payload fields have their ordinary Go zero values: numbers are zero, strings
 are empty, and pointers are nil. The payload can contain any Go field type.
-Declaration order therefore determines the enum's zero value.
+Declaration order determines the zero value.
 
 `var`, `new`, arrays, `make`, map misses, closed channels, generic `var T`, and
 error-return zeros all produce this first variant with zero fields.
 
-`exhaustive:` requires each declared variant exactly once. Otherwise,
-[switch expressions](../switch-expressions/what.md) need `default`.
+Use `default:` to handle remaining variants, or `exhaustive:` to require a case
+for every declared variant. [Switch expressions](../switch-expressions/what.md)
+require one of these labels.
 
 Evaluate the input once. Each single-variant clause binds `v` to a payload copy.
 Grouped and default clauses have no `v`. Only that copy permits payload
